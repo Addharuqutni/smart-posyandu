@@ -5,8 +5,23 @@ export function sekarangIso() {
   return new Date().toISOString()
 }
 
+/**
+ * Pengenal acak. `crypto.randomUUID` hanya ada di konteks aman (HTTPS atau
+ * localhost), jadi di pemasangan lewat `http://<ip-vps>` ia `undefined` dan
+ * setiap pembuatan id melempar TypeError — tampil sebagai "tidak bisa
+ * menghubungi server" padahal jaringan baik-baik saja. Cadangan ini memakai
+ * `getRandomValues` (tersedia di http) dengan bentuk UUID v4 yang sama.
+ */
 export function idBaru() {
-  return crypto.randomUUID()
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID()
+  }
+  const b = new Uint8Array(16)
+  crypto.getRandomValues(b)
+  b[6] = (b[6] & 0x0f) | 0x40
+  b[8] = (b[8] & 0x3f) | 0x80
+  const heks = [...b].map((x) => x.toString(16).padStart(2, '0')).join('')
+  return `${heks.slice(0, 8)}-${heks.slice(8, 12)}-${heks.slice(12, 16)}-${heks.slice(16, 20)}-${heks.slice(20)}`
 }
 
 /** Usia dalam bulan penuh pada tanggal tertentu. Boleh negatif bila salah isi. */

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { daftarValidasi, tindakLanjut, validasiKunjungan, validasiSemua } from '../jaringan/api.js'
 import { PESAN_STATUS } from '../logika/rentang.js'
 import Ikon from './Ikon.jsx'
-
+import { idBaru } from '../logika/waktu.js'
 export default function Validasi({ sesi }) {
   const [daftar, setDaftar] = useState([])
   const [total, setTotal] = useState(0)
@@ -80,7 +80,7 @@ export default function Validasi({ sesi }) {
     setPesan(null)
     try {
       await tindakLanjut(id, {
-        id: crypto.randomUUID(),
+        id: idBaru(),
         jenis: isi.jenis ?? 'edukasi',
         isi: isi.isi.trim(),
       })

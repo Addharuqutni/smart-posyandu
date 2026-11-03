@@ -10,6 +10,7 @@
 // ponytail: bila kelak data pemakai ini dianggap sensitif di tablet bersama,
 // simpan hanya `id` + `peran` dan ambil sisanya dari server saat daring.
 
+import { idBaru } from '../logika/waktu.js'
 const KUNCI_PENGGUNA = 'posyandu_pengguna'
 const KUNCI_PERANGKAT = 'posyandu_id_perangkat'
 const KUNCI_LAMA = 'posyandu_sesi'
@@ -61,7 +62,7 @@ export function idPerangkat() {
   if (!id) {
     const basis = slugPerangkat(navigator.userAgent || '')
     // Ujung acak kecil menjaga keunikan bila dua perangkat punya UA mirip.
-    id = `${basis}-${crypto.randomUUID().slice(0, 6)}`
+    id = `${basis}-${idBaru().slice(0, 6)}`
     localStorage.setItem(KUNCI_PERANGKAT, id)
   }
   return id
@@ -88,7 +89,7 @@ export async function deteksiPerangkatRil() {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
-  const id = `${slug || 'perangkat'}-${crypto.randomUUID().slice(0, 6)}`
+  const id = `${slug || 'perangkat'}-${idBaru().slice(0, 6)}`
   localStorage.setItem(KUNCI_PERANGKAT, id)
   return id
 }

@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
-import { masuk } from '../jaringan/api.js'
-import { deteksiPerangkatRil } from '../penyimpanan/sesi.js'
+import { GagalJaringan, masuk } from '../jaringan/api.js'
 import Ikon from './Ikon.jsx'
 
 export default function Masuk({ saatMasuk }) {
@@ -36,8 +35,12 @@ export default function Masuk({ saatMasuk }) {
         setGalat('Terlalu banyak percobaan. Coba lagi 15 menit lagi.')
       } else if (salah.status === 401) {
         setGalat('Username atau kata sandi salah.')
-      } else {
+      } else if (salah instanceof GagalJaringan) {
         setGalat('Tidak bisa menghubungi server. Sambungkan tablet ke jaringan.')
+      } else {
+        // Galat selain jaringan (mis. kode klien gagal) jangan dilaporkan
+        // sebagai masalah jaringan: itu menyesatkan pencarian penyebab.
+        setGalat('Gagal masuk. Muat ulang halaman, lalu coba lagi.')
       }
     } finally {
       setMengirim(false)

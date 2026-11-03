@@ -7,7 +7,7 @@ import {
   ubahPengguna,
 } from '../jaringan/api.js'
 import { inisial } from '../logika/nama.js'
-import { waktuPendek } from '../logika/waktu.js'
+import { idBaru, waktuPendek } from '../logika/waktu.js'
 import Ikon from './Ikon.jsx'
 import { PanelRiwayatMasuk } from './RiwayatMasuk.jsx'
 
@@ -66,7 +66,7 @@ export default function Pengguna({ sesi }) {
     try {
       await buatPengguna({
         ...isi,
-        id: crypto.randomUUID(),
+        id: idBaru(),
         posyandu_id: isi.peran === 'admin_desa' ? null : sesi.pengguna.posyandu_id,
       })
       setIsi(KOSONG)
