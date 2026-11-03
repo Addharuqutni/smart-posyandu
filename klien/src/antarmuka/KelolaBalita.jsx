@@ -6,7 +6,7 @@ import {
   hapusBalita,
   ubahBalita,
 } from '../jaringan/api.js'
-import { usiaBulan, tanggalHariIni } from '../logika/waktu.js'
+import { batasTanggalLahir, tanggalHariIni, usiaBulan, usiaDiterima } from '../logika/waktu.js'
 import Ikon from './Ikon.jsx'
 
 const KOSONG = {
@@ -114,6 +114,10 @@ export default function KelolaBalita({ sesi }) {
       setGalat('Pilih Posyandu lebih dulu.')
       return
     }
+    if (!usiaDiterima(isi.tanggal_lahir)) {
+      setGalat('Usia balita harus antara 0 hari dan 7 tahun (84 bulan).')
+      return
+    }
     setMenyimpan(true)
     try {
       await buatBalita(muatanDariForm())
@@ -130,6 +134,10 @@ export default function KelolaBalita({ sesi }) {
     peristiwa.preventDefault()
     setGalat(null)
     setPesan(null)
+    if (!usiaDiterima(sunting.tanggal_lahir)) {
+      setGalat('Usia balita harus antara 0 hari dan 7 tahun (84 bulan).')
+      return
+    }
     try {
       await ubahBalita(sunting.id, {
         nama_lengkap: sunting.nama_lengkap.trim(),
@@ -256,10 +264,12 @@ export default function KelolaBalita({ sesi }) {
               id="b-lahir"
               type="date"
               max={tanggalHariIni()}
+              min={batasTanggalLahir()}
               value={isi.tanggal_lahir}
               onChange={(e) => setIsi({ ...isi, tanggal_lahir: e.target.value })}
               required
             />
+            <p className="petunjuk">Usia balita maksimal 7 tahun (84 bulan).</p>
           </div>
 
           <div className="bidang">
@@ -380,6 +390,7 @@ export default function KelolaBalita({ sesi }) {
                 id="s-lahir"
                 type="date"
                 max={tanggalHariIni()}
+                min={batasTanggalLahir()}
                 value={sunting.tanggal_lahir}
                 onChange={(e) => setSunting({ ...sunting, tanggal_lahir: e.target.value })}
                 required

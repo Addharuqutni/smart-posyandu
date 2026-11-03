@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { simpanBalita } from '../penyimpanan/balita.js'
-import { tanggalHariIni } from '../logika/waktu.js'
+import { batasTanggalLahir, tanggalHariIni } from '../logika/waktu.js'
 import Ikon from './Ikon.jsx'
 
 const AWAL = {
@@ -123,10 +123,12 @@ export default function BalitaBaru({ sesi, setelahSimpan, kembali }) {
               id="lahir"
               type="date"
               max={tanggalHariIni()}
+              min={batasTanggalLahir()}
               value={isi.tanggal_lahir}
               onChange={(e) => ubah('tanggal_lahir', e.target.value)}
               required
             />
+            <p className="petunjuk">Usia balita maksimal 7 tahun (84 bulan).</p>
           </div>
 
           <div className="bidang">

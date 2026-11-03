@@ -1,6 +1,5 @@
 -- =============================================================
 -- Skema basis data — Aplikasi Smart Posyandu
--- Pilot 1 Posyandu, Desa Ketenger, Kabupaten Banyumas
 --
 -- Sumber kebenaran untuk struktur tabel. Perubahan skema harus
 -- dilakukan di berkas ini, lalu diterapkan ke basis data.
@@ -133,7 +132,7 @@ CREATE TABLE IF NOT EXISTS kunjungan (
     posyandu_id         UUID        NOT NULL REFERENCES posyandu(id),
     kader_id            UUID        REFERENCES kader(id),
     tanggal_kunjungan   DATE        NOT NULL,
-    usia_bulan          INTEGER     NOT NULL CHECK (usia_bulan BETWEEN 0 AND 60),
+    usia_bulan          INTEGER     NOT NULL CHECK (usia_bulan BETWEEN 0 AND 84),
     status_kehadiran    TEXT        NOT NULL DEFAULT 'hadir'
                                     CHECK (status_kehadiran IN ('hadir', 'tidak_hadir', 'dirujuk')),
     catatan             TEXT,
@@ -287,7 +286,7 @@ END $$;
 
 CREATE TABLE IF NOT EXISTS acuan_berat_umur (
     id              UUID PRIMARY KEY,
-    usia_bulan      INTEGER     NOT NULL CHECK (usia_bulan BETWEEN 0 AND 60),
+    usia_bulan      INTEGER     NOT NULL CHECK (usia_bulan BETWEEN 0 AND 84),
     jenis_kelamin   TEXT        NOT NULL CHECK (jenis_kelamin IN ('laki-laki', 'perempuan')),
     median_berat_kg NUMERIC(5, 3) NOT NULL,
     sumber          TEXT        NOT NULL,          -- misal 'Kemenkes 2020'

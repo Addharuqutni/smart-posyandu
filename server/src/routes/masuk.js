@@ -61,7 +61,7 @@ router.post('/masuk', async (minta, balas) => {
   }
 
   const baris = await satu(
-    `SELECT id, nama_lengkap, peran, posyandu_id, hash_kata_sandi
+    `SELECT id, nama_pengguna, nama_lengkap, peran, posyandu_id, hash_kata_sandi
      FROM pengguna
      WHERE nama_pengguna = $1 AND dihapus_pada IS NULL AND aktif = TRUE`,
     [nama_pengguna],
@@ -96,6 +96,7 @@ router.post('/masuk', async (minta, balas) => {
   balas.json({
     pengguna: {
       id: baris.id,
+      nama_pengguna: baris.nama_pengguna,
       nama_lengkap: baris.nama_lengkap,
       peran: baris.peran,
       posyandu_id: baris.posyandu_id ?? null,

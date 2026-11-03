@@ -18,7 +18,7 @@ ekspor PDF, modul imunisasi, dan ibu hamil.
 | Basis data | PostgreSQL 14+; `database/schema.sql` sumber kebenaran. |
 | Uji | Server: `node --test`. Klien: Vitest. |
 
-**Kondisi lapangan yang menentukan segalanya:** sinyal 4G tidak bisa dijamin.
+**Kondisi lapangan yang menentukan segalanya:** koneksi tidak selalu tersedia.
 Setiap fungsi kader harus berjalan tanpa server: bukan pesan error ramah, melainkan
 benar-benar menyimpan data. |
 

@@ -1,5 +1,5 @@
 import { db } from './db.js'
-import { idBaru, sekarangIso, tanggalHariIni } from '../logika/waktu.js'
+import { idBaru, sekarangIso, tanggalHariIni, usiaDiterima } from '../logika/waktu.js'
 import { enkripsiNik } from '../logika/nik.js'
 
 /**
@@ -20,8 +20,8 @@ export async function simpanBalita({
   if (!nama_lengkap?.trim()) throw new Error('Nama balita wajib diisi.')
   if (!['laki-laki', 'perempuan'].includes(jenis_kelamin)) throw new Error('Jenis kelamin wajib dipilih.')
   if (!tanggal_lahir) throw new Error('Tanggal lahir wajib diisi.')
-  if (tanggal_lahir > tanggalHariIni()) {
-    throw new Error('Tanggal lahir tidak boleh di masa depan.')
+  if (!usiaDiterima(tanggal_lahir, tanggalHariIni())) {
+    throw new Error('Usia balita harus antara 0 hari dan 7 tahun (84 bulan).')
   }
 
   const sekarang = sekarangIso()

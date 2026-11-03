@@ -2,7 +2,7 @@
 
 const express = require('express')
 const { satu, banyak, kueri } = require('../db/pool')
-const { butuhPeran } = require('../middleware/auth')
+const { butuhLogin, butuhPeran } = require('../middleware/auth')
 const { hashSandi } = require('../domain/keamanan')
 
 const router = express.Router()
@@ -90,6 +90,78 @@ router.patch('/pengguna/:id', Admin, async (minta, balas) => {
   }
 
   balas.json(hasil)
+})
+
+
+// --- Perbarui data akun ----------------------------------------------------
+// Pemakai biasa hanya boleh mengubah akunnya sendiri; admin desa boleh
+// mengubah akun mana pun. Peran, status aktif, dan kata sandi TIDAK lewat
+// sini (tetap di PATCH /pengguna/:id yang khusus admin).
+
+const POLA_NAMA_PENGGUNA = /^[a-z0-9_.-]{3,50}$/
+
+function teksNama(nilai) {
+  if (typeof nilai !== 'string') return null
+  const bersih = nilai.trim()
+  return bersih.length >= 1 && bersih.length <= 120 ? bersih : null
+}
+
+router.patch('/akun-saya', butuhLogin, async (minta, balas) => {
+  const b = minta.body || {}
+  const id = b.id === undefined ? minta.pengguna.id : b.id
+  if (minta.pengguna.peran !== 'admin_desa' && String(id) !== String(minta.pengguna.id)) {
+    return balas.status(403).json({ detail: 'tidak_diizinkan' })
+  }
+  if (typeof id !== 'string' || !/^[0-9a-f-]{36}$/i.test(id)) {
+    return balas.status(422).json({ detail: 'id_tidak_sah' })
+  }
+
+  const nilai = {}
+  if (b.nama_lengkap !== undefined) {
+    nilai.nama_lengkap = teksNama(b.nama_lengkap)
+    if (!nilai.nama_lengkap) return balas.status(422).json({ detail: 'nama_tidak_sah' })
+  }
+  if (b.nama_pengguna !== undefined) {
+    if (typeof b.nama_pengguna !== 'string' || !POLA_NAMA_PENGGUNA.test(b.nama_pengguna)) {
+      return balas.status(422).json({ detail: 'nama_pengguna_tidak_sah' })
+    }
+    nilai.nama_pengguna = b.nama_pengguna
+  }
+  if (!Object.keys(nilai).length) {
+    return balas.status(422).json({ detail: 'tidak_ada_yang_diubah' })
+  }
+
+  const set = Object.keys(nilai).map((k, i) => `${k} = $${i + 1}`).join(', ')
+  try {
+    const lama = await satu(
+      `SELECT nama_pengguna, nama_lengkap FROM pengguna WHERE id = $1 AND dihapus_pada IS NULL`,
+      [id],
+    )
+    if (!lama) return balas.status(404).json({ detail: 'pengguna_tidak_ditemukan' })
+    const baris = await satu(
+      `UPDATE pengguna SET ${set}, diperbarui_pada = now()
+       WHERE id = $${Object.keys(nilai).length + 1} AND dihapus_pada IS NULL
+       RETURNING id, nama_pengguna, nama_lengkap, peran, posyandu_id, aktif`,
+      [...Object.values(nilai), id],
+    )
+    if (!baris) return balas.status(404).json({ detail: 'pengguna_tidak_ditemukan' })
+    await kueri(
+      `INSERT INTO log_audit
+         (id, pengguna_id, id_perangkat, nama_tabel, id_baris, aksi,
+          nilai_lama, nilai_baru, terjadi_pada, diterima_pada)
+       VALUES (gen_random_uuid(), $1, 'server', 'pengguna', $2, 'ubah',
+               $3, $4, now(), now())`,
+      [minta.pengguna.id, id,
+        JSON.stringify(lama),
+        JSON.stringify({ nama_pengguna: baris.nama_pengguna, nama_lengkap: baris.nama_lengkap })],
+    )
+    balas.json(baris)
+  } catch (salah) {
+    if (salah.code === '23505') {
+      return balas.status(409).json({ detail: 'nama_pengguna_sudah_dipakai' })
+    }
+    throw salah
+  }
 })
 
 module.exports = router

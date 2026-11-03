@@ -52,58 +52,51 @@ export default function Masuk({ saatMasuk }) {
     <main className="masuk">
       <section className="masuk-brand" aria-label="Tentang aplikasi">
         <div className="masuk-merek">
-          <span className="merek-ikon">
-            <Ikon nama="posyandu" ukuran={24} />
-          </span>
+          <img className="masuk-logo" src="/logo-192.png" alt="" width="44" height="44" />
           <span>Smart Posyandu</span>
         </div>
 
         <div className="masuk-judul">
-          <h1>Catatan tumbuh balita, tetap utuh tanpa sinyal.</h1>
+          <span className="masuk-eyebrow">Sistem pencatatan posyandu</span>
+          <h1>Data tumbuh kembang balita, rapi dan terpercaya.</h1>
           <p>
-            Pencatatan kunjungan Posyandu Desa Ketenger. Data tersimpan di tablet lebih dulu,
-            lalu terkirim sendiri saat jaringan tersedia.
+            Pencatatan kunjungan, pengukuran, dan pemantauan gizi balita dalam satu
+            tempat yang mudah dipakai kader di lapangan.
           </p>
         </div>
 
         <ul className="fitur">
           <li>
             <span className="fitur-ikon">
-              <Ikon nama="luring" ukuran={16} />
-            </span>
-            Tetap bisa mencatat saat 4G hilang di lereng Slamet.
-          </li>
-          <li>
-            <span className="fitur-ikon">
               <Ikon nama="cek" ukuran={16} />
             </span>
-            Pemeriksaan rentang nilai mencegah salah ukur tersimpan diam-diam.
+            Fitur pemeriksaan rentang nilai secara otomatis mencegah tersimpannya kesalahan hasil pengukuran tanpa terdeteksi.
           </li>
           <li>
             <span className="fitur-ikon">
               <Ikon nama="akun" ukuran={16} />
             </span>
-            Petugas kesehatan memvalidasi; setiap perubahan tercatat.
+            Proses validasi dilakukan oleh tenaga kesehatan dan setiap riwayat perubahan data tercatat secara sistematis.
           </li>
         </ul>
 
-        <p className="samar pilot-catatan">
-          Pilot 1 Posyandu · Kec. Baturraden, Kab. Banyumas
-        </p>
+        <div className="masuk-sorotan" aria-hidden="true">
+          <span className="masuk-sorotan-angka">0–7</span>
+          <span className="masuk-sorotan-teks">tahun<br />pemantauan balita</span>
+        </div>
       </section>
 
       <section className="masuk-isi">
         <div className="masuk-kartu">
-          <h2>Masuk ke tablet</h2>
-          <p>Gunakan akun yang diberikan admin desa.</p>
+          <h2>Masuk</h2>
+          <p>Silakan masukan sesuai dengan akun yang diberikan oleh admin desa</p>
 
           <form className="kartu" onSubmit={kirim} aria-busy={mengirim}>
             {luring && (
               <div className="pesan peringatan" role="status">
                 <Ikon nama="luring" ukuran={18} />
                 <span>
-                  Tablet sedang luring. Masuk butuh koneksi; pencatatan setelah masuk tetap bisa
-                  luring.
+                  Tablet sedang luring. Masuk membutuhkan koneksi ke server.
                 </span>
               </div>
             )}
@@ -155,7 +148,6 @@ export default function Masuk({ saatMasuk }) {
                 <Ikon nama={tampilSandi ? 'mata-tutup' : 'mata'} ukuran={20} />
               </button>
             </div>
-
 
             <button
               type="submit"

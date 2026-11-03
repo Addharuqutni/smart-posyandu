@@ -6,6 +6,7 @@ const { butuhLogin, butuhPeran } = require('../middleware/auth')
 const { siapkan } = require('../domain/tabel')
 const { ubah, hapus, sisip } = require('../domain/repositori')
 const { hitung } = require('../domain/status_gizi')
+const { lahirDiterima } = require('../domain/usia')
 
 const router = express.Router()
 
@@ -150,7 +151,7 @@ router.post('/balita', Admin, async (minta, balas) => {
   const posyanduId = typeof b.posyandu_id === 'string' && POLA_UUID.test(b.posyandu_id)
     ? b.posyandu_id : null
   const nama = teksNama(b.nama_lengkap)
-  const tanggal = typeof b.tanggal_lahir === 'string' && POLA_TANGGAL.test(b.tanggal_lahir)
+  const tanggal = typeof b.tanggal_lahir === 'string' && POLA_TANGGAL.test(b.tanggal_lahir) && lahirDiterima(b.tanggal_lahir)
     ? b.tanggal_lahir : null
   const kelamin = ['laki-laki', 'perempuan'].includes(b.jenis_kelamin) ? b.jenis_kelamin : null
   const nik = b.nik == null || b.nik === '' ? null
@@ -187,6 +188,11 @@ router.patch('/balita/:id', Admin, async (minta, balas) => {
   const nilai = siapkan('balita', minta.body)
   if (Object.keys(nilai).length === 0) {
     return balas.status(422).json({ detail: 'tidak_ada_yang_diubah' })
+  }
+  if (nilai.tanggal_lahir !== undefined) {
+    if (typeof nilai.tanggal_lahir !== 'string' || !lahirDiterima(nilai.tanggal_lahir)) {
+      return balas.status(422).json({ detail: 'usia_di_luar_rentang' })
+    }
   }
   if (nilai.nik) nilai.nik = require('../domain/rahasia').enkripsi(nilai.nik)
   const baris = await ubah('balita', minta.params.id, nilai, {

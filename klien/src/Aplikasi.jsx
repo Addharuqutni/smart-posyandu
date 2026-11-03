@@ -31,9 +31,11 @@ import Validasi from './antarmuka/Validasi.jsx'
 import Pengguna from './antarmuka/Pengguna.jsx'
 import RiwayatMasuk from './antarmuka/RiwayatMasuk.jsx'
 import KelolaBalita from './antarmuka/KelolaBalita.jsx'
+import KelolaPosyandu from './antarmuka/KelolaPosyandu.jsx'
+import SuntingAkun from './antarmuka/SuntingAkun.jsx'
+import { daftarPengguna, keluar as cabutSesiApi, saya } from './jaringan/api.js'
 import { bacaPengguna, hapusSesi, idPerangkat, simpanPengguna } from './penyimpanan/sesi.js'
 import { db } from './penyimpanan/db.js'
-import { keluar as cabutSesiApi, saya } from './jaringan/api.js'
 import { jalankanSinkron, ambilPenanda } from './logika/sinkron.js'
 const KUNCI_SIAP = 'sudah_disiapkan'
 
@@ -45,6 +47,8 @@ const IKON_NAV = {
   laporan: 'rekap',
   pengguna: 'akun',
   balita: 'anak',
+  posyandu: 'posyandu',
+  akun: 'akun',
 }
 /** Layar pembuka menurut peran. */
 function layarAwal(peran) {
@@ -68,6 +72,7 @@ export default function Aplikasi() {
   const [siap, setSiap] = useState(false)
   const [keluarProses, setKeluarProses] = useState(false)
   const [versiData, setVersiData] = useState(0)
+  const [daftarAkun, setDaftarAkun] = useState([])
   const sedangSinkron = useRef(false)
 
   const perbaruiAntrean = useCallback(async (pemilikId) => {
@@ -189,6 +194,28 @@ export default function Aplikasi() {
     setLayar(layarAwal(pengguna.peran))
   }
 
+  async function muatDaftarAkun() {
+    if (sesi?.pengguna.peran !== 'admin_desa') return
+    try {
+      setDaftarAkun((await daftarPengguna()).pengguna)
+    } catch {
+      setDaftarAkun([])
+    }
+  }
+
+  async function setelahUbahAkun(pengguna) {
+    if (pengguna) {
+      simpanPengguna(pengguna)
+      setSesi((lama) => ({ ...lama, pengguna }))
+    }
+    await muatDaftarAkun()
+  }
+
+  useEffect(() => {
+    if (layar.nama === 'akun') muatDaftarAkun()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [layar.nama, sesi?.pengguna.peran])
+
   if (!sesi) {
     return <Masuk saatMasuk={mulai} />
   }
@@ -223,8 +250,10 @@ export default function Aplikasi() {
   if (peran === 'admin_desa') {
     navigasi.push({ nama: 'balita', label: 'Balita' })
     navigasi.push({ nama: 'laporan', label: 'Rekap' })
-    navigasi.push({ nama: 'pengguna', label: 'Akun' })
+    navigasi.push({ nama: 'posyandu', label: 'Posyandu' })
+    navigasi.push({ nama: 'pengguna', label: 'Kelola Akun' })
   }
+  navigasi.push({ nama: 'akun', label: 'Akun Saya' })
   const perluSiap = kader && !siap
 
   let isi
@@ -293,6 +322,8 @@ export default function Aplikasi() {
     isi = <Validasi sesi={sesi} />
   } else if (layar.nama === 'balita') {
     isi = <KelolaBalita sesi={sesi} />
+  } else if (layar.nama === 'posyandu') {
+    isi = <KelolaPosyandu />
   } else if (layar.nama === 'laporan') {
     isi = (
       <Suspense fallback={<LayarMemuat />}>
@@ -303,6 +334,23 @@ export default function Aplikasi() {
     isi = <Pengguna sesi={sesi} />
   } else if (layar.nama === 'sesi') {
     isi = <RiwayatMasuk sesi={sesi} />
+  } else if (layar.nama === 'akun') {
+    isi = (
+      <main className="layar" id="isi-utama">
+        <div className="kepala-layar">
+          <div>
+            <h1>Akun Saya</h1>
+            <p>Perbarui nama dan username akun.</p>
+          </div>
+        </div>
+        <SuntingAkun
+          key={sesi.pengguna.id}
+          sesi={sesi}
+          daftar={daftarAkun}
+          setelahSimpan={setelahUbahAkun}
+        />
+      </main>
+    )
   } else {
     isi = (
       <Beranda
@@ -332,9 +380,7 @@ export default function Aplikasi() {
       <header className="bilah-atas">
         <div className="bilah-isi">
           <div className="merek">
-            <span className="merek-ikon">
-              <Ikon nama="posyandu" ukuran={22} />
-            </span>
+            <img className="merek-logo" src="/logo-192.png" alt="" width="36" height="36" />
             <span className="merek-teks">
               <span className="merek-nama">Smart Posyandu</span>
               <span className="merek-sub" title={namaPosyandu}>

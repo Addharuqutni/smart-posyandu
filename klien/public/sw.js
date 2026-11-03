@@ -1,8 +1,8 @@
 // Service worker sederhana: simpan kerangka aplikasi agar bisa dibuka luring.
 // Data tetap di IndexedDB; berkas ini tidak pernah menyentuh /sinkron.
 // ponytail: tanpa Workbox. Bila aset bertambah rumit, pertimbangkan vite-plugin-pwa.
-const CACHE = 'posyandu-v1'
-const KERANGKA = ['/', '/index.html', '/manifest.webmanifest', '/ikon.svg']
+const CACHE = 'posyandu-v2'
+const KERANGKA = ['/', '/index.html', '/manifest.webmanifest', '/logo-32.png', '/logo-192.png']
 
 self.addEventListener('install', (peristiwa) => {
   peristiwa.waitUntil(caches.open(CACHE).then((c) => c.addAll(KERANGKA)))
@@ -22,8 +22,8 @@ self.addEventListener('activate', (peristiwa) => {
 // header saja tidak cukup: permintaan GET ke API otomatis membawa cookie. Bila
 // di-cache, data balita tersimpan di CacheStorage browser. Karena itu seluruh
 // path API ditolak dari cache; yang di-cache hanya kerangka aplikasi & asetnya.
-const API = /^\/(masuk|keluar|saya|sinkron|balita|kunjungan|validasi|pengguna|sesi|rekap|ekspor\.csv|kualitas|cadangan|sehat|waktu)(\/|$|\?)/
-const ASET = /^\/(assets\/|index\.html$|manifest\.webmanifest$|ikon\.svg$)/
+const API = /^\/(masuk|keluar|saya|akun-saya|sinkron|balita|kunjungan|validasi|posyandu|pengguna|sesi|rekap|ekspor\.csv|kualitas|cadangan|sehat|waktu)(\/|$|\?)/
+const ASET = /^\/(assets\/|index\.html$|manifest\.webmanifest$|logo-(32|192|512)\.png$)/
 
 self.addEventListener('fetch', (peristiwa) => {
   const permintaan = peristiwa.request

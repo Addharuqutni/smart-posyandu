@@ -149,6 +149,22 @@ export function daftarPosyandu() {
   return minta('/posyandu')
 }
 
+export function daftarSemuaPosyandu() {
+  return minta('/posyandu/semua')
+}
+
+export function buatPosyandu(muatan) {
+  return minta('/posyandu', { metode: 'POST', isi: muatan })
+}
+
+export function ubahPosyandu(id, muatan) {
+  return minta(`/posyandu/${id}`, { metode: 'PATCH', isi: muatan })
+}
+
+export function hapusPosyandu(id) {
+  return minta(`/posyandu/${id}`, { metode: 'DELETE' })
+}
+
 export function buatBalita(muatan) {
   return minta('/balita', { metode: 'POST', isi: muatan })
 }
@@ -259,4 +275,9 @@ export async function unduhEkspor(bulan) {
   }
   if (!jawab.ok) throw new KesalahanApi(jawab.status, null)
   return jawab.blob()
+}
+
+/** Perbarui data akun sendiri; admin desa boleh menyertakan id akun lain. */
+export function perbaruiAkun(muatan) {
+  return minta('/akun-saya', { metode: 'PATCH', isi: muatan })
 }

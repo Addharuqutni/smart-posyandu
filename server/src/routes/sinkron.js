@@ -11,6 +11,7 @@ const { bacaKursor, tulisKursor } = require('../domain/kursor')
 const { ambilMentah, sisip, ubah, hapus } = require('../domain/repositori')
 const { bangunKueriHalaman } = require('../domain/halaman-sinkron')
 const { butuhLogin } = require('../middleware/auth')
+const { lahirDiterima, kunjunganDiterima } = require('../domain/usia')
 
 const router = express.Router()
 
@@ -96,6 +97,29 @@ router.post('/sinkron', butuhLogin, async (minta, balas) => {
     }
 
     const tersimpan = await ambilMentah(namaTabel, idBaris)
+
+    // Batas usia balita 0 hari s.d. 7 tahun. Baris lama (mis. sudah tidak
+    // aktif) tetap boleh disunting/dihapus agar riwayatnya tidak macet di
+    // antrean sinkron; yang dilarang adalah memasukkan usia baru yang salah.
+    const tanggalServer = sekarang.toISOString().slice(0, 10)
+    const lahirTersimpan = (t) => typeof t === 'string'
+      ? t.slice(0, 10) : t?.toISOString?.().slice(0, 10)
+    if (namaTabel === 'balita') {
+      const lahir = siapkan(namaTabel, muatan).tanggal_lahir ?? lahirTersimpan(tersimpan?.tanggal_lahir)
+      if (!lahir || (muatan.tanggal_lahir !== undefined && !lahirDiterima(lahir, tanggalServer))) {
+        ditolak.push({ id_baris: idBaris, alasan: 'usia_di_luar_rentang' })
+        continue
+      }
+    }
+    if (namaTabel === 'kunjungan') {
+      const b = await satu(`SELECT tanggal_lahir FROM balita WHERE id = $1`, [muatan.balita_id])
+      const lahir = lahirTersimpan(b?.tanggal_lahir)
+      const tanggal = lahirTersimpan(muatan.tanggal_kunjungan)
+      if (!lahir || !kunjunganDiterima(lahir, tanggal)) {
+        ditolak.push({ id_baris: idBaris, alasan: 'usia_di_luar_rentang' })
+        continue
+      }
+    }
 
     // Otorisasi kepemilikan: kader hanya boleh menulis ke Posyandunya sendiri.
     // Tanpa ini, kader bisa menitipkan data ke Posyandu lain (bocor lintas unit).

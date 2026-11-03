@@ -168,3 +168,21 @@ describe('balita baru', () => {
     ])
   })
 })
+
+describe('batas usia balita', () => {
+  it('menolak balita yang lahir lebih dari 7 tahun lalu', async () => {
+    const lama = new Date()
+    lama.setFullYear(lama.getFullYear() - 8)
+    const tanggal_lahir = `${lama.getFullYear()}-${String(lama.getMonth() + 1).padStart(2, '0')}-${String(lama.getDate()).padStart(2, '0')}`
+    await expect(
+      simpanBalita({
+        idPerangkat: 'tablet-uji',
+        nama_lengkap: 'Terlalu Tua',
+        jenis_kelamin: 'laki-laki',
+        tanggal_lahir,
+        wali: { posyandu_id: 'p1', nama_lengkap: 'Siti', hubungan: 'ibu_kandung' },
+      }),
+    ).rejects.toThrow('Usia balita harus antara 0 hari dan 7 tahun')
+    expect(await db.balita.count()).toBe(1) // hanya BALITA milik beforeEach
+  })
+})

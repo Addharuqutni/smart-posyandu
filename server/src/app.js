@@ -154,6 +154,7 @@ function buatAplikasi() {
 
   aplikasi.use(require('./routes/masuk'))
   aplikasi.use(require('./routes/sinkron'))
+  aplikasi.use(require('./routes/posyandu'))
   aplikasi.use(require('./routes/data'))
   aplikasi.use(require('./routes/pengguna'))
   aplikasi.use(require('./routes/sesi'))

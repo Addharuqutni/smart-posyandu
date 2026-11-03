@@ -1,5 +1,5 @@
 import { db } from '../penyimpanan/db.js'
-import { idBaru, sekarangIso, usiaBulan } from '../logika/waktu.js'
+import { idBaru, sekarangIso, usiaBulan, batasKunjungan } from '../logika/waktu.js'
 import { LABEL, periksaRentang } from '../logika/rentang.js'
 
 /**
@@ -37,7 +37,11 @@ export async function simpanKunjungan({
   const kunjunganId = idBaru()
   const pengukuranId = idBaru()
   const usia = usiaBulan(balita.tanggal_lahir, tanggal)
-  if (usia < 0) throw new Error('Tanggal kunjungan sebelum tanggal lahir.')
+  if (!Number.isFinite(usia) || usia < 0) throw new Error('Tanggal kunjungan sebelum tanggal lahir.')
+  const batas = batasKunjungan(balita.tanggal_lahir)
+  if (!batas || tanggal > batas) {
+    throw new Error('Usia balita sudah melewati 7 tahun (84 bulan).')
+  }
 
   const kunjungan = {
     id: kunjunganId,
