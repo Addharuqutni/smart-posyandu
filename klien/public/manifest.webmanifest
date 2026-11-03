@@ -1,0 +1,17 @@
+{
+  "name": "Smart Posyandu",
+  "short_name": "Posyandu",
+  "lang": "id",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f6f8fa",
+  "theme_color": "#1f4e79",
+  "icons": [
+    {
+      "src": "/ikon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

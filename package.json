@@ -1,0 +1,32 @@
+{
+  "name": "smart-posyandu",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Aplikasi pencatatan Posyandu balita, pilot Desa Ketenger",
+  "scripts": {
+    "dev": "node alat.js dev",
+    "dev:klien": "npm run dev --prefix klien",
+    "dev:server": "npm run dev --prefix server",
+    "bangun": "cd klien && npm run bangun",
+    "uji": "npm run uji:klien && npm run uji:server",
+    "uji:klien": "cd klien && npm run uji",
+    "uji:server": "cd server && npm test",
+    "migrasi": "cd server && npm run migrate",
+    "demo": "cd server && npm run demo",
+    "demo:hapus": "cd server && npm run demo:hapus",
+    "siapkan": "cd klien && npm install && cd ../server && npm install",
+    "pratinjau": "cd klien && npm run pratinjau -- --host 127.0.0.1",
+    "cadangan": "cd server && npm run cadangan",
+    "pulih": "cd server && npm run pulih --",
+    "start": "cd server && npm start",
+    "buat-admin": "cd server && npm run buat-admin --",
+    "siap:produksi": "cd klien && npm run bangun && cd ../server && npm run migrate",
+    "periksa": "node alat.js periksa-bangun",
+    "siap:vps": "node alat.js siap-vps",
+    "siap:vps:periksa": "node alat.js siap-vps --periksa",
+    "pasang:https": "node alat.js pasang-https"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

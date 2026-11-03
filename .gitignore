@@ -1,0 +1,53 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+*.egg-info/
+
+# Node / Bun
+node_modules/
+dist/
+*.tsbuildinfo
+
+# Coretan/uji yang dibuat saat mencoba (jangan ikut ke produksi)
+tmp/
+docs/AGENTS.md
+
+# Lingkungan (berkas .env TUNGGAL di root; .env.contoh tetap ikut ke repositori)
+.env
+.env.local
+.env.*.local
+!.env.contoh
+
+# Cadangan basis data (bisa besar, jangan masuk repositori)
+*.dump
+*.sql.gz
+backups/
+
+# Sistem
+.DS_Store
+Thumbs.db
+
+# Hasil bangun dokumen (sementara)
+~$*.docx
+
+# Basis data dan cadangan (kini di root: cadangan/) 
+dev.db
+dev.db-*
+cadangan/
+cadangan-dev/
+
+# Backend Python lama (arsip, tidak dijalankan lagi)
+legacy/
+!legacy/README.md
+
+# Status alat
+.omp/
+.uizze/
+
+# Panduan agen AI (dokumen internal, tidak ikut ke produksi)
+AGENTS.md
+**/AGENTS.md
+
