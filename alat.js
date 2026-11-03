@@ -175,7 +175,7 @@ server {
     server_tokens off;
 
     # Hanya tantangan ACME yang dilayani di port 80. Sisanya dialihkan ke HTTPS.
-    location /.well-known/acme-challenge/ {
+    location ^~ /.well-known/acme-challenge/ {
         root /var/www/posyandu/klien/dist;
         default_type text/plain;
     }
@@ -323,7 +323,7 @@ server {
     server_tokens off;
 
     # Hanya tantangan ACME di port 80; sisanya ke HTTPS.
-    location /.well-known/acme-challenge/ {
+    location ^~ /.well-known/acme-challenge/ {
         root /var/www/posyandu/klien/dist;
         default_type text/plain;
     }
