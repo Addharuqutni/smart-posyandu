@@ -142,11 +142,11 @@ export default function KelolaPosyandu() {
   }
 
   return (
-    <main className="layar" id="isi-utama">
-      <div className="kepala-layar">
+    <main className="mx-auto min-h-[calc(100dvh_-_4rem)] max-w-lebar px-4 pt-4 pb-[calc(6.2rem_+_env(safe-area-inset-bottom))] max-sempit:px-3 max-sempit:pb-[calc(6.4rem_+_env(safe-area-inset-bottom))]" id="isi-utama">
+      <div className="kepala-layar mb-4 flex items-start justify-between gap-4">
         <div>
           <h1>Kelola Posyandu</h1>
-          <p>Tambah, sunting, dan hapus data Posyandu di desa.</p>
+          <p className="mt-1 mb-0 text-isi text-teks-redup">Tambah, sunting, dan hapus data Posyandu di desa.</p>
         </div>
         <button type="button" className="sekunder" onClick={muat}>
           <Ikon nama="sinkron" ukuran={18} />
@@ -155,23 +155,23 @@ export default function KelolaPosyandu() {
       </div>
 
       {galat && (
-        <div className="pesan galat" role="alert">
+        <div className="mb-3 flex items-start gap-2 rounded-kecil border px-3 py-3 text-isi font-semibold leading-snug border-merah-100 bg-merah-100 text-merah-800" role="alert">
           <Ikon nama="peringatan" ukuran={19} />
           <span>{galat}</span>
         </div>
       )}
       {pesan && (
-        <div className="pesan sukses" role="status">
+        <div className="mb-3 flex items-start gap-2 rounded-kecil border px-3 py-3 text-isi font-semibold leading-snug border-hijau-100 bg-hijau-100 text-hijau-800" role="status">
           <Ikon nama="cek" ukuran={19} />
           <span>{pesan}</span>
         </div>
       )}
 
-      <form className="kartu kartu-akun" onSubmit={simpan}>
+      <form className="kartu p-5 max-sempit:p-4" onSubmit={simpan}>
         <div className="kartu-judul">
-          <h3>Posyandu baru</h3>
+          <h2>Posyandu baru</h2>
         </div>
-        <div className="grid2 grid-akun">
+        <div className="grid gap-4 [grid-template-columns:repeat(2,minmax(0,1fr))] max-sempit:grid-cols-1 max-sempit:gap-3">
           <div className="bidang">
             <label htmlFor="ps-nama">
               <span>Nama Posyandu</span>
@@ -231,7 +231,7 @@ export default function KelolaPosyandu() {
             />
           </div>
           <div className="bidang">
-            <label className="baris-rapat" htmlFor="ps-aktif">
+            <label className="flex flex-wrap items-center gap-2" htmlFor="ps-aktif">
               <input
                 id="ps-aktif"
                 type="checkbox"
@@ -244,7 +244,7 @@ export default function KelolaPosyandu() {
             <p className="petunjuk">Posyandu nonaktif tidak muncul di pilihan kader.</p>
           </div>
         </div>
-        <div className="aksi-akun">
+        <div className="mt-4 flex justify-end border-t border-garis pt-4 max-sempit:[&>button]:w-full">
           <button type="submit" disabled={menyimpan}>
             <Ikon nama="tambah" ukuran={18} />
             {menyimpan ? 'Menyimpan…' : 'Tambah Posyandu'}
@@ -258,10 +258,10 @@ export default function KelolaPosyandu() {
           subjudul={sunting.nama}
           onTutup={() => setSunting(null)}
         >
-          <form onSubmit={simpanSunting} className="modal-isi">
-            <div className="seksi-grup">
-              <div className="seksi-grup-judul">Identitas & Wilayah</div>
-              <div className="grid2">
+          <form onSubmit={simpanSunting} className="flex flex-col gap-5 overflow-y-auto px-5 py-5 max-dialog:gap-4 max-dialog:p-4">
+            <div className="flex flex-col gap-3">
+              <div className="border-b border-garis pb-1.5 text-2xs font-bold uppercase tracking-[0.05em] text-aksen-biru-ink">Identitas & Wilayah</div>
+              <div className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(190px,1fr))]">
                 <div className="bidang">
                   <label htmlFor="modal-ps-nama">
                     <span>Nama Posyandu</span>
@@ -329,7 +329,7 @@ export default function KelolaPosyandu() {
               </div>
             </div>
 
-            <div className="modal-kaki">
+            <div className="flex items-center justify-end gap-2.5 border-t border-garis bg-biru-50 px-5 py-4 max-dialog:flex-col-reverse max-dialog:gap-2 max-dialog:p-3 max-dialog:[&>button]:w-full">
               <button type="button" className="sekunder" onClick={() => setSunting(null)}>
                 Batal
               </button>
@@ -344,8 +344,8 @@ export default function KelolaPosyandu() {
 
       <div className="kartu">
         <div className="kartu-judul">
-          <h3>Daftar Posyandu</h3>
-          <span className="samar">{daftar ? `${daftar.length} Posyandu` : 'Memuat…'}</span>
+          <h2>Daftar Posyandu</h2>
+          <span className="text-padat text-teks-samar">{daftar ? `${daftar.length} Posyandu` : 'Memuat…'}</span>
         </div>
         <div className="tabel-bungkus">
           <table className="tabel tabel-kartu tabel-aksi">
@@ -361,7 +361,7 @@ export default function KelolaPosyandu() {
               {(daftar ?? []).map((p) => (
                 <tr key={p.id}>
                   <td data-label="Nama"><strong>{p.nama}</strong></td>
-                  <td className="samar" data-label="Wilayah">
+                  <td className="text-padat text-teks-samar" data-label="Wilayah">
                     {[p.dusun, p.desa, p.kecamatan, p.kabupaten].filter(Boolean).join(', ') || '—'}
                   </td>
                   <td data-label="Status">
@@ -374,7 +374,7 @@ export default function KelolaPosyandu() {
                       Sunting
                     </button>
                     {konfirm === p.id ? (
-                      <span className="baris-rapat spasi-kiri-kecil">
+                      <span className="ml-1.5 flex flex-wrap items-center gap-2">
                         <button type="button" className="bahaya" onClick={() => hapus(p)}>
                           Ya, hapus
                         </button>
@@ -385,7 +385,7 @@ export default function KelolaPosyandu() {
                     ) : (
                       <button
                         type="button"
-                        className="bahaya spasi-kiri-kecil"
+                        className="bahaya ml-1.5"
                         onClick={() => setKonfirm(p.id)}
                       >
                         Hapus
@@ -403,7 +403,7 @@ export default function KelolaPosyandu() {
             </tbody>
           </table>
         </div>
-        <p className="samar teks-bawah">
+        <p className="mb-0 text-padat text-teks-samar">
           Posyandu yang masih memiliki data balita, kunjungan, kader, atau akun tidak bisa dihapus.
           Gunakan status nonaktif bila sudah tidak dipakai.
         </p>

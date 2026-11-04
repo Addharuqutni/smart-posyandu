@@ -149,11 +149,11 @@ export default function Pengguna({ sesi }) {
   }
 
   return (
-    <main className="layar" id="isi-utama">
-      <div className="kepala-layar">
+    <main className="mx-auto min-h-[calc(100dvh_-_4rem)] max-w-lebar px-4 pt-4 pb-[calc(6.2rem_+_env(safe-area-inset-bottom))] max-sempit:px-3 max-sempit:pb-[calc(6.4rem_+_env(safe-area-inset-bottom))]" id="isi-utama">
+      <div className="kepala-layar mb-4 flex items-start justify-between gap-4">
         <div>
           <h1>Kelola akun</h1>
-          <p>Akun kader, petugas kesehatan, dan admin desa.</p>
+          <p className="mt-1 mb-0 text-isi text-teks-redup">Akun kader, petugas kesehatan, dan admin desa.</p>
         </div>
         <button type="button" className="sekunder" onClick={muat}>
           <Ikon nama="sinkron" ukuran={18} />
@@ -162,30 +162,30 @@ export default function Pengguna({ sesi }) {
       </div>
 
       {galat && (
-        <div className="pesan galat" role="alert">
+        <div className="mb-3 flex items-start gap-2 rounded-kecil border px-3 py-3 text-isi font-semibold leading-snug border-merah-100 bg-merah-100 text-merah-800" role="alert">
           <Ikon nama="peringatan" ukuran={19} />
           <span>{galat}</span>
         </div>
       )}
       {pesan && (
-        <div className="pesan sukses" role="status">
+        <div className="mb-3 flex items-start gap-2 rounded-kecil border px-3 py-3 text-isi font-semibold leading-snug border-hijau-100 bg-hijau-100 text-hijau-800" role="status">
           <Ikon nama="cek" ukuran={19} />
           <span>{pesan}</span>
         </div>
       )}
 
-      <form className="kartu kartu-akun" onSubmit={tambah}>
-        <div className="kepala-akun">
-          <span className="kepala-akun-ikon">
+      <form className="kartu p-5 max-sempit:p-4" onSubmit={tambah}>
+        <div className="kepala-akun mb-5 flex items-start gap-3 max-sempit:mb-4">
+          <span className="grid size-[42px] shrink-0 place-items-center rounded-sedang border border-biru-100 bg-biru-50 text-biru-700 max-sempit:size-[38px]">
             <Ikon nama="akun" ukuran={20} />
           </span>
           <div>
-            <h3>Akun baru</h3>
-            <p>Buat akun untuk kader, petugas kesehatan, atau admin desa.</p>
+            <h2>Akun baru</h2>
+            <p className="mt-1 mb-0 text-isi text-teks-redup">Buat akun untuk kader, petugas kesehatan, atau admin desa.</p>
           </div>
         </div>
 
-        <div className="grid2 grid-akun">
+        <div className="grid gap-4 [grid-template-columns:repeat(2,minmax(0,1fr))] max-sempit:grid-cols-1 max-sempit:gap-3">
           <div className="bidang">
             <label htmlFor="p-nama">
               <span>Username</span>
@@ -265,7 +265,7 @@ export default function Pengguna({ sesi }) {
           </div>
         </div>
 
-        <div className="aksi-akun">
+        <div className="mt-4 flex justify-end border-t border-garis pt-4 max-sempit:[&>button]:w-full">
           <button type="submit">
             <Ikon nama="tambah" ukuran={18} />
             Buat akun
@@ -276,7 +276,7 @@ export default function Pengguna({ sesi }) {
       {sandiUntuk && (
         <form className="kartu" onSubmit={simpanSandi}>
           <div className="kartu-judul">
-            <h3>Setel ulang kata sandi</h3>
+            <h2>Setel ulang kata sandi</h2>
             <button
               type="button"
               className="tombol-ikon sekunder"
@@ -289,7 +289,7 @@ export default function Pengguna({ sesi }) {
               <Ikon nama="tutup" ukuran={18} />
             </button>
           </div>
-          <p className="redup petunjuk-atas">
+          <p className="-mt-1.5 text-isi text-teks-redup">
             Untuk <strong>{sandiUntuk.nama_lengkap}</strong> ({sandiUntuk.nama_pengguna}).
           </p>
           <div className="bidang">
@@ -309,7 +309,7 @@ export default function Pengguna({ sesi }) {
             />
             <p className="petunjuk">Minimal 8 karakter. Terlihat agar mudah disalin ke pemilik akun.</p>
           </div>
-          <div className="baris-rapat">
+          <div className="flex flex-wrap items-center gap-2">
             <button type="submit" disabled={sandiBaru.length < 8}>
               <Ikon nama="simpan" ukuran={18} />
               Simpan kata sandi
@@ -330,8 +330,8 @@ export default function Pengguna({ sesi }) {
 
       <div className="kartu">
         <div className="kartu-judul">
-          <h3>Daftar akun</h3>
-          <span className="samar">{daftar ? `${daftar.length} akun` : "Memuat…"}</span>
+          <h2>Daftar akun</h2>
+          <span className="text-padat text-teks-samar">{daftar ? `${daftar.length} akun` : "Memuat…"}</span>
         </div>
         <div className="tabel-bungkus">
           <table className="tabel tabel-kartu tabel-aksi">
@@ -347,13 +347,13 @@ export default function Pengguna({ sesi }) {
               {(daftar ?? []).map((p) => (
                 <tr key={p.id}>
                   <td data-label="Akun">
-                    <div className="baris-rapat avatar-baris">
-                      <span className="avatar avatar-tabel">
+                    <div className="flex flex-nowrap items-center gap-2">
+                      <span className="grid size-[34px] shrink-0 place-items-center rounded-kecil border border-garis-kuat bg-latar text-padat font-bold text-teks-redup">
                         {inisial(p.nama_lengkap)}
                       </span>
                       <span>
                         <strong>{p.nama_lengkap}</strong>
-                        <div className="samar">{p.nama_pengguna}</div>
+                        <div className="text-padat text-teks-samar">{p.nama_pengguna}</div>
                       </span>
                     </div>
                   </td>
@@ -376,7 +376,7 @@ export default function Pengguna({ sesi }) {
                     </button>
                     <button
                       type="button"
-                      className="sekunder spasi-kiri-kecil"
+                      className="sekunder ml-1.5"
                       onClick={() => {
                         setSandiUntuk(p)
                         setSandiBaru('')
@@ -387,7 +387,7 @@ export default function Pengguna({ sesi }) {
                     {p.aktif && p.peran !== 'admin_desa' && (
                       <>
                         {nonaktifUntuk === p.id ? (
-                          <span className="baris-rapat spasi-kiri-kecil">
+                          <span className="ml-1.5 flex flex-wrap items-center gap-2">
                             <button
                               type="button"
                               className="bahaya"
@@ -413,7 +413,7 @@ export default function Pengguna({ sesi }) {
                         ) : (
                           <button
                             type="button"
-                            className="bahaya spasi-kiri-kecil"
+                            className="bahaya ml-1.5"
                             onClick={() => setNonaktifUntuk(p.id)}
                           >
                             Nonaktifkan
@@ -424,7 +424,7 @@ export default function Pengguna({ sesi }) {
                     {!p.aktif && (
                       <button
                         type="button"
-                        className="sekunder spasi-kiri-kecil"
+                        className="sekunder ml-1.5"
                         onClick={() => ubah(p.id, { aktif: true }, `Akun ${p.nama_pengguna} diaktifkan.`)}
                       >
                         Aktifkan
@@ -451,12 +451,12 @@ export default function Pengguna({ sesi }) {
       </div>
 
       {sunting && (
-        <div className="modal-latar" onClick={(e) => { if (e.target === e.currentTarget) setSunting(null) }}>
-          <div className="modal-wadah" role="dialog" aria-modal="true" aria-labelledby="judul-sunting-akun">
-            <div className="modal-kepala">
+        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-biru-950/55 p-5 backdrop-blur-[4px] max-dialog:p-2.5" onClick={(e) => { if (e.target === e.currentTarget) setSunting(null) }}>
+          <div className="flex max-h-[90vh] w-full max-w-[680px] flex-col overflow-hidden rounded-besar border border-garis bg-kartu shadow-timbul max-dialog:max-h-[94vh]" role="dialog" aria-modal="true" aria-labelledby="judul-sunting-akun">
+            <div className="flex items-center justify-between gap-4 border-b border-garis bg-biru-50 px-5 py-5">
               <div>
-                <h2 id="judul-sunting-akun">Sunting Data Akun</h2>
-                <span className="modal-subjudul">
+                <h2 id="judul-sunting-akun" className="m-0 text-subjudul font-bold tracking-[-0.015em] text-biru-950">Sunting Data Akun</h2>
+                <span className="text-padat font-medium text-teks-samar">
                   {sunting.nama_lengkap} · {NAMA_PERAN[sunting.peran] ?? sunting.peran}
                 </span>
               </div>
@@ -470,10 +470,10 @@ export default function Pengguna({ sesi }) {
               </button>
             </div>
 
-            <form onSubmit={simpanSunting} className="modal-isi">
-              <div className="seksi-grup">
-                <div className="seksi-grup-judul">Identitas Akun</div>
-                <div className="grid2">
+            <form onSubmit={simpanSunting} className="flex flex-col gap-5 overflow-y-auto px-5 py-5 max-dialog:gap-4 max-dialog:p-4">
+              <div className="flex flex-col gap-3">
+                <div className="border-b border-garis pb-1.5 text-2xs font-bold uppercase tracking-[0.05em] text-aksen-biru-ink">Identitas Akun</div>
+                <div className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(190px,1fr))]">
                   <div className="bidang">
                     <label htmlFor="modal-akun-nama">
                       <span>Nama lengkap</span>
@@ -508,7 +508,7 @@ export default function Pengguna({ sesi }) {
                 </div>
               </div>
 
-              <div className="modal-kaki">
+              <div className="flex items-center justify-end gap-2.5 border-t border-garis bg-biru-50 px-5 py-4 max-dialog:flex-col-reverse max-dialog:gap-2 max-dialog:p-3 max-dialog:[&>button]:w-full">
                 <button type="button" className="sekunder" onClick={() => setSunting(null)}>
                   Batal
                 </button>
@@ -524,8 +524,8 @@ export default function Pengguna({ sesi }) {
 
       <div className="kartu">
         <div className="kartu-judul">
-          <h3>Sesi tablet aktif</h3>
-          <span className="samar">
+          <h2>Sesi tablet aktif</h2>
+          <span className="text-padat text-teks-samar">
             {sesiAktif ? `${sesiAktif.length} sesi` : 'Memuat…'}
           </span>
         </div>
@@ -545,14 +545,14 @@ export default function Pengguna({ sesi }) {
                 <tr key={s.id}>
                   <td data-label="Akun">
                     <strong>{s.nama_lengkap}</strong>
-                    <div className="samar">{s.nama_pengguna}</div>
+                    <div className="text-padat text-teks-samar">{s.nama_pengguna}</div>
                   </td>
-                  <td className="samar" data-label="Perangkat">{s.id_perangkat}</td>
-                  <td className="samar" data-label="Masuk">{waktuPendek(s.dibuat_pada)}</td>
-                  <td className="samar" data-label="Kedaluwarsa">{waktuPendek(s.kadaluarsa_pada)}</td>
+                  <td className="text-padat text-teks-samar" data-label="Perangkat">{s.id_perangkat}</td>
+                  <td className="text-padat text-teks-samar" data-label="Masuk">{waktuPendek(s.dibuat_pada)}</td>
+                  <td className="text-padat text-teks-samar" data-label="Kedaluwarsa">{waktuPendek(s.kadaluarsa_pada)}</td>
                   <td className="sel-aksi">
                     {cabutUntuk === s.id ? (
-                      <span className="baris-rapat">
+                      <span className="flex flex-wrap items-center gap-2">
                         <button
                           type="button"
                           className="bahaya"
@@ -587,7 +587,7 @@ export default function Pengguna({ sesi }) {
               )}
               {sesiAktif === null && !galat && (
                 <tr>
-                  <td colSpan={5} className="redup">Memuat daftar sesi…</td>
+                  <td colSpan={5} className="text-padat text-teks-redup">Memuat daftar sesi…</td>
                 </tr>
               )}
             </tbody>
@@ -597,7 +597,7 @@ export default function Pengguna({ sesi }) {
 
       <div className="kartu">
         <div className="kartu-judul">
-          <h3>Riwayat masuk perangkat</h3>
+          <h2>Riwayat masuk perangkat</h2>
         </div>
         <PanelRiwayatMasuk sesi={sesi} versi={versiRiwayat} />
       </div>

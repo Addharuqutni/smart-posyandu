@@ -194,11 +194,11 @@ export default function Catat({ sesi, balitaAwal, setelahSimpan, kembali }) {
   const salahKepala = diLuarRentang('lingkar_kepala_cm')
 
   return (
-    <main className="layar" id="isi-utama">
-      <div className="kepala-layar">
+    <main className="mx-auto min-h-[calc(100dvh_-_4rem)] max-w-lebar px-4 pt-4 pb-[calc(6.2rem_+_env(safe-area-inset-bottom))] max-sempit:px-3 max-sempit:pb-[calc(6.4rem_+_env(safe-area-inset-bottom))]" id="isi-utama">
+      <div className="kepala-layar mb-4 flex items-start justify-between gap-4">
         <div>
           <h1>Catat kunjungan</h1>
-          <p className="detail-balita-wali">
+          <p className="m-0 inline-flex items-center gap-1.5 text-padat text-teks-redup [&_svg]:shrink-0 [&_svg]:text-teks-samar">
             <Ikon nama="posyandu" ukuran={15} />
             <span>{sesi?.pengguna?.nama_posyandu || 'Posyandu'}</span>
           </p>
@@ -210,7 +210,7 @@ export default function Catat({ sesi, balitaAwal, setelahSimpan, kembali }) {
       </div>
 
       {sukses && (
-        <div className="pesan sukses" role="status">
+        <div className="mb-3 flex items-start gap-2 rounded-kecil border px-3 py-3 text-isi font-semibold leading-snug border-hijau-100 bg-hijau-100 text-hijau-800" role="status">
           <Ikon nama="cek" ukuran={19} />
           <span>Tersimpan di tablet. Terkirim otomatis saat jaringan tersedia.</span>
           {kunjunganTerakhir && (
@@ -221,13 +221,13 @@ export default function Catat({ sesi, balitaAwal, setelahSimpan, kembali }) {
         </div>
       )}
       {galat && (
-        <div className="pesan galat" role="alert">
+        <div className="mb-3 flex items-start gap-2 rounded-kecil border px-3 py-3 text-isi font-semibold leading-snug border-merah-100 bg-merah-100 text-merah-800" role="alert">
           <Ikon nama="peringatan" ukuran={19} />
           <span>{galat}</span>
         </div>
       )}
       {adaDraf && !sukses && (
-        <div className="pesan info" role="status">
+        <div className="mb-3 flex items-start gap-2 rounded-kecil border px-3 py-3 text-isi font-semibold leading-snug border-garis bg-biru-100 text-biru-800" role="status">
           <Ikon nama="simpan" ukuran={18} />
           <span>Draf pengukuran sebelumnya dipulihkan dari tablet ini.</span>
         </div>
@@ -236,8 +236,8 @@ export default function Catat({ sesi, balitaAwal, setelahSimpan, kembali }) {
       <form onSubmit={simpan} noValidate>
         <section className="kartu">
           <div className="kartu-judul">
-            <h3>1. Balita dan kunjungan</h3>
-            <span className="samar">Wajib</span>
+            <h2>1. Balita dan kunjungan</h2>
+            <span className="text-padat text-teks-samar">Wajib</span>
           </div>
 
           <div className="bidang">
@@ -246,13 +246,13 @@ export default function Catat({ sesi, balitaAwal, setelahSimpan, kembali }) {
               <span className="wajib" aria-hidden="true">*</span>
             </label>
             {balitaAwal ? (
-              <div className="kartu kartu-warnai kartu-balita-terpilih">
-                <span className="avatar avatar-balita" aria-hidden="true">
+              <div className="kartu kartu-warnai mx-0 flex items-center gap-3 rounded-kecil px-4 py-3 shadow-none">
+                <span className="grid size-10 shrink-0 place-items-center rounded-full border border-garis-kuat bg-biru-50 text-biru-700" aria-hidden="true">
                   <Ikon nama="anak" ukuran={20} />
                 </span>
                 <div>
                   <strong>{balita?.nama_lengkap}</strong>
-                  <div className="redup">
+                  <div className="text-isi text-teks-redup">
                     {usia !== null && usia >= 0 ? `${usia} bulan` : 'Usia belum bisa dihitung'} ·{' '}
                     {gender}
                   </div>
@@ -275,7 +275,7 @@ export default function Catat({ sesi, balitaAwal, setelahSimpan, kembali }) {
             )}
           </div>
 
-          <div className="grid2">
+          <div className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(190px,1fr))]">
             <div className="bidang">
               <label htmlFor="tanggal">
                 <span>Tanggal kunjungan</span>
@@ -318,24 +318,24 @@ export default function Catat({ sesi, balitaAwal, setelahSimpan, kembali }) {
         </section>
 
         {isi.status_kehadiran !== 'tidak_hadir' && (
-          <section className="kartu kartu-hasil-ukur">
-            <div className="kartu-judul">
+          <section className="kartu">
+            <div className="kartu-judul items-start gap-4">
               <div>
-                <h3>2. Hasil ukur balita</h3>
+                <h2>2. Hasil ukur balita</h2>
               </div>
-              <span className="lencana-wajib-header">Berat wajib</span>
+              <span className="inline-flex items-center rounded-mikro border border-garis bg-biru-50 px-2 py-0.5 text-2xs font-semibold whitespace-nowrap text-biru-800">Berat wajib</span>
             </div>
 
-            <div className="grid-hasil-ukur">
+            <div className="grid items-stretch gap-4 [grid-template-columns:repeat(auto-fit,minmax(240px,1fr))]">
               {/* 1. BERAT BADAN */}
               <div
-                className={`panel-ukur ${bidangSalah.includes('berat_kg') ? 'salah-bidang' : ''} ${salahBerat ? 'peringatan-rentang' : ''}`}
+                className={`flex flex-col rounded-kecil border bg-kartu p-5 shadow-halus transition-[border-color,box-shadow] focus-within:border-biru-600 focus-within:shadow-naik ${bidangSalah.includes('berat_kg') ? 'border-merah-700 bg-merah-100' : salahBerat ? 'border-aksen-amber-ink bg-aksen-amber-tint' : 'border-garis'}`}
               >
-                <div className="panel-ukur-kepala">
-                  <label htmlFor="berat" className="label-ukur">
+                <div className="mb-2.5 flex items-center justify-between">
+                  <label htmlFor="berat" className="m-0 text-lega font-bold text-teks">
                     Berat badan <span className="wajib">*</span>
                   </label>
-                  <span className="tag-status tag-wajib">
+                  <span className="rounded-kecil bg-biru-100 px-2 py-0.5 text-2xs font-bold tracking-[0.02em] text-biru-800">
                     Wajib
                     <Bantuan
                       id="bantuan-wajib-berat"
@@ -358,21 +358,21 @@ export default function Catat({ sesi, balitaAwal, setelahSimpan, kembali }) {
                     aria-invalid={bidangSalah.includes('berat_kg') || salahBerat}
                     required
                   />
-                  <span className="satuan-teks">kg</span>
+                  <span className="satuan">kg</span>
                 </div>
 
-                <div className="panel-ukur-kaki" id="bantuan-berat">
+                <div className="mt-2.5 flex flex-col gap-1 text-padat leading-snug" id="bantuan-berat">
                   {salahBerat ? (
-                    <span className="teks-peringatan">
+                    <span className="flex items-center gap-1 font-bold text-kuning-800">
                       <Ikon nama="peringatan" ukuran={14} />
                       Di luar rentang ({RENTANG.berat_kg[0]}–{RENTANG.berat_kg[1]} kg)
                     </span>
                   ) : (
-                    <span className="teks-petunjuk">
+                    <span className="font-semibold text-teks-redup">
                       Rentang wajar: {rentangTeks('berat_kg')} kg
                     </span>
                   )}
-                  <div className="catatan-bawah">
+                  <div className="text-2xs text-teks-samar">
                     Wajib untuk penentuan status gizi & grafik KMS
                   </div>
                 </div>
@@ -380,13 +380,13 @@ export default function Catat({ sesi, balitaAwal, setelahSimpan, kembali }) {
 
               {/* 2. TINGGI / PANJANG BADAN */}
               <div
-                className={`panel-ukur ${bidangSalah.includes('tinggi_cm') ? 'salah-bidang' : ''} ${salahTinggi ? 'peringatan-rentang' : ''}`}
+                className={`flex flex-col rounded-kecil border bg-kartu p-5 shadow-halus transition-[border-color,box-shadow] focus-within:border-biru-600 focus-within:shadow-naik ${bidangSalah.includes('tinggi_cm') ? 'border-merah-700 bg-merah-100' : salahTinggi ? 'border-aksen-amber-ink bg-aksen-amber-tint' : 'border-garis'}`}
               >
-                <div className="panel-ukur-kepala">
-                  <label htmlFor="tinggi" className="label-ukur">
+                <div className="mb-2.5 flex items-center justify-between">
+                  <label htmlFor="tinggi" className="m-0 text-lega font-bold text-teks">
                     {isi.cara_ukur_tinggi === 'terlentang' ? 'Panjang badan (PB)' : 'Tinggi badan (TB)'}
                   </label>
-                  <span className="tag-status tag-opsional">Disarankan</span>
+                  <span className="rounded-kecil bg-garis px-2 py-0.5 text-2xs font-bold tracking-[0.02em] text-teks-redup">Disarankan</span>
                 </div>
 
                 <div className="wadah-satuan">
@@ -401,33 +401,33 @@ export default function Catat({ sesi, balitaAwal, setelahSimpan, kembali }) {
                     aria-describedby="bantuan-tinggi"
                     aria-invalid={bidangSalah.includes('tinggi_cm') || salahTinggi}
                   />
-                  <span className="satuan-teks">cm</span>
+                  <span className="satuan">cm</span>
                 </div>
 
-                <div className="panel-ukur-kaki" id="bantuan-tinggi">
+                <div className="mt-2.5 flex flex-col gap-1 text-padat leading-snug" id="bantuan-tinggi">
                   {salahTinggi ? (
-                    <span className="teks-peringatan">
+                    <span className="flex items-center gap-1 font-bold text-kuning-800">
                       <Ikon nama="peringatan" ukuran={14} />
                       Di luar rentang ({RENTANG.tinggi_cm[0]}–{RENTANG.tinggi_cm[1]} cm)
                     </span>
                   ) : (
-                    <span className="teks-petunjuk">
+                    <span className="font-semibold text-teks-redup">
                       Rentang wajar: {rentangTeks('tinggi_cm')} cm
                     </span>
                   )}
                 </div>
 
                 {/* Cara Ukur Tinggi terintegrasi langsung di bawah input tinggi */}
-                <div className="bagian-cara-ukur">
-                  <div className="label-mini-cara">
+                <div className="mt-3 border-t border-dashed border-garis-kuat pt-3.5">
+                  <div className="mb-2 flex items-center justify-between text-padat font-semibold text-teks-redup">
                     <span>Posisi saat diukur:</span>
                     {usia !== null && usia >= 0 && (
-                      <span className="rekomendasi-cara">
+                      <span className="rounded-mikro bg-biru-100 px-1.5 py-0.5 text-2xs font-bold text-biru-700">
                         {usia < 24 ? 'Disarankan < 2 thn' : 'Disarankan ≥ 2 thn'}
                       </span>
                     )}
                   </div>
-                  <div className="segmen segmen-kompak" role="group" aria-label="Cara ukur tinggi">
+                  <div className="segmen [&>button]:min-h-10 [&>button]:px-2 [&>button]:text-padat [&>button]:font-semibold max-sempit:[&>button]:min-h-12" role="group" aria-label="Cara ukur tinggi">
                     <button
                       type="button"
                       className={isi.cara_ukur_tinggi === 'terlentang' ? 'aktif' : ''}
@@ -447,7 +447,7 @@ export default function Catat({ sesi, balitaAwal, setelahSimpan, kembali }) {
                       Berdiri (TB)
                     </button>
                   </div>
-                  <div className="keterangan-cara-ukur">
+                  <div className="mt-1.5 text-2xs leading-snug text-teks-samar">
                     {isi.cara_ukur_tinggi === 'terlentang'
                       ? 'Posisi telentang (infantometer) untuk panjang badan.'
                       : 'Posisi berdiri tegak (stadiometer) untuk tinggi badan.'}
@@ -457,13 +457,13 @@ export default function Catat({ sesi, balitaAwal, setelahSimpan, kembali }) {
 
               {/* 3. LINGKAR KEPALA */}
               <div
-                className={`panel-ukur ${bidangSalah.includes('lingkar_kepala_cm') ? 'salah-bidang' : ''} ${salahKepala ? 'peringatan-rentang' : ''}`}
+                className={`flex flex-col rounded-kecil border bg-kartu p-5 shadow-halus transition-[border-color,box-shadow] focus-within:border-biru-600 focus-within:shadow-naik ${bidangSalah.includes('lingkar_kepala_cm') ? 'border-merah-700 bg-merah-100' : salahKepala ? 'border-aksen-amber-ink bg-aksen-amber-tint' : 'border-garis'}`}
               >
-                <div className="panel-ukur-kepala">
-                  <label htmlFor="kepala" className="label-ukur">
+                <div className="mb-2.5 flex items-center justify-between">
+                  <label htmlFor="kepala" className="m-0 text-lega font-bold text-teks">
                     Lingkar kepala
                   </label>
-                  <span className="tag-status tag-opsional">Opsional</span>
+                  <span className="rounded-kecil bg-garis px-2 py-0.5 text-2xs font-bold tracking-[0.02em] text-teks-redup">Opsional</span>
                 </div>
 
                 <div className="wadah-satuan">
@@ -478,21 +478,21 @@ export default function Catat({ sesi, balitaAwal, setelahSimpan, kembali }) {
                     aria-describedby="bantuan-kepala"
                     aria-invalid={bidangSalah.includes('lingkar_kepala_cm') || salahKepala}
                   />
-                  <span className="satuan-teks">cm</span>
+                  <span className="satuan">cm</span>
                 </div>
 
-                <div className="panel-ukur-kaki" id="bantuan-kepala">
+                <div className="mt-2.5 flex flex-col gap-1 text-padat leading-snug" id="bantuan-kepala">
                   {salahKepala ? (
-                    <span className="teks-peringatan">
+                    <span className="flex items-center gap-1 font-bold text-kuning-800">
                       <Ikon nama="peringatan" ukuran={14} />
                       Di luar rentang ({RENTANG.lingkar_kepala_cm[0]}–{RENTANG.lingkar_kepala_cm[1]} cm)
                     </span>
                   ) : (
-                    <span className="teks-petunjuk">
+                    <span className="font-semibold text-teks-redup">
                       Rentang wajar: {rentangTeks('lingkar_kepala_cm')} cm
                     </span>
                   )}
-                  <div className="catatan-bawah">
+                  <div className="text-2xs text-teks-samar">
                     Diukur pita melingkari dahi & bagian belakang kepala
                   </div>
                 </div>
@@ -502,7 +502,7 @@ export default function Catat({ sesi, balitaAwal, setelahSimpan, kembali }) {
         )}
 
         {isi.status_kehadiran === 'tidak_hadir' && (
-          <div className="pesan info" role="status">
+          <div className="mb-3 flex items-start gap-2 rounded-kecil border px-3 py-3 text-isi font-semibold leading-snug border-garis bg-biru-100 text-biru-800" role="status">
             <Ikon nama="info" ukuran={18} />
             <span>Tidak hadir: kunjungan disimpan tanpa hasil ukur.</span>
           </div>
@@ -510,8 +510,8 @@ export default function Catat({ sesi, balitaAwal, setelahSimpan, kembali }) {
 
         <section className="kartu">
           <div className="kartu-judul">
-            <h3>3. Catatan</h3>
-            <span className="samar">Opsional</span>
+            <h2>3. Catatan</h2>
+            <span className="text-padat text-teks-samar">Opsional</span>
           </div>
           <div className="bidang">
             <label htmlFor="catatan">Catatan kunjungan</label>

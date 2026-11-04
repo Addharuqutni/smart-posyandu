@@ -224,11 +224,11 @@ export default function Laporan({ sesi }) {
   const sebaran = isi?.sebaran_status_gizi ?? {}
 
   return (
-    <main className="layar" id="isi-utama">
-      <div className="kepala-layar">
+    <main className="mx-auto min-h-[calc(100dvh_-_4rem)] max-w-lebar px-4 pt-4 pb-[calc(6.2rem_+_env(safe-area-inset-bottom))] max-sempit:px-3 max-sempit:pb-[calc(6.4rem_+_env(safe-area-inset-bottom))]" id="isi-utama">
+      <div className="kepala-layar mb-4 flex items-start justify-between gap-4">
         <div>
           <h1>Rekap bulanan</h1>
-          <p>Ringkasan kunjungan, status gizi, dan mutu data.</p>
+          <p className="mt-1 mb-0 text-isi text-teks-redup">Ringkasan kunjungan, status gizi, dan mutu data.</p>
         </div>
         <button
           type="button"
@@ -243,26 +243,26 @@ export default function Laporan({ sesi }) {
       </div>
 
       {galat && (
-        <div className="pesan galat" role="alert">
+        <div className="mb-3 flex items-start gap-2 rounded-kecil border px-3 py-3 text-isi font-semibold leading-snug border-merah-100 bg-merah-100 text-merah-800" role="alert">
           <Ikon nama="peringatan" ukuran={19} />
           <span>{galat}</span>
         </div>
       )}
       {pesan && (
-        <div className="pesan sukses" role="status">
+        <div className="mb-3 flex items-start gap-2 rounded-kecil border px-3 py-3 text-isi font-semibold leading-snug border-hijau-100 bg-hijau-100 text-hijau-800" role="status">
           <Ikon nama="cek" ukuran={19} />
           <span>{pesan}</span>
         </div>
       )}
 
-      <div className="kartu kartu-filter">
-        <div className="baris-filter">
-          <div className="bidang bidang-filter">
+      <div className="kartu px-4 py-4">
+        <div className="flex flex-wrap items-end gap-3">
+          <div className="mb-0 min-w-0 flex-[1_1_190px]">
             <span className="label-segmen" id="label-bulan">Bulan rekap</span>
-            <div className="pilih-bulan" role="group" aria-labelledby="label-bulan">
+            <div className="flex flex-wrap items-center gap-1.5" role="group" aria-labelledby="label-bulan">
               <button
                 type="button"
-                className="tombol-geser"
+                className="inline-flex min-h-12 min-w-12 items-center justify-center rounded-kecil border border-garis bg-kartu px-2 text-tombol leading-none font-bold text-biru-800 shadow-none hover:border-garis-kuat hover:bg-biru-50 hover:text-biru-950 disabled:border-garis disabled:bg-latar disabled:text-garis-kuat"
                 onClick={() => gantiBulan(-1)}
                 disabled={memuat || bulan <= `${TAHUN_AWAL}-01`}
                 aria-label="Bulan sebelumnya"
@@ -270,6 +270,7 @@ export default function Laporan({ sesi }) {
                 ‹
               </button>
               <select
+                className="w-auto min-w-[8.25rem] flex-none"
                 value={bulanTerpilih}
                 onChange={(e) => pilihBagian(e.target.value, tahunTerpilih)}
                 disabled={memuat}
@@ -282,7 +283,7 @@ export default function Laporan({ sesi }) {
                 ))}
               </select>
               <select
-                className="pilih-tahun"
+                className="w-auto min-w-[5.5rem] flex-none"
                 value={tahunTerpilih}
                 onChange={(e) => pilihBagian(bulanTerpilih, e.target.value)}
                 disabled={memuat}
@@ -296,7 +297,7 @@ export default function Laporan({ sesi }) {
               </select>
               <button
                 type="button"
-                className="tombol-geser"
+                className="inline-flex min-h-12 min-w-12 items-center justify-center rounded-kecil border border-garis bg-kartu px-2 text-tombol leading-none font-bold text-biru-800 shadow-none hover:border-garis-kuat hover:bg-biru-50 hover:text-biru-950 disabled:border-garis disabled:bg-latar disabled:text-garis-kuat"
                 onClick={() => gantiBulan(1)}
                 disabled={memuat || bulan >= bulanIni()}
                 aria-label="Bulan berikutnya"
@@ -318,17 +319,17 @@ export default function Laporan({ sesi }) {
 
       {isi && (
         <>
-          <div className="kepala-layar kepala-seksi">
+          <div className="mb-2.5 flex items-start justify-between gap-4 [&_h2]:m-0 [&_h2]:text-subjudul [&_p]:mt-1 [&_p]:mb-0 [&_p]:text-isi [&_p]:text-teks-redup">
             <div>
               <h2>{judulBulan(isi.bulan)}</h2>
               <p>{isi.posyandu.nama ?? 'Semua Posyandu'}</p>
             </div>
           </div>
 
-          <div className="ringkasan ringkasan-rekap">
-            <div className="stat stat--kunjungan">
-              <div className="stat-atas">
-                <span className="stat-ikon">
+          <div className="mb-4 grid gap-2.5 [grid-template-columns:repeat(5,minmax(0,1fr))] max-sempit:[grid-template-columns:repeat(auto-fit,minmax(130px,1fr))] max-sempit:gap-2">
+            <div className="relative flex min-h-[5.4rem] flex-col justify-between rounded-sedang border border-garis bg-kartu px-4 py-4 shadow-halus transition-[border-color,box-shadow] hover:border-garis-kuat hover:shadow-naik max-sempit:min-h-[4.8rem] max-sempit:px-3 max-sempit:py-2.5">
+              <div className="mb-2 flex items-center justify-between">
+                <span className="grid size-8 shrink-0 place-items-center rounded-kecil max-sempit:size-6 bg-aksen-biru-tint text-aksen-biru-ink">
                   <Ikon nama="kunjungan" ukuran={16} />
                 </span>
                 <Bantuan
@@ -337,15 +338,15 @@ export default function Laporan({ sesi }) {
                   teks="Total kedatangan balita bulan ini. Satu balita bisa dihitung lebih dari satu kali bila datang beberapa kali."
                 />
               </div>
-              <div className="stat-bawah">
-                <div className="stat-nilai">{isi.jumlah_kunjungan}</div>
-                <div className="stat-label">Jumlah kunjungan</div>
+              <div className="flex flex-col gap-1">
+                <div className="text-judul leading-[1.15] font-bold tabular-nums tracking-[-0.02em] text-biru-950">{isi.jumlah_kunjungan}</div>
+                <div className="text-2xs leading-tight font-medium text-teks-redup">Jumlah kunjungan</div>
               </div>
             </div>
 
-            <div className="stat stat--hadir">
-              <div className="stat-atas">
-                <span className="stat-ikon">
+            <div className="relative flex min-h-[5.4rem] flex-col justify-between rounded-sedang border border-garis bg-kartu px-4 py-4 shadow-halus transition-[border-color,box-shadow] hover:border-garis-kuat hover:shadow-naik max-sempit:min-h-[4.8rem] max-sempit:px-3 max-sempit:py-2.5">
+              <div className="mb-2 flex items-center justify-between">
+                <span className="grid size-8 shrink-0 place-items-center rounded-kecil max-sempit:size-6 bg-aksen-hijau-tint text-aksen-hijau-ink">
                   <Ikon nama="balita-hadir" ukuran={16} />
                 </span>
                 <Bantuan
@@ -354,15 +355,15 @@ export default function Laporan({ sesi }) {
                   teks="Jumlah balita berbeda yang datang bulan ini. Bukan total kunjungan, dan bukan semua balita terdaftar."
                 />
               </div>
-              <div className="stat-bawah">
-                <div className="stat-nilai">{isi.jumlah_balita_tercatat}</div>
-                <div className="stat-label">Balita yang datang</div>
+              <div className="flex flex-col gap-1">
+                <div className="text-judul leading-[1.15] font-bold tabular-nums tracking-[-0.02em] text-biru-950">{isi.jumlah_balita_tercatat}</div>
+                <div className="text-2xs leading-tight font-medium text-teks-redup">Balita yang datang</div>
               </div>
             </div>
 
-            <div className="stat stat--terdaftar">
-              <div className="stat-atas">
-                <span className="stat-ikon">
+            <div className="relative flex min-h-[5.4rem] flex-col justify-between rounded-sedang border border-garis bg-kartu px-4 py-4 shadow-halus transition-[border-color,box-shadow] hover:border-garis-kuat hover:shadow-naik max-sempit:min-h-[4.8rem] max-sempit:px-3 max-sempit:py-2.5">
+              <div className="mb-2 flex items-center justify-between">
+                <span className="grid size-8 shrink-0 place-items-center rounded-kecil max-sempit:size-6 bg-aksen-slate-tint text-aksen-slate-ink">
                   <Ikon nama="balita" ukuran={16} />
                 </span>
                 <Bantuan
@@ -371,15 +372,15 @@ export default function Laporan({ sesi }) {
                   teks="Semua balita aktif di Posyandu ini, datang atau tidak bulan ini."
                 />
               </div>
-              <div className="stat-bawah">
-                <div className="stat-nilai">{isi.balita_terdaftar ?? '—'}</div>
-                <div className="stat-label">Balita terdaftar</div>
+              <div className="flex flex-col gap-1">
+                <div className="text-judul leading-[1.15] font-bold tabular-nums tracking-[-0.02em] text-biru-950">{isi.balita_terdaftar ?? '—'}</div>
+                <div className="text-2xs leading-tight font-medium text-teks-redup">Balita terdaftar</div>
               </div>
             </div>
 
-            <div className="stat stat--tidak-datang">
-              <div className="stat-atas">
-                <span className="stat-ikon">
+            <div className="relative flex min-h-[5.4rem] flex-col justify-between rounded-sedang border border-garis bg-kartu px-4 py-4 shadow-halus transition-[border-color,box-shadow] hover:border-garis-kuat hover:shadow-naik max-sempit:min-h-[4.8rem] max-sempit:px-3 max-sempit:py-2.5">
+              <div className="mb-2 flex items-center justify-between">
+                <span className="grid size-8 shrink-0 place-items-center rounded-kecil max-sempit:size-6 bg-aksen-amber-tint text-aksen-amber-ink">
                   <Ikon nama="balita-absen" ukuran={16} />
                 </span>
                 <Bantuan
@@ -388,15 +389,15 @@ export default function Laporan({ sesi }) {
                   teks="Balita aktif yang sama sekali tidak datang bulan ini. Perlu ditindaklanjuti kader."
                 />
               </div>
-              <div className="stat-bawah">
-                <div className="stat-nilai">{isi.balita_tidak_berkunjung ?? '—'}</div>
-                <div className="stat-label">Balita tidak datang</div>
+              <div className="flex flex-col gap-1">
+                <div className="text-judul leading-[1.15] font-bold tabular-nums tracking-[-0.02em] text-biru-950">{isi.balita_tidak_berkunjung ?? '—'}</div>
+                <div className="text-2xs leading-tight font-medium text-teks-redup">Balita tidak datang</div>
               </div>
             </div>
 
-            <div className="stat stat--median">
-              <div className="stat-atas">
-                <span className="stat-ikon">
+            <div className="relative flex min-h-[5.4rem] flex-col justify-between rounded-sedang border border-garis bg-kartu px-4 py-4 shadow-halus transition-[border-color,box-shadow] hover:border-garis-kuat hover:shadow-naik max-sempit:min-h-[4.8rem] max-sempit:px-3 max-sempit:py-2.5">
+              <div className="mb-2 flex items-center justify-between">
+                <span className="grid size-8 shrink-0 place-items-center rounded-kecil max-sempit:size-6 bg-aksen-teal-tint text-aksen-teal-ink">
                   <Ikon nama="grafik" ukuran={16} />
                 </span>
                 <Bantuan
@@ -405,14 +406,14 @@ export default function Laporan({ sesi }) {
                   teks="Berat balita dibanding berat rata-rata anak seusianya. 100% = sama dengan rata-rata. Di bawah 80% perlu perhatian."
                 />
               </div>
-              <div className="stat-bawah">
-                <div className="stat-nilai">
+              <div className="flex flex-col gap-1">
+                <div className="text-judul leading-[1.15] font-bold tabular-nums tracking-[-0.02em] text-biru-950">
                   {isi.rata_persen_median ?? '—'}
                   {isi.rata_persen_median != null && (
-                    <span className="satuan-stat">%</span>
+                    <span className="ml-0.5 text-padat font-semibold text-teks-redup">%</span>
                   )}
                 </div>
-                <div className="stat-label">Rata-rata persen median</div>
+                <div className="text-2xs leading-tight font-medium text-teks-redup">Rata-rata persen median</div>
               </div>
             </div>
           </div>
@@ -427,15 +428,15 @@ export default function Laporan({ sesi }) {
                   teks="Status gizi dihitung server dari berat dan tinggi menurut umur. Jumlah di sini hanya kunjungan bulan ini."
                 />
               </h3>
-              <span className="samar">Pengukuran bulan ini</span>
+              <span className="text-padat text-teks-samar">Pengukuran bulan ini</span>
             </div>
             {Object.keys(sebaran).length === 0 ? (
-              <p className="redup">
+              <p className="text-isi text-teks-redup">
                 Belum ada pengukuran pada bulan ini.
               </p>
             ) : (
               <div className="tabel-bungkus">
-                <table className="tabel tabel-lebar-min">
+                <table className="tabel min-w-80">
                   <tbody>
                     {Object.entries(sebaran).map(([kode, cacah]) => (
                       <tr key={kode}>
@@ -444,7 +445,7 @@ export default function Laporan({ sesi }) {
                             {PESAN_STATUS[kode] ?? 'Belum dinilai'}
                           </span>
                         </td>
-                        <td className="angka tebal">
+                        <td className="angka font-bold">
                           {cacah}
                         </td>
                       </tr>
@@ -455,13 +456,13 @@ export default function Laporan({ sesi }) {
             )}
             <button
               type="button"
-              className="sekunder tombol-spasi-atas"
+              className="sekunder mt-3"
               onClick={ekspor}
             >
               <Ikon nama="unduh" ukuran={18} />
               Unduh CSV {judulBulan(bulan)}
             </button>
-            <p className="samar teks-bawah">
+            <p className="mb-0 text-padat text-teks-samar">
               Ekspor dibubuhi cap waktu dan nama pemakai, serta dicatat di log audit.
             </p>
           </div>
@@ -475,8 +476,8 @@ export default function Laporan({ sesi }) {
           </div>
 
           {mutu && (
-            <div className="tabel-bungkus tabel-spasi-bawah">
-              <table className="tabel tabel-lebar-min">
+            <div className="tabel-bungkus mb-4">
+              <table className="tabel min-w-80">
                 <tbody>
                   <tr>
                     <td>Pengukuran belum divalidasi</td>
@@ -486,7 +487,7 @@ export default function Laporan({ sesi }) {
                     <tr>
                       <td>
                         Kunjungan tidak hadir
-                        <div className="samar">
+                        <div className="text-padat text-teks-samar">
                           Tidak ada timbangan atau ukur, jadi tidak ada yang divalidasi
                         </div>
                       </td>
@@ -505,21 +506,21 @@ export default function Laporan({ sesi }) {
               </table>
             </div>
           )}
-          <div className="baris baris-subjudul">
+          <div className="mb-2 flex flex-wrap items-center justify-between gap-3 [&_strong]:text-isi">
             <strong>Berkas cadangan</strong>
             <button type="button" className="sekunder" onClick={cadangkan} disabled={mencadangkan}>
               <Ikon nama="unduh" ukuran={17} />
               {mencadangkan ? 'Mencadangkan…' : 'Cadangkan sekarang'}
             </button>
           </div>
-          <ul className="daftar-sederhana">
+          <ul className="grid list-disc gap-1.5 pl-4 text-isi text-teks-redup">
             {cadangan.map((c) => (
-              <li key={c.nama} className="baris">
+              <li key={c.nama} className="flex flex-wrap items-center justify-between gap-3">
                 <span>
-                  <span className="kode">{c.nama}</span> · {Math.round(c.ukuran_byte / 1024)} KB ·{' '}
+                  <span className="rounded-kecil border border-garis bg-latar px-1 py-0.5 font-mono text-padat">{c.nama}</span> · {Math.round(c.ukuran_byte / 1024)} KB ·{' '}
                   {waktuPendek(c.dibuat_pada)}
                 </span>
-                <span className="baris-rapat">
+                <span className="flex flex-wrap items-center gap-2">
                   <button
                     type="button"
                     className="sekunder"
@@ -545,12 +546,12 @@ export default function Laporan({ sesi }) {
           </ul>
 
           {konfirmPulih && (
-            <div className="catatan spasi-atas">
+            <div className="mt-4 rounded-kecil bg-biru-50 px-3 py-2.5 text-padat text-teks-redup">
               <strong>
                 <Ikon nama="peringatan" ukuran={16} /> Periksa sebelum memulihkan
               </strong>
-              <p className="petunjuk-atas">
-                Berkas <span className="kode">{konfirmPulih.nama}</span> dibuat{' '}
+              <p className="-mt-1.5 mb-2 text-padat text-teks-samar">
+                Berkas <span className="rounded-kecil border border-garis bg-latar px-1 py-0.5 font-mono text-padat">{konfirmPulih.nama}</span> dibuat{' '}
                 {waktuPendek(konfirmPulih.pratinjau.dibuat_pada)}. Isinya:
               </p>
               <div className="tabel-bungkus">
@@ -572,16 +573,16 @@ export default function Laporan({ sesi }) {
                 </table>
               </div>
               {konfirmPulih.pratinjau.tabel.length === 0 && (
-                <p className="teks-peringatan">
+                <p className="flex items-center gap-1.5 font-bold text-kuning-800">
                   <Ikon nama="peringatan" ukuran={16} />
                   Berkas ini tidak memuat baris apa pun. Jangan dipulihkan.
                 </p>
               )}
-              <p className="petunjuk-atas">
+              <p className="-mt-1.5 mb-2 text-padat text-teks-samar">
                 Pemulihan menimpa baris dengan id yang sama dan menambah baris yang belum ada.
                 Tidak ada baris yang dihapus. Cadangan pengaman dibuat otomatis sebelum menulis.
               </p>
-              <p className="petunjuk-atas">
+              <p className="-mt-1.5 mb-2 text-padat text-teks-samar">
                 Akun pengguna ikut dipulihkan: kata sandi kembali ke versi berkas ini, dan akun
                 yang dibuat setelahnya tetap ada. Sesi tablet yang sedang aktif tidak terputus.
               </p>
@@ -605,7 +606,7 @@ export default function Laporan({ sesi }) {
                   Diminta karena pemulihan bisa menimpa data. Tiga kali salah, tunggu 15 menit.
                 </p>
               </div>
-              <div className="baris-rapat">
+              <div className="flex flex-wrap items-center gap-2">
                 <button
                   type="button"
                   className="bahaya"
@@ -633,20 +634,20 @@ export default function Laporan({ sesi }) {
             </div>
           )}
 
-          <p className="samar teks-bawah">
+          <p className="mb-0 text-padat text-teks-samar">
             Pencadangan harian berjalan otomatis di server. Berkas dienkripsi; kunci disimpan
             terpisah dari berkasnya. Unduh berkas lalu simpan di SSD kantor desa.
           </p>
 
-          <div className="baris baris-subjudul spasi-atas">
+          <div className="mt-4 mb-2 flex flex-wrap items-center justify-between gap-3 [&_strong]:text-isi">
             <strong>Pulihkan dari berkas di perangkat</strong>
           </div>
-          <label className={`berkas-pilih${memulihkanUnggah ? ' tak-aktif' : ''}`}>
-            <span className="berkas-pilih-tombol">
+          <label className={`relative flex min-h-12 cursor-pointer items-center gap-3 rounded-kecil border border-garis bg-kartu px-4 py-2.5 transition-[border-color,box-shadow] hover:border-biru-800 hover:shadow-[0_0_0_3px_var(--color-biru-100)] ${memulihkanUnggah ? 'pointer-events-none opacity-60' : ''}`}>
+            <span className="inline-flex shrink-0 items-center gap-1.5 rounded-kecil bg-biru-800 px-3 py-2 text-isi font-semibold whitespace-nowrap text-kartu">
               <Ikon nama="unduh" ukuran={16} />
               Pilih berkas
             </span>
-            <span className="berkas-nama">
+            <span className="min-w-0 flex-1 text-isi text-teks-redup [overflow-wrap:anywhere]">
               {berkasPulih
                 ? `${berkasPulih.name} · ${Math.round(berkasPulih.size / 1024)} KB`
                 : 'Belum ada berkas dipilih'}
@@ -661,15 +662,15 @@ export default function Laporan({ sesi }) {
             />
           </label>
           {berkasPulih && (
-            <div className="catatan spasi-atas">
+            <div className="mt-4 rounded-kecil bg-biru-50 px-3 py-2.5 text-padat text-teks-redup">
               <strong>
                 <Ikon nama="peringatan" ukuran={16} /> Pulihkan dari berkas ini?
               </strong>
-              <p className="petunjuk-atas">
-                <span className="kode">{berkasPulih.name}</span> ·{' '}
+              <p className="-mt-1.5 mb-2 text-padat text-teks-samar">
+                <span className="rounded-kecil border border-garis bg-latar px-1 py-0.5 font-mono text-padat">{berkasPulih.name}</span> ·{' '}
                 {Math.round(berkasPulih.size / 1024)} KB
               </p>
-              <p className="petunjuk-atas">
+              <p className="-mt-1.5 mb-2 text-padat text-teks-samar">
                 Pemulihan menimpa baris dengan id yang sama dan menambah baris yang belum ada;
                 tidak ada baris yang dihapus. Cadangan pengaman dibuat otomatis sebelum menulis.
               </p>
@@ -693,7 +694,7 @@ export default function Laporan({ sesi }) {
                   Diminta karena pemulihan bisa menimpa data. Tiga kali salah, tunggu 15 menit.
                 </p>
               </div>
-              <div className="baris-rapat">
+              <div className="flex flex-wrap items-center gap-2">
                 <button
                   type="button"
                   className="bahaya"
@@ -719,7 +720,7 @@ export default function Laporan({ sesi }) {
         </div>
       )}
 
-      <p className="hak-cipta">© 2026 KodeNara. All rights reserved.</p>
+      <p className="mt-4 text-center text-2xs tracking-[0.01em] text-teks-samar">© 2026 KodeNara. All rights reserved.</p>
 
     </main>
   )

@@ -11,12 +11,12 @@ import Ikon from './Ikon.jsx'
 /** Keadaan kosong: satu bentuk untuk semua layar. */
 export function Kosong({ ikon = 'info', judul, teks, aksi }) {
   return (
-    <div className="kosong">
-      <div className="kosong-ikon">
+    <div className="mb-4 rounded-sedang border border-dashed border-garis-kuat bg-kartu px-5 py-8 text-center">
+      <div className="mx-auto mb-3 grid size-[52px] place-items-center rounded-full bg-biru-100 text-biru-700">
         <Ikon nama={ikon} ukuran={26} />
       </div>
-      <h3>{judul}</h3>
-      {teks && <p>{teks}</p>}
+      <h2 className="mb-1.5 text-dasar font-bold text-teks">{judul}</h2>
+      {teks && <p className="mx-auto mb-4 max-w-[34ch] text-isi text-teks-redup">{teks}</p>}
       {aksi}
     </div>
   )
@@ -32,11 +32,11 @@ export function KotakCari({
   labelTampil = false,
 }) {
   return (
-    <div className="cari">
-      <label className={labelTampil ? 'label-cari' : 'sr-only'} htmlFor={id}>
+    <div className="relative mb-4">
+      <label className={labelTampil ? 'mb-1.5 text-padat font-semibold text-teks-redup' : 'sr-only'} htmlFor={id}>
         {label}
       </label>
-      <Ikon nama="cari" ukuran={20} />
+      <Ikon nama="cari" ukuran={20} className="pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2 text-teks-samar" />
       <input
         id={id}
         type="search"
@@ -44,11 +44,12 @@ export function KotakCari({
         onChange={(e) => onUbah(e.target.value)}
         placeholder={placeholder}
         autoComplete="off"
+        className="min-h-12 rounded-kecil border-garis-kuat bg-kartu pr-12 pl-[2.65rem] shadow-kontrol"
       />
       {nilai && (
         <button
           type="button"
-          className="cari-bersih"
+          className="absolute top-1/2 right-2 size-12 -translate-y-1/2 rounded-full bg-transparent p-0 text-teks-samar hover:bg-latar"
           onClick={() => onUbah('')}
           aria-label="Hapus pencarian"
         >
@@ -67,9 +68,9 @@ export function KendaliHalaman({ halaman, total, ukuran = UKURAN_HALAMAN, onPili
   const jumlahHalaman = Math.max(1, Math.ceil(total / ukuran))
   if (jumlahHalaman <= 1) return null
   return (
-    <div className="kendali-halaman">
-      <span className="samar">{keterangan ?? `Halaman ${halaman + 1} dari ${jumlahHalaman}`}</span>
-      <span className="baris-rapat">
+    <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+      <span className="text-padat text-teks-samar">{keterangan ?? `Halaman ${halaman + 1} dari ${jumlahHalaman}`}</span>
+      <span className="flex flex-wrap items-center gap-2">
         <button
           type="button"
           className="sekunder"
@@ -143,16 +144,16 @@ export function Modal({ judul, subjudul, onTutup, children }) {
 
   return (
     <div
-      className="modal-latar"
+      className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-biru-950/55 p-5 backdrop-blur-[4px] max-dialog:p-2.5"
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) tutupRef.current()
       }}
     >
-      <div className="modal-wadah" role="dialog" aria-modal="true" aria-labelledby={idJudul} ref={wadah}>
-        <div className="modal-kepala">
+      <div className="flex max-h-[90vh] w-full max-w-[680px] flex-col overflow-hidden rounded-besar border border-garis bg-kartu shadow-timbul max-dialog:max-h-[94vh]" role="dialog" aria-modal="true" aria-labelledby={idJudul} ref={wadah}>
+        <div className="flex items-center justify-between gap-4 border-b border-garis bg-biru-50 px-5 py-5">
           <div>
-            <h2 id={idJudul}>{judul}</h2>
-            {subjudul && <span className="modal-subjudul">{subjudul}</span>}
+            <h2 id={idJudul} className="m-0 text-subjudul font-bold tracking-[-0.015em] text-biru-950">{judul}</h2>
+            {subjudul && <span className="text-padat font-medium text-teks-samar">{subjudul}</span>}
           </div>
           <button
             type="button"

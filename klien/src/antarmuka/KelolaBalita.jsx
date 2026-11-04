@@ -199,11 +199,11 @@ export default function KelolaBalita({ sesi }) {
   }
 
   return (
-    <main className="layar" id="isi-utama">
-      <div className="kepala-layar">
+    <main className="mx-auto min-h-[calc(100dvh_-_4rem)] max-w-lebar px-4 pt-4 pb-[calc(6.2rem_+_env(safe-area-inset-bottom))] max-sempit:px-3 max-sempit:pb-[calc(6.4rem_+_env(safe-area-inset-bottom))]" id="isi-utama">
+      <div className="kepala-layar mb-4 flex items-start justify-between gap-4">
         <div>
           <h1>Data balita</h1>
-          <p>Daftar, sunting, dan hapus balita terdaftar di Posyandu ini.</p>
+          <p className="mt-1 mb-0 text-isi text-teks-redup">Daftar, sunting, dan hapus balita terdaftar di Posyandu ini.</p>
         </div>
         <button type="button" className="sekunder" onClick={() => muat()}>
           <Ikon nama="sinkron" ukuran={18} />
@@ -212,29 +212,29 @@ export default function KelolaBalita({ sesi }) {
       </div>
 
       {galat && (
-        <div className="pesan galat" role="alert">
+        <div className="mb-3 flex items-start gap-2 rounded-kecil border px-3 py-3 text-isi font-semibold leading-snug border-merah-100 bg-merah-100 text-merah-800" role="alert">
           <Ikon nama="peringatan" ukuran={19} />
           <span>{galat}</span>
         </div>
       )}
       {pesan && (
-        <div className="pesan sukses" role="status">
+        <div className="mb-3 flex items-start gap-2 rounded-kecil border px-3 py-3 text-isi font-semibold leading-snug border-hijau-100 bg-hijau-100 text-hijau-800" role="status">
           <Ikon nama="cek" ukuran={19} />
           <span>{pesan}</span>
         </div>
       )}
 
-      <form className="kartu kartu-akun" onSubmit={tambah}>
-        <div className="kepala-akun">
-          <span className="kepala-akun-ikon">
+      <form className="kartu p-5 max-sempit:p-4" onSubmit={tambah}>
+        <div className="kepala-akun mb-5 flex items-start gap-3 max-sempit:mb-4">
+          <span className="grid size-[42px] shrink-0 place-items-center rounded-sedang border border-biru-100 bg-biru-50 text-biru-700 max-sempit:size-[38px]">
             <Ikon nama="tambah" ukuran={20} />
           </span>
           <div>
-            <h3>Balita baru</h3>
+            <h2>Balita baru</h2>
           </div>
         </div>
 
-        <div className="grid2 grid-akun">
+        <div className="grid gap-4 [grid-template-columns:repeat(2,minmax(0,1fr))] max-sempit:grid-cols-1 max-sempit:gap-3">
           <div className="bidang">
             <label htmlFor="b-posyandu">
               <span>Posyandu</span>
@@ -355,7 +355,7 @@ export default function KelolaBalita({ sesi }) {
           </div>
         </div>
 
-        <div className="aksi-akun">
+        <div className="mt-4 flex justify-end border-t border-garis pt-4 max-sempit:[&>button]:w-full">
           <button type="submit" disabled={menyimpan}>
             <Ikon nama="tambah" ukuran={18} />
             {menyimpan ? 'Menyimpan…' : 'Daftarkan balita'}
@@ -369,10 +369,10 @@ export default function KelolaBalita({ sesi }) {
           subjudul={sunting.nama_lengkap}
           onTutup={() => setSunting(null)}
         >
-          <form onSubmit={simpanSunting} className="modal-isi">
-            <div className="seksi-grup">
-              <div className="seksi-grup-judul">Identitas Utama</div>
-              <div className="grid2">
+          <form onSubmit={simpanSunting} className="flex flex-col gap-5 overflow-y-auto px-5 py-5 max-dialog:gap-4 max-dialog:p-4">
+            <div className="flex flex-col gap-3">
+              <div className="border-b border-garis pb-1.5 text-2xs font-bold uppercase tracking-[0.05em] text-aksen-biru-ink">Identitas Utama</div>
+              <div className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(190px,1fr))]">
                 <div className="bidang">
                   <label htmlFor="s-posyandu">
                     <span>Posyandu</span>
@@ -437,9 +437,9 @@ export default function KelolaBalita({ sesi }) {
               </div>
             </div>
 
-            <div className="seksi-grup">
-              <div className="seksi-grup-judul">Orang Tua & Data Lahir (Opsional)</div>
-              <div className="grid2">
+            <div className="flex flex-col gap-3">
+              <div className="border-b border-garis pb-1.5 text-2xs font-bold uppercase tracking-[0.05em] text-aksen-biru-ink">Orang Tua & Data Lahir (Opsional)</div>
+              <div className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(190px,1fr))]">
                 <div className="bidang">
                   <label htmlFor="s-ibu">Nama ibu kandung</label>
                   <input
@@ -490,7 +490,7 @@ export default function KelolaBalita({ sesi }) {
               </div>
             </div>
 
-            <div className="modal-kaki">
+            <div className="flex items-center justify-end gap-2.5 border-t border-garis bg-biru-50 px-5 py-4 max-dialog:flex-col-reverse max-dialog:gap-2 max-dialog:p-3 max-dialog:[&>button]:w-full">
               <button type="button" className="sekunder" onClick={() => setSunting(null)}>
                 Batal
               </button>
@@ -505,14 +505,14 @@ export default function KelolaBalita({ sesi }) {
 
       <div className="kartu">
         <div className="kartu-judul">
-          <h3>Balita terdaftar</h3>
-          <span className="samar">
+          <h2>Balita terdaftar</h2>
+          <span className="text-padat text-teks-samar">
             {cari.trim() ? `${daftar.length} cocok` : `${total} balita`}
           </span>
         </div>
 
 
-        <div className="bidang bidang-filter daftar-posyandu">
+        <div className="bidang mb-4 max-w-[22rem] min-w-0 flex-[1_1_190px]">
           <label htmlFor="filter-posyandu-balita">
             <span>Posyandu</span>
             <span className="wajib" aria-hidden="true">*</span>
@@ -532,9 +532,9 @@ export default function KelolaBalita({ sesi }) {
         <KotakCari id="cari-balita" nilai={cari} onUbah={setCari} />
 
         {!filterPosyanduId ? (
-          <p className="redup">Pilih Posyandu untuk menampilkan daftar balita.</p>
+          <p className="text-isi text-teks-redup">Pilih Posyandu untuk menampilkan daftar balita.</p>
         ) : memuat ? (
-          <div className="kerangka-tabel" role="status" aria-label="Memuat daftar balita">
+          <div className="grid gap-2 py-3" role="status" aria-label="Memuat daftar balita">
             <div className="kerangka kerangka-baris" style={{ width: '85%' }} />
             <div className="kerangka kerangka-baris" style={{ width: '95%' }} />
             <div className="kerangka kerangka-baris" style={{ width: '60%' }} />
@@ -562,7 +562,7 @@ export default function KelolaBalita({ sesi }) {
               <thead>
                 <tr>
                   <th>Nama</th>
-                  <th className="kolom-usia">Usia</th>
+                  <th className="w-[10%] text-left">Usia</th>
                   <th>Jenis kelamin</th>
                   <th>Status</th>
                   <th aria-label="Tindakan" />
@@ -574,10 +574,10 @@ export default function KelolaBalita({ sesi }) {
                   return (
                     <tr key={b.id}>
                       <td data-label="Nama">
-                        <div className="tabel-nama-wadah">
+                        <div className="flex min-w-0 flex-col gap-1">
                           <strong>{b.nama_lengkap}</strong>
                           {b.nama_ibu_kandung && (
-                            <span className="samar">Ibu: {b.nama_ibu_kandung}</span>
+                            <span className="text-padat text-teks-samar">Ibu: {b.nama_ibu_kandung}</span>
                           )}
                         </div>
                       </td>
@@ -604,7 +604,7 @@ export default function KelolaBalita({ sesi }) {
                       </td>
                       <td className="sel-aksi">
                         {konfirm?.id === b.id ? (
-                          <span className="baris-rapat">
+                          <span className="flex flex-wrap items-center gap-2">
                             <button
                               type="button"
                               className="bahaya"
@@ -631,7 +631,7 @@ export default function KelolaBalita({ sesi }) {
                             </button>
                             <button
                               type="button"
-                              className="bahaya spasi-kiri-kecil"
+                              className="bahaya ml-1.5"
                               onClick={() => setKonfirm(b)}
                             >
                               Hapus

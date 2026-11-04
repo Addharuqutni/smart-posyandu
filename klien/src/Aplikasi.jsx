@@ -13,13 +13,13 @@ const Laporan = lazy(() => import('./antarmuka/Laporan.jsx'))
 /** Layar sementara saat bundel sebuah layar masih diunduh. */
 function LayarMemuat() {
   return (
-    <main className="layar" id="isi-utama">
-      <div className="kosong">
-        <div className="kosong-ikon">
+    <main className="mx-auto min-h-[calc(100dvh_-_4rem)] max-w-lebar px-4 pt-4 pb-[calc(6.2rem_+_env(safe-area-inset-bottom))] max-sempit:px-3 max-sempit:pb-[calc(6.4rem_+_env(safe-area-inset-bottom))]" id="isi-utama">
+      <div className="mb-4 rounded-sedang border border-dashed border-garis-kuat bg-kartu px-5 py-8 text-center">
+        <div className="mx-auto mb-3 grid size-[52px] place-items-center rounded-full bg-biru-100 text-biru-700">
           <Ikon nama="sinkron" ukuran={24} />
         </div>
-        <h3>Memuat layar…</h3>
-        <p>Mengunduh bagian aplikasi yang dibutuhkan.</p>
+        <h3 className="mb-1.5 text-dasar font-bold text-teks">Memuat layar…</h3>
+        <p className="mx-auto mb-0 max-w-[34ch] text-isi text-teks-redup">Mengunduh bagian aplikasi yang dibutuhkan.</p>
       </div>
     </main>
   )
@@ -231,13 +231,13 @@ export default function Aplikasi() {
   let isi
   if (perluSiap) {
     isi = (
-      <main className="layar" id="isi-utama">
+      <main className="mx-auto min-h-[calc(100dvh_-_4rem)] max-w-lebar px-4 pt-4 pb-[calc(6.2rem_+_env(safe-area-inset-bottom))] max-sempit:px-3 max-sempit:pb-[calc(6.4rem_+_env(safe-area-inset-bottom))]" id="isi-utama">
         <div className="kartu">
-          <div className="kosong-ikon">
+          <div className="mx-auto mb-3 grid size-[52px] place-items-center rounded-full bg-biru-100 text-biru-700">
             <Ikon nama="unduh" ukuran={24} />
           </div>
-          <h2 style={{ marginTop: 0 }}>Penyiapan awal</h2>
-          <p>
+          <h2 className="mb-1.5 text-dasar font-bold text-teks">Penyiapan awal</h2>
+          <p className="mx-auto mb-4 max-w-[34ch] text-isi text-teks-redup">
             Unduh salinan daftar balita sebelum mulai mencatat. Ini mencegah balita tercatat dua
             kali.
           </p>
@@ -246,7 +246,7 @@ export default function Aplikasi() {
             {sinkron.mengirim ? 'Mengunduh…' : 'Unduh sekarang'}
           </button>
           {sinkron.luring && (
-            <p className="redup" style={{ marginBottom: 0 }}>
+            <p className="text-isi text-teks-redup" style={{ marginBottom: 0 }}>
               Tidak ada jaringan. Sambungkan tablet ke internet untuk penyiapan awal.
             </p>
           )}
@@ -327,51 +327,56 @@ export default function Aplikasi() {
 
   return (
     <>
-      <a className="lewati" href="#isi-utama">
+      <a className="fixed top-2 left-2 z-100 -translate-y-[160%] rounded-kecil bg-kartu px-4 py-2.5 font-bold text-biru-900 no-underline shadow-naik focus:translate-y-0" href="#isi-utama">
         Lewati ke isi
       </a>
 
-      <header className="bilah-atas">
-        <div className="bilah-isi">
-          <div className="merek">
-            <img className="merek-logo" src="/logo-192.png" alt="" width="36" height="36" />
-            <span className="merek-teks">
-              <span className="merek-nama">Smart Posyandu</span>
+      <header className="sticky top-0 z-20 border-b border-white/10 bg-[linear-gradient(100deg,var(--color-biru-900)_0%,var(--color-biru-800)_62%,var(--color-aksen-teal-ink)_100%)] text-kartu shadow-kontrol [padding-top:env(safe-area-inset-top)]">
+        <div className="mx-auto flex min-h-16 max-w-lebar items-center justify-between gap-3 px-4 py-2 max-sempit:min-h-[58px] max-sempit:px-3">
+          <div className="flex min-w-0 items-center gap-2.5">
+            <img className="size-9 shrink-0 object-contain [filter:drop-shadow(0_2px_5px_rgb(0_0_0/0.3))]" src="/logo-192.png" alt="" width="36" height="36" />
+            <span className="grid min-w-0 leading-tight">
+              <span className="text-tombol font-bold tracking-[0.01em] whitespace-nowrap max-sempit:text-lega">Smart Posyandu</span>
               {tampilPosyandu && (
-                <span className="merek-sub" title={namaPosyandu}>
+                <span className="overflow-hidden text-xs text-ellipsis whitespace-nowrap text-biru-100 max-mini:max-w-[120px]" title={namaPosyandu}>
                   {namaPosyandu}
                 </span>
               )}
             </span>
           </div>
-          <div className="status-wadah">
-            <span className={`status ${statusKelas}`} role="status" aria-live="polite">
+          <div className="flex items-center gap-2">
+            <span className={`status max-sempit:min-h-8 max-sempit:px-2 max-sempit:text-xs ${statusKelas}`} role="status" aria-live="polite">
               <span className="status-dot" aria-hidden="true" />
               <span className="sr-only">{statusTeks}. </span>
-              <span aria-hidden="true">{peranLabel} · {namaPengguna}</span>
+              <span aria-hidden="true" className="max-mini:max-w-[88px] max-mini:overflow-hidden max-mini:text-ellipsis max-mini:whitespace-nowrap">{peranLabel} · {namaPengguna}</span>
             </span>
             <button
               type="button"
-              className="tombol-keluar"
+              className="min-h-[44px] rounded-full border border-white/22 bg-transparent px-3 py-1.5 text-padat text-kartu shadow-none hover:bg-white/12 max-sempit:size-[44px] max-sempit:min-w-[44px] max-sempit:p-0"
               onClick={keluar}
               disabled={keluarProses}
               title="Keluar dari akun"
             >
               <Ikon nama="keluar" ukuran={17} />
-              <span>{keluarProses ? 'Keluar…' : 'Keluar'}</span>
+              <span className="max-sempit:hidden">{keluarProses ? 'Keluar…' : 'Keluar'}</span>
             </button>
           </div>
         </div>
       </header>
 
       {sinkron.menunggu > 0 && (
-        <div className="strip-antrean" role="status">
-          <div>
+        <div className="border-b bg-kuning-100 text-kuning-800 border-kuning-100" role="status">
+          <div className="mx-auto flex max-w-lebar items-center gap-2 px-4 py-2 text-padat font-semibold max-sempit:text-xs">
             <Ikon nama="sinkron" ukuran={16} />
             <span>
               {sinkron.menunggu} catatan menunggu dikirim ke server
             </span>
-            <button type="button" onClick={jalankan} disabled={sinkron.mengirim}>
+            <button
+              type="button"
+              className="ml-auto min-h-9 rounded-kecil border border-kuning-800 bg-kartu px-3 py-1 text-padat text-kuning-800 shadow-none max-sempit:min-h-12"
+              onClick={jalankan}
+              disabled={sinkron.mengirim}
+            >
               {sinkron.mengirim ? 'Mengirim…' : 'Kirim sekarang'}
             </button>
           </div>
@@ -379,8 +384,8 @@ export default function Aplikasi() {
       )}
 
       {sinkron.gagal > 0 && (
-        <div className="strip-antrean gagal" role="alert">
-          <div>
+        <div className="border-b bg-merah-100 text-merah-800 border-merah-100" role="alert">
+          <div className="mx-auto flex max-w-lebar items-center gap-2 px-4 py-2 text-padat font-semibold max-sempit:text-xs">
             <Ikon nama="peringatan" ukuran={16} />
             <span>
               {sinkron.gagal} catatan gagal dikirim. Hubungi admin desa.
@@ -393,7 +398,7 @@ export default function Aplikasi() {
 
       {navigasi.length > 0 && !perluSiap && (
         <nav className="nav-bawah" aria-label="Navigasi utama">
-          <div className="nav-isi">
+          <div className="mx-auto flex max-w-lebar justify-center gap-2 px-4 py-1.5">
             {navigasi.map((n) => (
               <button
                 key={n.nama}

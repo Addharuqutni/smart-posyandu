@@ -86,13 +86,13 @@ export default function Riwayat({ sesi, balita, kembali, setelahUbah }) {
           {
             label: 'Berat (kg)',
             data: denganUkur.map((b) => Number(b.pengukuran.berat_kg)),
-            borderColor: '#14557f',
-            backgroundColor: 'rgba(20,85,127,0.12)',
+            borderColor: '#12538a',
+            backgroundColor: 'rgba(18,83,138,0.12)',
             borderWidth: 2.5,
             tension: 0.3,
             fill: true,
             pointRadius: 4,
-            pointBackgroundColor: '#14557f',
+            pointBackgroundColor: '#12538a',
             pointBorderColor: '#ffffff',
             pointBorderWidth: 2,
           },
@@ -105,19 +105,19 @@ export default function Riwayat({ sesi, balita, kembali, setelahUbah }) {
         scales: {
           x: {
             grid: { display: false },
-            ticks: { color: '#64748b', maxRotation: 0, autoSkipPadding: 12 },
+            ticks: { color: '#5b6e82', maxRotation: 0, autoSkipPadding: 12 },
           },
           y: {
             beginAtZero: false,
-            title: { display: true, text: 'kg', color: '#64748b' },
-            grid: { color: '#e8edf2' },
-            ticks: { color: '#64748b' },
+            title: { display: true, text: 'kg', color: '#5b6e82' },
+            grid: { color: '#d1dce6' },
+            ticks: { color: '#5b6e82' },
           },
         },
         plugins: {
           legend: { display: false },
           tooltip: {
-            backgroundColor: '#0b2a4a',
+            backgroundColor: '#0a192f',
             padding: 10,
             titleFont: { weight: '600' },
             callbacks: {
@@ -169,30 +169,30 @@ export default function Riwayat({ sesi, balita, kembali, setelahUbah }) {
     : 'Wali belum tercatat'
 
   return (
-    <main className="layar" id="isi-utama">
-      <div className="kartu detail-balita-kartu">
-        <div className="detail-balita-header">
-          <div className="detail-balita-identitas">
+    <main className="mx-auto min-h-[calc(100dvh_-_4rem)] max-w-lebar px-4 pt-4 pb-[calc(6.2rem_+_env(safe-area-inset-bottom))] max-sempit:px-3 max-sempit:pb-[calc(6.4rem_+_env(safe-area-inset-bottom))]" id="isi-utama">
+      <div className="kartu shadow-kontrol">
+        <div className="mb-4 flex flex-wrap items-start justify-between gap-4">
+          <div className="flex min-w-0 flex-1 basis-[280px] items-center gap-3">
             <span
-              className={`avatar avatar-balita-detail ${balita.jenis_kelamin === 'laki-laki' ? 'laki' : 'perempuan'}`}
+              className={`grid size-[50px] shrink-0 place-items-center rounded-kecil border text-judul font-bold shadow-kontrol ${balita.jenis_kelamin === 'laki-laki' ? 'border-biru-100 bg-aksen-biru-tint text-aksen-biru-ink' : 'border-merah-100 bg-aksen-rose-tint text-aksen-rose-ink'}`}
               aria-hidden="true"
             >
               {inisial(balita.nama_lengkap)}
             </span>
-            <div className="detail-balita-nama-wadah">
-              <div className="detail-balita-nama-baris">
-                <h1>{balita.nama_lengkap}</h1>
+            <div className="flex min-w-0 flex-col gap-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="m-0 text-judul leading-tight font-bold tracking-[-0.015em] text-biru-950">{balita.nama_lengkap}</h1>
                 <span
-                  className={`lencana-kelamin ${balita.jenis_kelamin === 'laki-laki' ? 'laki' : 'perempuan'}`}
+                  className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs leading-tight font-semibold ${balita.jenis_kelamin === 'laki-laki' ? 'border-aksen-biru-ink bg-aksen-biru-tint text-aksen-biru-ink' : 'border-aksen-rose-ink bg-aksen-rose-tint text-aksen-rose-ink'}`}
                 >
                   {balita.jenis_kelamin === 'laki-laki' ? 'Laki-laki' : 'Perempuan'}
                 </span>
               </div>
-              <p className="detail-balita-wali">
+              <p className="m-0 inline-flex items-center gap-1.5 text-padat text-teks-redup [&_svg]:shrink-0 [&_svg]:text-teks-samar">
                 <Ikon nama="balita" ukuran={14} />
                 <span>{waliTeks}</span>
               </p>
-              <p className="detail-balita-wali">
+              <p className="m-0 inline-flex items-center gap-1.5 text-padat text-teks-redup [&_svg]:shrink-0 [&_svg]:text-teks-samar">
                 <Ikon nama="posyandu" ukuran={14} />
                 <span>
                   {posyandu
@@ -209,33 +209,33 @@ export default function Riwayat({ sesi, balita, kembali, setelahUbah }) {
             </div>
           </div>
 
-          <button type="button" className="sekunder tombol-kembali-detail" onClick={kembali}>
+          <button type="button" className="sekunder self-start" onClick={kembali}>
             <Ikon nama="kembali" ukuran={17} />
             <span>Kembali</span>
           </button>
         </div>
 
-        <div className="sorotan-balita-wadah" aria-label="Informasi Usia dan Tanggal Lahir">
-          <div className="sorotan-item sorotan-item--usia">
-            <div className="sorotan-ikon">
+        <div className="grid gap-3 border-t border-garis pt-3.5 [grid-template-columns:repeat(auto-fit,minmax(220px,1fr))]" aria-label="Informasi Usia dan Tanggal Lahir">
+          <div className="flex items-center gap-3 rounded-kecil border px-4 py-2.5 transition-[transform,box-shadow] hover:shadow-kontrol border-aksen-biru-ink bg-aksen-biru-tint">
+            <div className="grid size-[38px] shrink-0 place-items-center rounded-kecil bg-kartu text-aksen-biru-ink">
               <Ikon nama="anak" ukuran={20} />
             </div>
-            <div className="sorotan-konten">
-              <span className="sorotan-label">Usia Balita</span>
-              <span className="sorotan-nilai">
+            <div className="flex min-w-0 flex-col gap-0.5">
+              <span className="text-mikro font-bold tracking-[0.05em] uppercase text-aksen-biru-ink">Usia Balita</span>
+              <span className="flex items-baseline gap-1 text-subjudul leading-tight font-bold tabular-nums text-biru-950">
                 <strong>{umur >= 0 ? `${umur}` : '—'}</strong>
-                <span className="sorotan-satuan">{umur >= 0 ? ' bulan' : ''}</span>
+                <span className="text-padat font-semibold text-teks-redup">{umur >= 0 ? ' bulan' : ''}</span>
               </span>
             </div>
           </div>
 
-          <div className="sorotan-item sorotan-item--lahir">
-            <div className="sorotan-ikon">
+          <div className="flex items-center gap-3 rounded-kecil border px-4 py-2.5 transition-[transform,box-shadow] hover:shadow-kontrol border-aksen-hijau-ink bg-aksen-hijau-tint">
+            <div className="grid size-[38px] shrink-0 place-items-center rounded-kecil bg-kartu text-aksen-hijau-ink">
               <Ikon nama="kunjungan" ukuran={20} />
             </div>
-            <div className="sorotan-konten">
-              <span className="sorotan-label">Tanggal Lahir</span>
-              <span className="sorotan-nilai">
+            <div className="flex min-w-0 flex-col gap-0.5">
+              <span className="text-mikro font-bold tracking-[0.05em] uppercase text-aksen-hijau-ink">Tanggal Lahir</span>
+              <span className="flex items-baseline gap-1 text-subjudul leading-tight font-bold tabular-nums text-biru-950">
                 <strong>{tanggalLengkap(balita.tanggal_lahir)}</strong>
               </span>
             </div>
@@ -243,44 +243,44 @@ export default function Riwayat({ sesi, balita, kembali, setelahUbah }) {
         </div>
       </div>
       {galat && (
-        <div className="pesan galat" role="alert">
+        <div className="mb-3 flex items-start gap-2 rounded-kecil border px-3 py-3 text-isi font-semibold leading-snug border-merah-100 bg-merah-100 text-merah-800" role="alert">
           <Ikon nama="peringatan" ukuran={19} />
           <span>{galat}</span>
         </div>
       )}
 
-      <div className="ringkasan">
-        <div className="stat stat--kunjungan">
-          <div className="stat-atas">
-            <span className="stat-ikon">
+      <div className="mb-4 grid grid-cols-3 gap-2.5 max-sempit:gap-2">
+        <div className="relative flex min-h-[5.4rem] flex-col justify-between rounded-sedang border border-garis bg-kartu px-4 py-4 shadow-halus transition-[border-color,box-shadow] hover:border-garis-kuat hover:shadow-naik max-sempit:min-h-[4.8rem] max-sempit:px-3 max-sempit:py-2.5">
+          <div className="mb-2 flex items-center justify-between">
+            <span className="grid size-8 shrink-0 place-items-center rounded-kecil max-sempit:size-6 bg-aksen-biru-tint text-aksen-biru-ink">
               <Ikon nama="kunjungan" ukuran={16} />
             </span>
           </div>
-          <div className="stat-bawah">
-            <div className="stat-nilai">{baris.length}</div>
-            <div className="stat-label">Total kunjungan</div>
+          <div className="flex flex-col gap-1">
+            <div className="text-judul leading-[1.15] font-bold tabular-nums tracking-[-0.02em] text-biru-950">{baris.length}</div>
+            <div className="text-2xs leading-tight font-medium text-teks-redup">Total kunjungan</div>
           </div>
         </div>
 
-        <div className="stat stat--berat">
-          <div className="stat-atas">
-            <span className="stat-ikon">
+        <div className="relative flex min-h-[5.4rem] flex-col justify-between rounded-sedang border border-garis bg-kartu px-4 py-4 shadow-halus transition-[border-color,box-shadow] hover:border-garis-kuat hover:shadow-naik max-sempit:min-h-[4.8rem] max-sempit:px-3 max-sempit:py-2.5">
+          <div className="mb-2 flex items-center justify-between">
+            <span className="grid size-8 shrink-0 place-items-center rounded-kecil max-sempit:size-6 bg-aksen-teal-tint text-aksen-teal-ink">
               <Ikon nama="grafik" ukuran={16} />
             </span>
           </div>
-          <div className="stat-bawah">
-            <div className="stat-nilai">
+          <div className="flex flex-col gap-1">
+            <div className="text-judul leading-[1.15] font-bold tabular-nums tracking-[-0.02em] text-biru-950">
               {terakhir ? `${terakhir.pengukuran.berat_kg}` : '—'}
-              {terakhir && <span className="satuan-stat"> kg</span>}
+              {terakhir && <span className="ml-0.5 text-padat font-semibold text-teks-redup"> kg</span>}
             </div>
-            <div className="stat-label">Berat terakhir</div>
+            <div className="text-2xs leading-tight font-medium text-teks-redup">Berat terakhir</div>
           </div>
         </div>
 
-        <div className="stat stat--gizi">
-          <div className="stat-atas">
+        <div className="relative flex min-h-[5.4rem] flex-col justify-between rounded-sedang border border-garis bg-kartu px-4 py-4 shadow-halus transition-[border-color,box-shadow] hover:border-garis-kuat hover:shadow-naik max-sempit:min-h-[4.8rem] max-sempit:px-3 max-sempit:py-2.5">
+          <div className="mb-2 flex items-center justify-between">
             <span
-              className={`lencana-gizi lencana-mandiri ${statusTerakhir ?? 'menunggu'}`}
+              className={`lencana-gizi mt-1.5 w-fit ${statusTerakhir ?? 'menunggu'}`}
             >
               {statusTerakhir ? PESAN_STATUS[statusTerakhir] : 'Belum dinilai'}
             </span>
@@ -290,8 +290,8 @@ export default function Riwayat({ sesi, balita, kembali, setelahUbah }) {
               teks="Dihitung server dari berat menurut umur. Muncul setelah kunjungan terkirim dan divalidasi petugas."
             />
           </div>
-          <div className="stat-bawah">
-            <div className="stat-label">Status gizi terakhir</div>
+          <div className="flex flex-col gap-1">
+            <div className="text-2xs leading-tight font-medium text-teks-redup">Status gizi terakhir</div>
           </div>
         </div>
       </div>
@@ -310,15 +310,15 @@ export default function Riwayat({ sesi, balita, kembali, setelahUbah }) {
       ) : (
         <>
           {denganUkur.length > 1 && (
-            <div className="kartu grafik-kartu">
+            <div className="kartu h-[280px] p-4 max-sempit:h-[230px]">
               <div className="kartu-judul">
-                <h3>Berat badan</h3>
-                <span className="samar">
+                <h2>Berat badan</h2>
+                <span className="text-padat text-teks-samar">
                   {tanggalPendek(denganUkur[0].tanggal_kunjungan)} –{' '}
                   {tanggalPendek(terakhir.tanggal_kunjungan)}
                 </span>
               </div>
-              <div className="wadah-kanvas">
+              <div className="relative h-[calc(100%_-_2.1rem)]">
                 <canvas
                   ref={kanvas}
                   aria-label="Grafik berat badan menurut tanggal kunjungan"
@@ -330,7 +330,7 @@ export default function Riwayat({ sesi, balita, kembali, setelahUbah }) {
 
           <div className="kartu">
             <div className="kartu-judul">
-              <h3>Riwayat pengukuran</h3>
+              <h2>Riwayat pengukuran</h2>
               <button type="button" className="sekunder" onClick={() => window.print()}>
                 <Ikon nama="unduh" ukuran={17} />
                 Cetak
@@ -390,11 +390,11 @@ export default function Riwayat({ sesi, balita, kembali, setelahUbah }) {
       {sunting && (
         <form className="kartu" onSubmit={simpanSunting}>
           <div className="kartu-judul">
-            <h3>Ubah pengukuran</h3>
+            <h2>Ubah pengukuran</h2>
             <span className="lencana-gizi menunggu">Belum divalidasi</span>
           </div>
-          <div className="grid3">
-            <div className="bidang ukuran">
+          <div className="grid gap-x-3 [grid-template-columns:repeat(auto-fit,minmax(150px,1fr))]">
+            <div className="bidang">
               <label htmlFor="u-berat">
                 <span>Berat (kg)</span>
                 <span className="wajib" aria-hidden="true">*</span>
@@ -410,10 +410,10 @@ export default function Riwayat({ sesi, balita, kembali, setelahUbah }) {
                   onChange={(e) => ubahUkur('berat_kg', e.target.value)}
                   required
                 />
-                <span className="satuan-teks">kg</span>
+                <span className="satuan">kg</span>
               </div>
             </div>
-            <div className="bidang ukuran">
+            <div className="bidang">
               <label htmlFor="u-tinggi">Tinggi (cm)</label>
               <div className="wadah-satuan">
                 <input
@@ -425,10 +425,10 @@ export default function Riwayat({ sesi, balita, kembali, setelahUbah }) {
                   value={sunting.tinggi_cm ?? ''}
                   onChange={(e) => ubahUkur('tinggi_cm', e.target.value)}
                 />
-                <span className="satuan-teks">cm</span>
+                <span className="satuan">cm</span>
               </div>
             </div>
-            <div className="bidang ukuran">
+            <div className="bidang">
               <label htmlFor="u-kepala">Lingkar kepala (cm)</label>
               <div className="wadah-satuan">
                 <input
@@ -440,16 +440,16 @@ export default function Riwayat({ sesi, balita, kembali, setelahUbah }) {
                   value={sunting.lingkar_kepala_cm ?? ''}
                   onChange={(e) => ubahUkur('lingkar_kepala_cm', e.target.value)}
                 />
-                <span className="satuan-teks">cm</span>
+                <span className="satuan">cm</span>
               </div>
             </div>
           </div>
-          <p className="samar">
+          <p className="text-padat text-teks-samar">
             Rentang wajar: berat {RENTANG.berat_kg[0]}–{RENTANG.berat_kg[1]} kg, tinggi{' '}
             {RENTANG.tinggi_cm[0]}–{RENTANG.tinggi_cm[1]} cm, lingkar kepala{' '}
             {RENTANG.lingkar_kepala_cm[0]}–{RENTANG.lingkar_kepala_cm[1]} cm.
           </p>
-          <div className="baris-rapat spasi-atas">
+          <div className="mt-4 flex flex-wrap items-center gap-2">
             <button type="submit">
               <Ikon nama="simpan" ukuran={18} />
               Simpan perubahan
@@ -461,7 +461,7 @@ export default function Riwayat({ sesi, balita, kembali, setelahUbah }) {
         </form>
       )}
 
-      <p className="samar">
+      <p className="text-padat text-teks-samar">
         Status gizi dihitung server. Setelah divalidasi petugas, pengukuran tidak bisa diubah.
       </p>
     </main>

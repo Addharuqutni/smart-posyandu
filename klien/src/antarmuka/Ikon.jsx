@@ -43,7 +43,7 @@ export default function Ikon({ nama, ukuran = 20, className = '', tebal = 2 }) {
   if (!jalur) return null
   return (
     <svg
-      className={`ikon ${className}`}
+      className={`block shrink-0 ${className}`}
       width={ukuran}
       height={ukuran}
       viewBox="0 0 24 24"

@@ -65,7 +65,7 @@ export function PanelRiwayatMasuk({ sesi, versi = 0 }) {
   return (
     <>
       {galat && (
-        <div className="pesan galat" role="alert">
+        <div className="mb-3 flex items-start gap-2 rounded-kecil border px-3 py-3 text-isi font-semibold leading-snug border-merah-100 bg-merah-100 text-merah-800" role="alert">
           <Ikon nama="peringatan" ukuran={19} />
           <span>{galat}</span>
         </div>
@@ -76,7 +76,7 @@ export function PanelRiwayatMasuk({ sesi, versi = 0 }) {
           <table className="tabel">
             <tbody>
               <tr>
-                <td colSpan={5} className="redup">
+                <td colSpan={5} className="text-isi text-teks-redup">
                   Memuat riwayat masuk…
                 </td>
               </tr>
@@ -84,7 +84,7 @@ export function PanelRiwayatMasuk({ sesi, versi = 0 }) {
           </table>
         </div>
       ) : riwayat.length === 0 ? (
-        <p className="redup">Belum ada riwayat masuk.</p>
+        <p className="text-isi text-teks-redup">Belum ada riwayat masuk.</p>
       ) : (
         <div className="tabel-bungkus">
           <table className="tabel tabel-kartu">
@@ -102,13 +102,13 @@ export function PanelRiwayatMasuk({ sesi, versi = 0 }) {
                 <tr key={s.id}>
                   <td data-label="Akun">
                     <strong>{s.nama_lengkap}</strong>
-                    <div className="samar">
+                    <div className="text-padat text-teks-samar">
                       {s.nama_pengguna} · {LABEL_PERAN[s.peran] ?? s.peran}
                     </div>
                   </td>
-                  <td className="samar" data-label="Perangkat">{s.id_perangkat}</td>
-                  <td className="samar" data-label="Masuk">{waktuPendek(s.dibuat_pada)}</td>
-                  <td className="samar" data-label="Selesai">
+                  <td className="text-padat text-teks-samar" data-label="Perangkat">{s.id_perangkat}</td>
+                  <td className="text-padat text-teks-samar" data-label="Masuk">{waktuPendek(s.dibuat_pada)}</td>
+                  <td className="text-padat text-teks-samar" data-label="Selesai">
                     {waktuPendek(s.dicabut_pada ?? s.kadaluarsa_pada)}
                   </td>
                   <td data-label="Status">
@@ -143,11 +143,11 @@ export default function RiwayatMasuk({ sesi }) {
   const semuaAkun = sesi.pengguna.peran === 'admin_desa'
 
   return (
-    <main className="layar" id="isi-utama">
-      <div className="kepala-layar">
+    <main className="mx-auto min-h-[calc(100dvh_-_4rem)] max-w-lebar px-4 pt-4 pb-[calc(6.2rem_+_env(safe-area-inset-bottom))] max-sempit:px-3 max-sempit:pb-[calc(6.4rem_+_env(safe-area-inset-bottom))]" id="isi-utama">
+      <div className="kepala-layar mb-4 flex items-start justify-between gap-4">
         <div>
           <h1>Perangkat</h1>
-          <p>
+          <p className="mt-1 mb-0 text-isi text-teks-redup">
             Riwayat masuk {semuaAkun ? 'semua akun' : 'akun ini'} beserta perangkat yang dipakai.
           </p>
         </div>
@@ -164,9 +164,9 @@ export default function RiwayatMasuk({ sesi }) {
 
       <div className="kartu">
         <div className="kartu-judul">
-          <h3>Riwayat masuk perangkat</h3>
+          <h2>Riwayat masuk perangkat</h2>
         </div>
-        <p className="redup petunjuk-atas">
+        <p className="-mt-1.5 text-isi text-teks-redup">
           Bila ada perangkat yang tidak dikenal, keluar dari akun lalu hubungi admin desa untuk mencabutnya.
         </p>
         <PanelRiwayatMasuk sesi={sesi} versi={versi} />

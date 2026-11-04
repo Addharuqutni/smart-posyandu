@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import tailwindcss from '@tailwindcss/vite'
 import { fileURLToPath } from 'node:url'
 
 // Konfigurasi dipusat di `.env` root proyek, dipakai bersama server.
@@ -8,7 +9,7 @@ import { fileURLToPath } from 'node:url'
 const akar = fileURLToPath(new URL('..', import.meta.url))
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [tailwindcss(), react()],
   envDir: akar,
   // Host disamakan dengan API (VITE_API di .env) supaya cookie SameSite=Strict
   // tidak dianggap lintas-situs saat pengembangan di http.

@@ -129,9 +129,9 @@ export default function Beranda({
   const namaPosyandu = sesi.pengguna.nama_posyandu || 'Posyandu'
 
   return (
-    <main className="layar" id="isi-utama">
+    <main className="mx-auto min-h-[calc(100dvh_-_4rem)] max-w-lebar px-4 pt-4 pb-[calc(6.2rem_+_env(safe-area-inset-bottom))] max-sempit:px-3 max-sempit:pb-[calc(6.4rem_+_env(safe-area-inset-bottom))]" id="isi-utama">
       {sinkron.luring && (
-        <div className="pesan info" role="status">
+        <div className="mb-3 flex items-start gap-2 rounded-kecil border px-3 py-3 text-isi font-semibold leading-snug border-garis bg-biru-100 text-biru-800" role="status">
           <Ikon nama="luring" ukuran={19} />
           <span>
             Tidak ada jaringan. Pencatatan tetap tersimpan di tablet dan akan terkirim otomatis.
@@ -140,7 +140,7 @@ export default function Beranda({
       )}
 
       {sinkron.gagal > 0 && (
-        <div className="pesan galat" role="alert">
+        <div className="mb-3 flex items-start gap-2 rounded-kecil border px-3 py-3 text-isi font-semibold leading-snug border-merah-100 bg-merah-100 text-merah-800" role="alert">
           <Ikon nama="peringatan" ukuran={19} />
           <span>
             {sinkron.gagal} perubahan ditolak server. Perubahan ini tidak dikirim ulang; hubungi
@@ -150,11 +150,11 @@ export default function Beranda({
       )}
 
       {ditolak.length > 0 && (
-        <details className="kartu kartu-lipat">
-          <summary className="ringkasan-lipat">
+        <details className="kartu">
+          <summary className="cursor-pointer font-semibold">
             Rincian perubahan yang ditolak
           </summary>
-          <ul className="daftar-sederhana spasi-atas-kecil">
+          <ul className="mt-2 grid list-disc gap-1.5 pl-4 text-isi text-teks-redup">
             {ditolak.map((d) => (
               <li key={d.urut}>
                 {String(d.nama_tabel).replaceAll('_', ' ')} ·{' '}
@@ -165,7 +165,7 @@ export default function Beranda({
         </details>
       )}
 
-      <div className="kepala-layar">
+      <div className="kepala-layar mb-4 flex items-start justify-between gap-4">
         <div>
           <h1>Balita</h1>
         </div>
@@ -180,40 +180,40 @@ export default function Beranda({
         </button>
       </div>
 
-      <div className="ringkasan" aria-label="Ringkasan bulan ini">
-        <div className="stat stat--terdaftar">
-          <div className="stat-atas">
-            <span className="stat-ikon">
+      <div className="mb-4 grid grid-cols-3 gap-2.5 max-sempit:gap-2" aria-label="Ringkasan bulan ini">
+        <div className="relative flex min-h-[5.4rem] flex-col justify-between rounded-sedang border border-garis bg-kartu px-4 py-4 shadow-halus transition-[border-color,box-shadow] hover:border-garis-kuat hover:shadow-naik max-sempit:min-h-[4.8rem] max-sempit:px-3 max-sempit:py-2.5">
+          <div className="mb-2 flex items-center justify-between">
+            <span className="grid size-8 shrink-0 place-items-center rounded-kecil max-sempit:size-6 bg-aksen-slate-tint text-aksen-slate-ink">
               <Ikon nama="balita" ukuran={16} />
             </span>
           </div>
-          <div className="stat-bawah">
-            <div className="stat-nilai">{balita.length}</div>
-            <div className="stat-label">Balita aktif</div>
+          <div className="flex flex-col gap-1">
+            <div className="text-judul leading-[1.15] font-bold tabular-nums tracking-[-0.02em] text-biru-950">{balita.length}</div>
+            <div className="text-2xs leading-tight font-medium text-teks-redup">Balita aktif</div>
           </div>
         </div>
 
-        <div className="stat stat--hadir">
-          <div className="stat-atas">
-            <span className="stat-ikon">
+        <div className="relative flex min-h-[5.4rem] flex-col justify-between rounded-sedang border border-garis bg-kartu px-4 py-4 shadow-halus transition-[border-color,box-shadow] hover:border-garis-kuat hover:shadow-naik max-sempit:min-h-[4.8rem] max-sempit:px-3 max-sempit:py-2.5">
+          <div className="mb-2 flex items-center justify-between">
+            <span className="grid size-8 shrink-0 place-items-center rounded-kecil max-sempit:size-6 bg-aksen-hijau-tint text-aksen-hijau-ink">
               <Ikon nama="balita-hadir" ukuran={16} />
             </span>
           </div>
-          <div className="stat-bawah">
-            <div className="stat-nilai">{diukurBulanIni}</div>
-            <div className="stat-label">Diukur bulan ini</div>
+          <div className="flex flex-col gap-1">
+            <div className="text-judul leading-[1.15] font-bold tabular-nums tracking-[-0.02em] text-biru-950">{diukurBulanIni}</div>
+            <div className="text-2xs leading-tight font-medium text-teks-redup">Diukur bulan ini</div>
           </div>
         </div>
 
-        <div className="stat stat--sinkron">
-          <div className="stat-atas">
-            <span className="stat-ikon">
+        <div className="relative flex min-h-[5.4rem] flex-col justify-between rounded-sedang border border-garis bg-kartu px-4 py-4 shadow-halus transition-[border-color,box-shadow] hover:border-garis-kuat hover:shadow-naik max-sempit:min-h-[4.8rem] max-sempit:px-3 max-sempit:py-2.5">
+          <div className="mb-2 flex items-center justify-between">
+            <span className="grid size-8 shrink-0 place-items-center rounded-kecil max-sempit:size-6 bg-aksen-biru-tint text-aksen-biru-ink">
               <Ikon nama="sinkron" ukuran={16} />
             </span>
           </div>
-          <div className="stat-bawah">
-            <div className="stat-nilai">{sinkron.menunggu}</div>
-            <div className="stat-label">Catatan tertunda</div>
+          <div className="flex flex-col gap-1">
+            <div className="text-judul leading-[1.15] font-bold tabular-nums tracking-[-0.02em] text-biru-950">{sinkron.menunggu}</div>
+            <div className="text-2xs leading-tight font-medium text-teks-redup">Catatan tertunda</div>
           </div>
         </div>
       </div>
@@ -221,7 +221,7 @@ export default function Beranda({
       <KotakCari id="cari" nilai={cari} onUbah={setCari} />
 
       {cari && (
-        <p className="samar petunjuk-cari">
+        <p className="-mt-1 mb-3 ml-1.5 text-padat text-teks-samar">
           {tersaring.length} nama cocok dengan “{cari.trim()}”
         </p>
       )}
@@ -262,24 +262,24 @@ export default function Beranda({
       )}
 
       {tersaring.length > 0 && (
-        <ul className="daftar-balita">
+        <ul className="m-0 grid list-none gap-2.5 p-0">
           {ditampilkan.map((b) => {
             const umur = usiaBulan(b.tanggal_lahir, hariIni)
             const status = statusTerakhir[b.id]
             const gender = b.jenis_kelamin === 'laki-laki' ? 'laki' : 'perempuan'
             return (
-              <li key={b.id} className="balita-kartu">
-                <span className={`avatar ${gender}`} aria-hidden="true">
+              <li key={b.id} className="flex items-center gap-3 rounded-sedang border border-garis bg-kartu px-5 py-4 shadow-halus transition-[border-color,box-shadow] hover:border-garis-kuat hover:shadow-naik max-sempit:flex-wrap max-sempit:p-3">
+                <span className={`grid size-11 shrink-0 place-items-center rounded-kecil border text-base font-bold ${gender === 'laki' ? 'border-biru-100 bg-aksen-biru-tint text-aksen-biru-ink' : 'border-merah-100 bg-aksen-rose-tint text-aksen-rose-ink'}`} aria-hidden="true">
                   {inisial(b.nama_lengkap)}
                 </span>
-                <div className="balita-info">
-                  <span className="balita-nama">{b.nama_lengkap}</span>
-                  <span className="balita-meta">
+                <div className="grid min-w-0 flex-1 gap-1 max-sempit:basis-[calc(100%_-_60px)]">
+                  <span className="text-base leading-tight font-bold text-teks">{b.nama_lengkap}</span>
+                  <span className="flex flex-wrap items-center gap-1.5 text-padat text-teks-redup">
                     {umur >= 0 ? `${umur} bulan` : 'Tanggal lahir belum benar'}
                     <span aria-hidden="true">·</span>
                     {gender === 'laki' ? 'Laki-laki' : 'Perempuan'}
                   </span>
-                  <span className="balita-meta">
+                  <span className="flex flex-wrap items-center gap-1.5 text-padat text-teks-redup">
                     <span>Status gizi</span>
                     <span
                       className={`lencana-gizi ${status ?? 'menunggu'}`}
@@ -289,7 +289,7 @@ export default function Beranda({
                     </span>
                   </span>
                 </div>
-                <div className="balita-aksi">
+                <div className="flex shrink-0 items-center gap-2 max-sempit:w-full max-sempit:pt-0.5 max-sempit:[&>button]:flex-1">
                   <button type="button" className="sekunder" onClick={() => saatRiwayat(b)}>
                     <Ikon nama="riwayat" ukuran={17} />
                     Riwayat
