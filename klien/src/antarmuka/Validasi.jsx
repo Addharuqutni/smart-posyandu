@@ -1,12 +1,15 @@
 import { useEffect, useState } from 'react'
-import { daftarValidasi, tindakLanjut, validasiKunjungan, validasiSemua } from '../jaringan/api.js'
+import { daftarPosyandu, daftarValidasi, tindakLanjut, validasiKunjungan, validasiSemua } from '../jaringan/api.js'
 import { PESAN_STATUS } from '../logika/rentang.js'
 import Ikon from './Ikon.jsx'
+import { Kosong, KotakCari, Modal } from './Bersama.jsx'
 import { idBaru } from '../logika/waktu.js'
 export default function Validasi({ sesi }) {
   const [daftar, setDaftar] = useState([])
   const [total, setTotal] = useState(0)
   const [cari, setCari] = useState('')
+  const [posyanduList, setPosyanduList] = useState([])
+  const [posyanduId, setPosyanduId] = useState(sesi.pengguna.posyandu_id ?? '')
   const [galat, setGalat] = useState(null)
   const [memuat, setMemuat] = useState(true)
   const [memuatLagi, setMemuatLagi] = useState(false)
@@ -14,12 +17,19 @@ export default function Validasi({ sesi }) {
   const [sedang, setSedang] = useState(null)
   const [tindak, setTindak] = useState({})
   const [pesan, setPesan] = useState(null)
+  const [konfirmMassal, setKonfirmMassal] = useState(false)
 
-  async function muat(kunci = cari) {
+  useEffect(() => {
+    daftarPosyandu()
+      .then((b) => setPosyanduList(b.posyandu ?? []))
+      .catch(() => setPosyanduList([]))
+  }, [])
+
+  async function muat(kunci = cari, posId = posyanduId) {
     setMemuat(true)
     setGalat(null)
     try {
-      const balasan = await daftarValidasi({ batas: 50, offset: 0, q: kunci.trim() })
+      const balasan = await daftarValidasi({ batas: 50, offset: 0, q: kunci.trim(), posyandu_id: posId })
       setDaftar(balasan.validasi)
       setTotal(balasan.total ?? balasan.validasi.length)
     } catch {
@@ -33,7 +43,7 @@ export default function Validasi({ sesi }) {
     setMemuatLagi(true)
     setGalat(null)
     try {
-      const balasan = await daftarValidasi({ batas: 50, offset: daftar.length, q: cari.trim() })
+      const balasan = await daftarValidasi({ batas: 50, offset: daftar.length, q: cari.trim(), posyandu_id: posyanduId })
       setDaftar((lama) => [...lama, ...balasan.validasi])
       setTotal(balasan.total ?? total)
     } catch {
@@ -45,16 +55,13 @@ export default function Validasi({ sesi }) {
 
   async function tanganiValidasiSemua() {
     if (total === 0) return
-    const pesanKonfirm = cari.trim()
-      ? `Validasi ${total} pengukuran yang cocok dengan "${cari.trim()}"?`
-      : `Validasi SEMUA ${total} pengukuran yang belum divalidasi?`
-    if (!window.confirm(pesanKonfirm)) return
     setMemvalidasikan(true)
     setGalat(null)
     setPesan(null)
     try {
       const balasan = await validasiSemua(cari.trim())
-      setPesan(`${balasan.divalidasi} pengukuran divalidasi. Muat ulang untuk memperbarui daftar.`)
+      setPesan(`${balasan.divalidasi} pengukuran divalidasi.`)
+      setKonfirmMassal(false)
       await muat(cari)
     } catch {
       setGalat('Validasi massal gagal. Periksa koneksi lalu coba lagi.')
@@ -125,14 +132,72 @@ export default function Validasi({ sesi }) {
           </button>
           <button
             type="button"
-            className="bahaya"
-            onClick={tanganiValidasiSemua}
+            className="sekunder"
+            onClick={() => setKonfirmMassal(true)}
             disabled={memuat || memvalidasikan || total === 0}
             title="Validasi semua pengukuran yang sedang ditampilkan oleh filter"
           >
             <Ikon nama="cek" ukuran={18} />
             {memvalidasikan ? 'Memvalidasi…' : `Validasi semua (${total})`}
           </button>
+        </div>
+      </div>
+
+      {konfirmMassal && (
+        <Modal judul="Validasi semua pengukuran?" onTutup={() => setKonfirmMassal(false)}>
+          <div className="modal-isi">
+            <p className="tanpa-margin-bawah">
+              {cari.trim()
+                ? `${total} pengukuran yang cocok dengan “${cari.trim()}” akan ditandai tervalidasi.`
+                : `${total} pengukuran yang belum divalidasi akan ditandai tervalidasi.`}
+            </p>
+            <p className="samar tanpa-margin-bawah">
+              Setelah divalidasi, pengukuran tidak bisa diubah lagi oleh kader.
+            </p>
+          </div>
+          <div className="modal-kaki">
+            <button type="button" className="sekunder" onClick={() => setKonfirmMassal(false)}>
+              Batal
+            </button>
+            <button type="button" onClick={tanganiValidasiSemua} disabled={memvalidasikan}>
+              <Ikon nama="cek" ukuran={18} />
+              {memvalidasikan ? 'Memvalidasi…' : `Ya, validasi ${total}`}
+            </button>
+          </div>
+        </Modal>
+      )}
+
+      <div className="kartu kartu-filter">
+        <div className="baris baris-filter">
+          <div className="bidang bidang-filter">
+            <label htmlFor="filter-posyandu">Posyandu</label>
+            <select
+              id="filter-posyandu"
+              value={posyanduId}
+              onChange={(e) => {
+                const id = e.target.value
+                setPosyanduId(id)
+                muat(cari, id)
+              }}
+            >
+              <option value="">Semua Posyandu</option>
+              {posyanduList.map((p) => (
+                <option key={p.id} value={p.id}>{p.nama}</option>
+              ))}
+            </select>
+          </div>
+          <div className="bidang bidang-filter">
+            <span className="label-segmen" id="label-cari-validasi">Cari nama balita</span>
+            <div role="search" aria-labelledby="label-cari-validasi">
+              <KotakCari
+                id="cari-validasi"
+                nilai={cari}
+                onUbah={setCari}
+                label="Cari nama balita"
+                placeholder="Cari balita…"
+              />
+            </div>
+          </div>
         </div>
       </div>
 
@@ -150,36 +215,18 @@ export default function Validasi({ sesi }) {
       )}
 
       {!memuat && !galat && daftar.length === 0 && (
-        <div className="kosong">
-          <div className="kosong-ikon">
-            <Ikon nama="cek" ukuran={26} />
-          </div>
-          <h3>Tidak ada yang menunggu</h3>
-          <p>
-            Semua pengukuran yang terkirim sudah divalidasi. Muat ulang setelah kader mengirim
-            data baru.
-          </p>
-          <button type="button" className="sekunder" onClick={() => muat()}>
-            <Ikon nama="sinkron" ukuran={17} />
-            Muat ulang
-          </button>
-        </div>
-      )}
-
-      <div className="cari">
-        <label className="sr-only" htmlFor="cari-validasi">
-          Cari nama balita
-        </label>
-        <Ikon nama="cari" ukuran={20} />
-        <input
-          id="cari-validasi"
-          type="search"
-          placeholder="Cari nama balita…"
-          autoComplete="off"
-          value={cari}
-          onChange={(e) => setCari(e.target.value)}
+        <Kosong
+          ikon="cek"
+          judul="Tidak ada yang menunggu"
+          teks="Semua pengukuran yang terkirim sudah divalidasi. Muat ulang setelah kader mengirim data baru."
+          aksi={
+            <button type="button" className="sekunder" onClick={() => muat()}>
+              <Ikon nama="sinkron" ukuran={17} />
+              Muat ulang
+            </button>
+          }
         />
-      </div>
+      )}
 
       {daftar.map((k) => (
         <article key={k.id} className="kartu">

@@ -10,5 +10,7 @@ const akar = fileURLToPath(new URL('..', import.meta.url))
 export default defineConfig({
   plugins: [react()],
   envDir: akar,
-  server: { port: 5173 },
+  // Host disamakan dengan API (VITE_API di .env) supaya cookie SameSite=Strict
+  // tidak dianggap lintas-situs saat pengembangan di http.
+  server: { host: '127.0.0.1', port: 5173 },
 })

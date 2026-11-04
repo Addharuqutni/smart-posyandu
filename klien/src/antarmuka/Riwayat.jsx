@@ -2,12 +2,15 @@ import { useEffect, useRef, useState } from 'react'
 import Chart from 'chart.js/auto'
 import { db } from '../penyimpanan/db.js'
 import { ubahPengukuran } from '../penyimpanan/kunjungan.js'
-import { PESAN_STATUS } from '../logika/rentang.js'
+import { PESAN_STATUS, RENTANG } from '../logika/rentang.js'
+import { rapikanDesimal } from '../logika/angka.js'
 import { waliBalita } from '../penyimpanan/balita.js'
 import { usiaBulan, tanggalHariIni } from '../logika/waktu.js'
 import { inisial } from '../logika/nama.js'
 import Ikon from './Ikon.jsx'
 import Bantuan from './Bantuan.jsx'
+import { Kosong } from './Bersama.jsx'
+import { detailPosyandu } from '../jaringan/api.js'
 
 const NAMA_BULAN = [
   'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
@@ -31,26 +34,39 @@ function tanggalLengkap(iso) {
 export default function Riwayat({ sesi, balita, kembali, setelahUbah }) {
   const [baris, setBaris] = useState([])
   const [wali, setWali] = useState([])
+  const [posyandu, setPosyandu] = useState(null)
   const [sunting, setSunting] = useState(null)
   const [galat, setGalat] = useState(null)
   const kanvas = useRef(null)
   const grafik = useRef(null)
 
   async function muat() {
-    const kunjungan = await db.kunjungan
-      .where('balita_id')
-      .equals(balita.id)
-      .filter((k) => !k.dihapus_pada)
-      .toArray()
-    kunjungan.sort((a, b) => a.tanggal_kunjungan.localeCompare(b.tanggal_kunjungan))
-    const lengkap = []
-    for (const k of kunjungan) {
-      const ukur = await db.pengukuran.where('kunjungan_id').equals(k.id).first()
-      // Kunjungan tanpa ukur (tidak hadir) tetap tampil di riwayat.
-      lengkap.push({ ...k, pengukuran: ukur && !ukur.dihapus_pada ? ukur : null })
+    try {
+      const [kunjungan, waliBalitaData, posyanduData] = await Promise.all([
+        db.kunjungan
+          .where('balita_id')
+          .equals(balita.id)
+          .filter((k) => !k.dihapus_pada)
+          .toArray(),
+        waliBalita(balita.id),
+        balita.posyandu_id ? detailPosyandu(balita.posyandu_id) : Promise.resolve(null),
+      ])
+      kunjungan.sort((a, b) => a.tanggal_kunjungan.localeCompare(b.tanggal_kunjungan))
+      const lengkap = []
+      for (const k of kunjungan) {
+        const ukur = await db.pengukuran.where('kunjungan_id').equals(k.id).first()
+        // Kunjungan tanpa ukur (tidak hadir) tetap tampil di riwayat.
+        lengkap.push({ ...k, pengukuran: ukur && !ukur.dihapus_pada ? ukur : null })
+      }
+      setBaris(lengkap)
+      setWali(waliBalitaData)
+      setPosyandu(posyanduData)
+      setGalat(null)
+    } catch (salah) {
+      // Riwayat tetap bisa dibaca luring; detail Posyandu menyusul saat daring.
+      setGalat(salah?.message && !salah.status ? null : 'Detail Posyandu belum bisa dimuat.')
+      setWali(await waliBalita(balita.id))
     }
-    setBaris(lengkap)
-    setWali(await waliBalita(balita.id))
   }
 
   useEffect(() => {
@@ -139,6 +155,11 @@ export default function Riwayat({ sesi, balita, kembali, setelahUbah }) {
     }
   }
 
+  /** Ubah satu angka ukur; koma diterima sebagai pemisah desimal. */
+  function ubahUkur(kolom, nilai) {
+    setSunting((lama) => ({ ...lama, [kolom]: rapikanDesimal(nilai) }))
+  }
+
   const umur = usiaBulan(balita.tanggal_lahir, tanggalHariIni())
   const denganUkur = baris.filter((b) => b.pengukuran)
   const terakhir = denganUkur[denganUkur.length - 1]
@@ -170,6 +191,20 @@ export default function Riwayat({ sesi, balita, kembali, setelahUbah }) {
               <p className="detail-balita-wali">
                 <Ikon nama="balita" ukuran={14} />
                 <span>{waliTeks}</span>
+              </p>
+              <p className="detail-balita-wali">
+                <Ikon nama="posyandu" ukuran={14} />
+                <span>
+                  {posyandu
+                    ? [
+                        posyandu.nama,
+                        posyandu.dusun,
+                        posyandu.desa,
+                        posyandu.kecamatan,
+                        posyandu.kabupaten,
+                      ].filter(Boolean).join(' · ')
+                    : 'Posyandu belum termuat'}
+                </span>
               </p>
             </div>
           </div>
@@ -262,16 +297,16 @@ export default function Riwayat({ sesi, balita, kembali, setelahUbah }) {
       </div>
 
       {baris.length === 0 ? (
-        <div className="kosong">
-          <div className="kosong-ikon">
-            <Ikon nama="riwayat" ukuran={24} />
-          </div>
-          <h3>Belum ada kunjungan</h3>
-          <p>Hasil ukur yang dicatat akan muncul di sini beserta grafik berat badan.</p>
-          <button type="button" className="sekunder" onClick={kembali}>
-            Kembali ke daftar balita
-          </button>
-        </div>
+        <Kosong
+          ikon="riwayat"
+          judul="Belum ada kunjungan"
+          teks="Hasil ukur yang dicatat akan muncul di sini beserta grafik berat badan."
+          aksi={
+            <button type="button" className="sekunder" onClick={kembali}>
+              Kembali ke daftar balita
+            </button>
+          }
+        />
       ) : (
         <>
           {denganUkur.length > 1 && (
@@ -367,14 +402,12 @@ export default function Riwayat({ sesi, balita, kembali, setelahUbah }) {
               <div className="wadah-satuan">
                 <input
                   id="u-berat"
-                  type="number"
+                  type="text"
                   inputMode="decimal"
-                  step="0.01"
-                  min="1"
-                  max="40"
+                  autoComplete="off"
                   placeholder="cth. 9.45"
                   value={sunting.berat_kg}
-                  onChange={(e) => setSunting({ ...sunting, berat_kg: e.target.value })}
+                  onChange={(e) => ubahUkur('berat_kg', e.target.value)}
                   required
                 />
                 <span className="satuan-teks">kg</span>
@@ -385,14 +418,12 @@ export default function Riwayat({ sesi, balita, kembali, setelahUbah }) {
               <div className="wadah-satuan">
                 <input
                   id="u-tinggi"
-                  type="number"
+                  type="text"
                   inputMode="decimal"
-                  step="0.1"
-                  min="30"
-                  max="130"
+                  autoComplete="off"
                   placeholder="cth. 75.0"
                   value={sunting.tinggi_cm ?? ''}
-                  onChange={(e) => setSunting({ ...sunting, tinggi_cm: e.target.value })}
+                  onChange={(e) => ubahUkur('tinggi_cm', e.target.value)}
                 />
                 <span className="satuan-teks">cm</span>
               </div>
@@ -402,19 +433,22 @@ export default function Riwayat({ sesi, balita, kembali, setelahUbah }) {
               <div className="wadah-satuan">
                 <input
                   id="u-kepala"
-                  type="number"
+                  type="text"
                   inputMode="decimal"
-                  step="0.1"
-                  min="25"
-                  max="60"
+                  autoComplete="off"
                   placeholder="cth. 45.0"
                   value={sunting.lingkar_kepala_cm ?? ''}
-                  onChange={(e) => setSunting({ ...sunting, lingkar_kepala_cm: e.target.value })}
+                  onChange={(e) => ubahUkur('lingkar_kepala_cm', e.target.value)}
                 />
                 <span className="satuan-teks">cm</span>
               </div>
             </div>
           </div>
+          <p className="samar">
+            Rentang wajar: berat {RENTANG.berat_kg[0]}–{RENTANG.berat_kg[1]} kg, tinggi{' '}
+            {RENTANG.tinggi_cm[0]}–{RENTANG.tinggi_cm[1]} cm, lingkar kepala{' '}
+            {RENTANG.lingkar_kepala_cm[0]}–{RENTANG.lingkar_kepala_cm[1]} cm.
+          </p>
           <div className="baris-rapat spasi-atas">
             <button type="submit">
               <Ikon nama="simpan" ukuran={18} />

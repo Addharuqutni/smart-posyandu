@@ -5,6 +5,7 @@ import { usiaBulan, tanggalHariIni } from '../logika/waktu.js'
 import { inisial } from '../logika/nama.js'
 import { kunjunganTerbaruPerBalita, idDiukurBulanIni, rentangBulan } from '../logika/terakhir.js'
 import Ikon from './Ikon.jsx'
+import { Kosong, KotakCari, KendaliHalaman, UKURAN_HALAMAN } from './Bersama.jsx'
 
 export default function Beranda({
   sesi,
@@ -75,7 +76,10 @@ export default function Beranda({
     return balita.filter((b) => b.nama_lengkap.toLowerCase().includes(kunci))
   }, [balita, cari])
 
-  const ditampilkan = useMemo(() => tersaring.slice(halaman * 50, (halaman + 1) * 50), [tersaring, halaman])
+  const ditampilkan = useMemo(
+    () => tersaring.slice(halaman * UKURAN_HALAMAN, (halaman + 1) * UKURAN_HALAMAN),
+    [tersaring, halaman],
+  )
 
   const kunciHalaman = useMemo(() => ditampilkan.map((b) => b.id).join(','), [ditampilkan])
 
@@ -164,9 +168,6 @@ export default function Beranda({
       <div className="kepala-layar">
         <div>
           <h1>Balita</h1>
-          <p>
-            {namaPosyandu} · {balita.length} balita aktif
-          </p>
         </div>
         <button
           type="button"
@@ -217,30 +218,7 @@ export default function Beranda({
         </div>
       </div>
 
-      <div className="cari">
-        <label className="sr-only" htmlFor="cari">
-          Cari nama balita
-        </label>
-        <Ikon nama="cari" ukuran={20} />
-        <input
-          id="cari"
-          type="search"
-          value={cari}
-          onChange={(e) => setCari(e.target.value)}
-          placeholder="Cari nama balita…"
-          autoComplete="off"
-        />
-        {cari && (
-          <button
-            type="button"
-            className="cari-bersih"
-            onClick={() => setCari('')}
-            aria-label="Hapus pencarian"
-          >
-            <Ikon nama="tutup" ukuran={18} />
-          </button>
-        )}
-      </div>
+      <KotakCari id="cari" nilai={cari} onUbah={setCari} />
 
       {cari && (
         <p className="samar petunjuk-cari">
@@ -249,43 +227,38 @@ export default function Beranda({
       )}
 
       {memuat && balita.length === 0 && (
-        <div className="kosong">
-          <div className="kosong-ikon">
-            <Ikon nama="sinkron" ukuran={24} />
-          </div>
-          <h3>Memuat daftar balita…</h3>
-          <p>Membaca data yang tersimpan di tablet.</p>
-        </div>
+        <Kosong
+          ikon="sinkron"
+          judul="Memuat daftar balita…"
+          teks="Membaca data yang tersimpan di tablet."
+        />
       )}
 
       {!memuat && balita.length === 0 && (
-        <div className="kosong">
-          <div className="kosong-ikon">
-            <Ikon nama="balita" ukuran={26} />
-          </div>
-          <h3>Belum ada data balita</h3>
-          <p>
-            Sambungkan tablet ke jaringan lalu sinkronkan. Data balita diunduh dari server dan
-            tetap tersimpan untuk pemakaian luring.
-          </p>
-          <button type="button" onClick={() => jalankan?.()} disabled={sinkron.mengirim}>
-            <Ikon nama="unduh" ukuran={18} />
-            {sinkron.mengirim ? 'Mengunduh…' : 'Sinkronkan sekarang'}
-          </button>
-        </div>
+        <Kosong
+          ikon="balita"
+          judul="Belum ada data balita"
+          teks="Sambungkan tablet ke jaringan lalu sinkronkan. Data balita diunduh dari server dan tetap tersimpan untuk pemakaian luring."
+          aksi={
+            <button type="button" onClick={() => jalankan?.()} disabled={sinkron.mengirim}>
+              <Ikon nama="unduh" ukuran={18} />
+              {sinkron.mengirim ? 'Mengunduh…' : 'Sinkronkan sekarang'}
+            </button>
+          }
+        />
       )}
 
       {!memuat && balita.length > 0 && tersaring.length === 0 && (
-        <div className="kosong">
-          <div className="kosong-ikon">
-            <Ikon nama="cari" ukuran={24} />
-          </div>
-          <h3>Tidak ada nama yang cocok</h3>
-          <p>Periksa ejaan atau hapus kata pencarian.</p>
-          <button type="button" className="sekunder" onClick={() => setCari('')}>
-            Hapus pencarian
-          </button>
-        </div>
+        <Kosong
+          ikon="cari"
+          judul="Tidak ada nama yang cocok"
+          teks="Periksa ejaan atau hapus kata pencarian."
+          aksi={
+            <button type="button" className="sekunder" onClick={() => setCari('')}>
+              Hapus pencarian
+            </button>
+          }
+        />
       )}
 
       {tersaring.length > 0 && (
@@ -331,32 +304,12 @@ export default function Beranda({
           })}
         </ul>
       )}
-      {tersaring.length > 50 && (
-        <div className="baris baris-subjudul spasi-atas">
-          <span className="samar">
-            Halaman {halaman + 1} dari {Math.max(1, Math.ceil(tersaring.length / 50))} ·{' '}
-            {ditampilkan.length} dari {tersaring.length} nama
-          </span>
-          <span className="baris-rapat">
-            <button
-              type="button"
-              className="sekunder"
-              onClick={() => setHalaman((h) => Math.max(0, h - 1))}
-              disabled={halaman === 0}
-            >
-              ‹ Sebelumnya
-            </button>
-            <button
-              type="button"
-              className="sekunder"
-              onClick={() => setHalaman((h) => (h + 1) * 50 < tersaring.length ? h + 1 : h)}
-              disabled={(halaman + 1) * 50 >= tersaring.length}
-            >
-              Berikutnya ›
-            </button>
-          </span>
-        </div>
-      )}
+      <KendaliHalaman
+        halaman={halaman}
+        total={tersaring.length}
+        onPilih={setHalaman}
+        keterangan={`Halaman ${halaman + 1} dari ${Math.max(1, Math.ceil(tersaring.length / UKURAN_HALAMAN))} · ${ditampilkan.length} dari ${tersaring.length} nama`}
+      />
     </main>
   )
 }

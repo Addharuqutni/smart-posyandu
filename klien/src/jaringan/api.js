@@ -58,10 +58,15 @@ async function minta(jalur, { metode = 'GET', isi, kepala: tambahan } = {}) {
   if (!jawab.ok) {
     let rincian = null
     try {
-      const detail = (await jawab.json()).detail ?? null
-      // Server mengirim `detail` berupa teks, atau objek {rincian, ...} untuk
-      // kasus terkunci. Jangan biarkan bentuk objek masuk ke React.
-      rincian = typeof detail === 'string' ? detail : detail?.rincian ?? 'kesalahan_server'
+      const isi = await jawab.json()
+      const detail = isi.detail ?? null
+      // Server mengirim `detail` berupa teks, atau objek {detail, rincian}
+      // untuk kasus yang perlu kalimat penjelas. Jangan biarkan bentuk objek
+      // masuk ke React.
+      rincian =
+        typeof detail === 'string'
+          ? (isi.rincian ?? detail)
+          : detail?.rincian ?? isi.rincian ?? 'kesalahan_server'
     } catch {
       // balasan bukan JSON; biarkan rincian null
     }
@@ -108,9 +113,11 @@ export function tarikSinkron(sejak) {
   return minta(`/sinkron?batas=2000${sejak ? `&sejak=${encodeURIComponent(sejak)}` : ''}`)
 }
 
-export function daftarValidasi({ batas = 50, offset = 0, q = '' } = {}) {
+export function daftarValidasi({ batas = 50, offset = 0, q = '', posyandu_id = '' } = {}) {
   const param = `batas=${batas}&offset=${offset}`
-  return minta(`/validasi?${param}${q ? `&q=${encodeURIComponent(q)}` : ''}`)
+  const query = q ? `&q=${encodeURIComponent(q)}` : ''
+  const pos = posyandu_id ? `&posyandu_id=${encodeURIComponent(posyandu_id)}` : ''
+  return minta(`/validasi?${param}${query}${pos}`)
 }
 
 /** Validasi massal: kunjungan yang cocok dengan q (atau semua). */
@@ -138,15 +145,20 @@ export function daftarCadangan() {
   return minta('/cadangan')
 }
 
-export function daftarBalita({ q = '', aktif = true, batas = 200, offset = 0 } = {}) {
+export function daftarBalita({ q = '', aktif = true, batas = 200, offset = 0, posyandu_id = '' } = {}) {
   const param = new URLSearchParams({ batas, offset })
   if (q) param.set('q', q)
+  if (posyandu_id) param.set('posyandu_id', posyandu_id)
   param.set('aktif', String(aktif))
   return minta(`/balita?${param}`)
 }
 
 export function daftarPosyandu() {
   return minta('/posyandu')
+}
+
+export function detailPosyandu(id) {
+  return minta(`/posyandu/${encodeURIComponent(id)}`)
 }
 
 export function daftarSemuaPosyandu() {

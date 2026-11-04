@@ -18,9 +18,11 @@ async function muatPengguna(minta, balas, lanjut) {
   if (!token) return lanjut()
 
   const baris = await satu(
-    `SELECT p.id, p.nama_pengguna, p.nama_lengkap, p.peran, p.posyandu_id, p.aktif
+    `SELECT p.id, p.nama_pengguna, p.nama_lengkap, p.peran, p.posyandu_id, p.aktif,
+            ps.nama AS nama_posyandu
      FROM sesi_login s
      JOIN pengguna p ON p.id = s.pengguna_id
+     LEFT JOIN posyandu ps ON ps.id = p.posyandu_id
      WHERE s.token_hash = $1 AND s.dicabut_pada IS NULL AND s.kadaluarsa_pada > now()
        AND p.dihapus_pada IS NULL`,
     [hashToken(token)],

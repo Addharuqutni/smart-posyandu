@@ -70,26 +70,20 @@ export default function Masuk({ saatMasuk }) {
             <span className="fitur-ikon">
               <Ikon nama="cek" ukuran={16} />
             </span>
-            Fitur pemeriksaan rentang nilai secara otomatis mencegah tersimpannya kesalahan hasil pengukuran tanpa terdeteksi.
+            Nilai ukur di luar rentang wajar ditolak saat diisi, sebelum tersimpan.
           </li>
           <li>
             <span className="fitur-ikon">
               <Ikon nama="akun" ukuran={16} />
             </span>
-            Proses validasi dilakukan oleh tenaga kesehatan dan setiap riwayat perubahan data tercatat secara sistematis.
+            Hasil ukur divalidasi tenaga kesehatan, dan setiap perubahan data tercatat.
           </li>
         </ul>
-
-        <div className="masuk-sorotan" aria-hidden="true">
-          <span className="masuk-sorotan-angka">0–7</span>
-          <span className="masuk-sorotan-teks">tahun<br />pemantauan balita</span>
-        </div>
       </section>
 
       <section className="masuk-isi">
         <div className="masuk-kartu">
           <h2>Masuk</h2>
-          <p>Silakan masukan sesuai dengan akun yang diberikan oleh admin desa</p>
 
           <form className="kartu" onSubmit={kirim} aria-busy={mengirim}>
             {luring && (
@@ -162,6 +156,8 @@ export default function Masuk({ saatMasuk }) {
             <Ikon nama="info" ukuran={16} />
             <span>Lupa kata sandi? Hubungi admin desa untuk menyetel ulang.</span>
           </p>
+
+          <p className="hak-cipta">© 2026 KodeNara. All rights reserved.</p>
         </div>
       </section>
     </main>

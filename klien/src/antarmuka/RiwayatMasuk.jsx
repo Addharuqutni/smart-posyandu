@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { riwayatSesi } from '../jaringan/api.js'
 import { waktuPendek } from '../logika/waktu.js'
 import Ikon from './Ikon.jsx'
+import { KendaliHalaman } from './Bersama.jsx'
 
 const LABEL_PERAN = {
   kader: 'Kader',
@@ -86,7 +87,7 @@ export function PanelRiwayatMasuk({ sesi, versi = 0 }) {
         <p className="redup">Belum ada riwayat masuk.</p>
       ) : (
         <div className="tabel-bungkus">
-          <table className="tabel">
+          <table className="tabel tabel-kartu">
             <thead>
               <tr>
                 <th>Akun</th>
@@ -99,16 +100,18 @@ export function PanelRiwayatMasuk({ sesi, versi = 0 }) {
             <tbody>
               {riwayat.map((s) => (
                 <tr key={s.id}>
-                  <td>
+                  <td data-label="Akun">
                     <strong>{s.nama_lengkap}</strong>
                     <div className="samar">
                       {s.nama_pengguna} · {LABEL_PERAN[s.peran] ?? s.peran}
                     </div>
                   </td>
-                  <td className="samar">{s.id_perangkat}</td>
-                  <td className="samar">{waktuPendek(s.dibuat_pada)}</td>
-                  <td className="samar">{waktuPendek(s.dicabut_pada ?? s.kadaluarsa_pada)}</td>
-                  <td>
+                  <td className="samar" data-label="Perangkat">{s.id_perangkat}</td>
+                  <td className="samar" data-label="Masuk">{waktuPendek(s.dibuat_pada)}</td>
+                  <td className="samar" data-label="Selesai">
+                    {waktuPendek(s.dicabut_pada ?? s.kadaluarsa_pada)}
+                  </td>
+                  <td data-label="Status">
                     <span className={`lencana ${s.status === 'Aktif' ? 'aktif' : 'nonaktif'}`}>
                       {s.status}
                     </span>
@@ -121,29 +124,14 @@ export function PanelRiwayatMasuk({ sesi, versi = 0 }) {
       )}
 
       {total > UKURAN_HALAMAN && (
-        <div className="baris baris-subjudul spasi-atas">
-          <span className="samar">
-            Halaman {halaman + 1} dari {jumlahHalaman} · {riwayat?.length ?? 0} dari {total} sesi
-          </span>
-          <span className="baris-rapat">
-            <button
-              type="button"
-              className="sekunder"
-              onClick={() => setHalaman((h) => Math.max(0, h - 1))}
-              disabled={memuat || halaman === 0}
-            >
-              ‹ Sebelumnya
-            </button>
-            <button
-              type="button"
-              className="sekunder"
-              onClick={() => setHalaman((h) => ((h + 1) * UKURAN_HALAMAN < total ? h + 1 : h))}
-              disabled={memuat || (halaman + 1) * UKURAN_HALAMAN >= total}
-            >
-              Berikutnya ›
-            </button>
-          </span>
-        </div>
+        <KendaliHalaman
+          halaman={halaman}
+          total={total}
+          ukuran={UKURAN_HALAMAN}
+          nonaktif={memuat}
+          onPilih={setHalaman}
+          keterangan={`Halaman ${halaman + 1} dari ${jumlahHalaman} · ${riwayat?.length ?? 0} dari ${total} sesi`}
+        />
       )}
     </>
   )
@@ -179,8 +167,7 @@ export default function RiwayatMasuk({ sesi }) {
           <h3>Riwayat masuk perangkat</h3>
         </div>
         <p className="redup petunjuk-atas">
-          Sesi lama tetap tercatat meski perangkatnya sudah keluar. Bila ada perangkat yang tidak
-          dikenal, keluar dari akun lalu hubungi admin desa untuk mencabutnya.
+          Bila ada perangkat yang tidak dikenal, keluar dari akun lalu hubungi admin desa untuk mencabutnya.
         </p>
         <PanelRiwayatMasuk sesi={sesi} versi={versi} />
       </div>

@@ -71,7 +71,7 @@ async function waliBanyak(ids) {
 }
 
 router.get('/balita', butuhLogin, async (minta, balas) => {
-  const { q, aktif = 'true' } = minta.query || {}
+  const { q, aktif = 'true', posyandu_id: posyanduId } = minta.query || {}
   const batas = Math.min(Math.max(Number(minta.query?.batas) || 200, 1), 500)
   const offset = Math.max(0, Math.floor(Number(minta.query?.offset) || 0))
   const qBersih = String(q ?? '').trim().slice(0, 80)
@@ -86,6 +86,15 @@ router.get('/balita', butuhLogin, async (minta, balas) => {
   if (qBersih) {
     nilai.push(`%${qBersih}%`)
     syarat += ` AND nama_lengkap ILIKE $${nilai.length}`
+  }
+  const POLA_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+  const posFilter = String(posyanduId ?? '').trim()
+  if (posFilter) {
+    if (!POLA_UUID.test(posFilter)) {
+      return balas.status(422).json({ detail: 'posyandu_tidak_sah' })
+    }
+    nilai.push(posFilter)
+    syarat += ` AND posyandu_id = $${nilai.length}`
   }
 
   // Jumlah keseluruhan dengan syarat yang sama, supaya layar admin bisa
@@ -248,7 +257,7 @@ router.get('/validasi', butuhPeran('nakes', 'admin_desa'), async (minta, balas) 
   const batas = Math.min(Number(minta.query.batas) || 50, 500)
   const offset = Math.max(0, Number(minta.query.offset) || 0)
   const q = String(minta.query.q ?? '').trim()
-
+  const posyanduId = String(minta.query.posyandu_id ?? '').trim()
   const where = [
     'k.dihapus_pada IS NULL',
     'divalidasi_oleh IS NULL',
@@ -258,6 +267,10 @@ router.get('/validasi', butuhPeran('nakes', 'admin_desa'), async (minta, balas) 
   if (q) {
     nilai.push(`%${q}%`)
     where.push(`EXISTS (SELECT 1 FROM balita b WHERE b.id = k.balita_id AND b.nama_lengkap ILIKE $${nilai.length})`)
+  }
+  if (posyanduId) {
+    nilai.push(posyanduId)
+    where.push(`k.posyandu_id = $${nilai.length}`)
   }
   const syarat = where.join(' AND ')
 

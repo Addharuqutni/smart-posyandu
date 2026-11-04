@@ -1,11 +1,13 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { simpanBalita } from '../penyimpanan/balita.js'
 import { batasTanggalLahir, tanggalHariIni } from '../logika/waktu.js'
+import { daftarPosyandu } from '../jaringan/api.js'
 import Ikon from './Ikon.jsx'
 
 const AWAL = {
   nama_lengkap: '',
   jenis_kelamin: 'perempuan',
+  posyandu_id: '',
   tanggal_lahir: '',
   nik: '',
   wali_nama: '',
@@ -19,6 +21,18 @@ export default function BalitaBaru({ sesi, setelahSimpan, kembali }) {
   const [galat, setGalat] = useState(null)
   const [sukses, setSukses] = useState(false)
   const [mengirim, setMengirim] = useState(false)
+  const [posyandu, setPosyandu] = useState([])
+
+  useEffect(() => {
+    daftarPosyandu()
+      .then((b) => {
+        const daftar = b.posyandu ?? []
+        setPosyandu(daftar)
+        if (daftar.length === 1) ubah('posyandu_id', daftar[0].id)
+      })
+      .catch(() => setPosyandu([]))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   function ubah(kolom, nilai) {
     setIsi((lama) => ({ ...lama, [kolom]: nilai }))
@@ -28,17 +42,22 @@ export default function BalitaBaru({ sesi, setelahSimpan, kembali }) {
     peristiwa.preventDefault()
     setGalat(null)
     setSukses(false)
+    if (!isi.posyandu_id) {
+      setGalat('Pilih Posyandu lebih dulu.')
+      return
+    }
     setMengirim(true)
     try {
       await simpanBalita({
         idPerangkat: sesi.id_perangkat,
         pemilik_id: sesi.pengguna.id,
+        posyandu_id: isi.posyandu_id,
         nama_lengkap: isi.nama_lengkap,
         jenis_kelamin: isi.jenis_kelamin,
         tanggal_lahir: isi.tanggal_lahir,
         nik: isi.nik.trim() || null,
         wali: {
-          posyandu_id: sesi.pengguna.posyandu_id,
+          posyandu_id: isi.posyandu_id,
           nama_lengkap: isi.wali_nama,
           hubungan: isi.hubungan,
           nomor_kontak: isi.nomor_kontak,
@@ -61,7 +80,6 @@ export default function BalitaBaru({ sesi, setelahSimpan, kembali }) {
       <div className="kepala-layar">
         <div>
           <h1>Balita baru</h1>
-          <p>Daftarkan balita dan wali. Tersimpan di tablet, terkirim saat ada jaringan.</p>
         </div>
         <button type="button" className="sekunder" onClick={kembali}>
           <Ikon nama="kembali" ukuran={18} />
@@ -97,6 +115,23 @@ export default function BalitaBaru({ sesi, setelahSimpan, kembali }) {
           <div className="seksi-form-judul">
             <Ikon nama="anak" ukuran={15} />
             Identitas Balita
+          </div>
+          <div className="bidang">
+            <label htmlFor="posyandu">
+              <span>Posyandu</span>
+              <span className="wajib" aria-hidden="true">*</span>
+            </label>
+            <select
+              id="posyandu"
+              value={isi.posyandu_id}
+              onChange={(e) => ubah('posyandu_id', e.target.value)}
+              required
+            >
+              <option value="">— pilih posyandu —</option>
+              {posyandu.map((p) => (
+                <option key={p.id} value={p.id}>{p.nama}</option>
+              ))}
+            </select>
           </div>
 
           <div className="bidang">
@@ -163,9 +198,6 @@ export default function BalitaBaru({ sesi, setelahSimpan, kembali }) {
               onChange={(e) => ubah('nik', e.target.value)}
               aria-describedby="bantuan-nik"
             />
-            <p className="petunjuk" id="bantuan-nik">
-              Hanya dikirim ke server; tidak disimpan di tablet ini.
-            </p>
           </div>
 
           <div className="seksi-form-judul">
@@ -217,7 +249,6 @@ export default function BalitaBaru({ sesi, setelahSimpan, kembali }) {
               value={isi.nomor_kontak}
               onChange={(e) => ubah('nomor_kontak', e.target.value)}
             />
-            <p className="petunjuk">Dipakai kader untuk menghubungi wali bila perlu.</p>
           </div>
 
           <div className="bidang">
@@ -234,9 +265,6 @@ export default function BalitaBaru({ sesi, setelahSimpan, kembali }) {
           </div>
         </div>
 
-        <div className="catatan">
-          Data balita adalah data pribadi anak yang dilindungi. NIK tersimpan terenkripsi.
-        </div>
 
         <div className="aksi-akun">
           <button type="submit" disabled={mengirim}>

@@ -5,7 +5,7 @@
 
 const express = require('express')
 const { satu, banyak, transaksi } = require('../db/pool')
-const { butuhPeran } = require('../middleware/auth')
+const { butuhLogin, butuhPeran } = require('../middleware/auth')
 const { catatAudit } = require('../domain/repositori')
 
 const router = express.Router()
@@ -47,6 +47,24 @@ router.get('/posyandu/semua', Admin, async (minta, balas) => {
     `SELECT * FROM posyandu WHERE dihapus_pada IS NULL ORDER BY nama`,
   )
   balas.json({ posyandu: baris })
+})
+
+// Detail Posyandu untuk kartu balita. Kader hanya boleh melihat Posyandunya
+// sendiri; nakes dan admin desa boleh melihat semua yang belum dihapus.
+router.get('/posyandu/:id', butuhLogin, async (minta, balas) => {
+  if (!POLA_UUID.test(minta.params.id)) {
+    return balas.status(422).json({ detail: 'muatan_tidak_sah' })
+  }
+  if (minta.pengguna.peran === 'kader' &&
+      String(minta.pengguna.posyandu_id ?? '') !== String(minta.params.id)) {
+    return balas.status(403).json({ detail: 'tidak_diizinkan' })
+  }
+  const baris = await satu(
+    `SELECT * FROM posyandu WHERE id = $1 AND dihapus_pada IS NULL`,
+    [minta.params.id],
+  )
+  if (!baris) return balas.status(404).json({ detail: 'posyandu_tidak_ditemukan' })
+  balas.json(baris)
 })
 
 router.post('/posyandu', Admin, async (minta, balas) => {

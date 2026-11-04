@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react'
 import {
   buatPengguna,
   cabutSesi,
-  daftarPengguna,
   daftarSesi,
+  daftarPengguna,
+  perbaruiAkun,
   ubahPengguna,
 } from '../jaringan/api.js'
 import { inisial } from '../logika/nama.js'
@@ -39,6 +40,8 @@ export default function Pengguna({ sesi }) {
   const [sesiAktif, setSesiAktif] = useState(null)
   const [versiRiwayat, setVersiRiwayat] = useState(0)
   const [cabutUntuk, setCabutUntuk] = useState(null)
+  const [sunting, setSunting] = useState(null)
+  const [menyimpan, setMenyimpan] = useState(false)
 
   async function muat() {
     setGalat(null)
@@ -67,7 +70,7 @@ export default function Pengguna({ sesi }) {
       await buatPengguna({
         ...isi,
         id: idBaru(),
-        posyandu_id: isi.peran === 'admin_desa' ? null : sesi.pengguna.posyandu_id,
+        posyandu_id: null,
       })
       setIsi(KOSONG)
       setTampilSandi(false)
@@ -117,6 +120,31 @@ export default function Pengguna({ sesi }) {
     if (berhasil) {
       setSandiUntuk(null)
       setSandiBaru('')
+    }
+  }
+
+  async function simpanSunting(peristiwa) {
+    peristiwa.preventDefault()
+    setGalat(null)
+    setPesan(null)
+    if (!sunting.nama_lengkap.trim() || !sunting.nama_pengguna.trim()) {
+      setGalat('Nama lengkap dan username wajib diisi.')
+      return
+    }
+    setMenyimpan(true)
+    try {
+      await perbaruiAkun({
+        id: sunting.id,
+        nama_lengkap: sunting.nama_lengkap.trim(),
+        nama_pengguna: sunting.nama_pengguna.trim(),
+      })
+      setPesan(`Akun ${sunting.nama_pengguna.trim()} diperbarui.`)
+      setSunting(null)
+      await muat()
+    } catch (salah) {
+      setGalat(salah.rincian ?? 'Gagal memperbarui akun.')
+    } finally {
+      setMenyimpan(false)
     }
   }
 
@@ -234,13 +262,6 @@ export default function Pengguna({ sesi }) {
               <option value="nakes">Petugas kesehatan</option>
               <option value="admin_desa">Admin desa</option>
             </select>
-            <p className="petunjuk" id="p-peran-bantuan">
-              {isi.peran === 'kader'
-                ? 'Mencatat kunjungan di tablet; hanya melihat Posyandu sendiri.'
-                : isi.peran === 'nakes'
-                  ? 'Memvalidasi pengukuran dan mencatat tindak lanjut.'
-                  : 'Mengelola akun, rekap, dan pencadangan.'}
-            </p>
           </div>
         </div>
 
@@ -313,7 +334,7 @@ export default function Pengguna({ sesi }) {
           <span className="samar">{daftar ? `${daftar.length} akun` : "Memuat…"}</span>
         </div>
         <div className="tabel-bungkus">
-          <table className="tabel">
+          <table className="tabel tabel-kartu tabel-aksi">
             <thead>
               <tr>
                 <th>Akun</th>
@@ -325,7 +346,7 @@ export default function Pengguna({ sesi }) {
             <tbody>
               {(daftar ?? []).map((p) => (
                 <tr key={p.id}>
-                  <td>
+                  <td data-label="Akun">
                     <div className="baris-rapat avatar-baris">
                       <span className="avatar avatar-tabel">
                         {inisial(p.nama_lengkap)}
@@ -336,10 +357,10 @@ export default function Pengguna({ sesi }) {
                       </span>
                     </div>
                   </td>
-                  <td>
+                  <td data-label="Peran">
                     <span className="lencana peran">{NAMA_PERAN[p.peran] ?? p.peran}</span>
                   </td>
-                  <td>
+                  <td data-label="Status">
                     <span className={`lencana ${p.aktif ? 'aktif' : 'nonaktif'}`}>
                       {p.aktif ? 'Aktif' : 'Nonaktif'}
                     </span>
@@ -348,6 +369,14 @@ export default function Pengguna({ sesi }) {
                     <button
                       type="button"
                       className="sekunder"
+                      onClick={() => setSunting({ ...p })}
+                      aria-label={`Sunting akun ${p.nama_lengkap || p.nama_pengguna}`}
+                    >
+                      Sunting
+                    </button>
+                    <button
+                      type="button"
+                      className="sekunder spasi-kiri-kecil"
                       onClick={() => {
                         setSandiUntuk(p)
                         setSandiBaru('')
@@ -419,11 +448,79 @@ export default function Pengguna({ sesi }) {
             </tbody>
           </table>
         </div>
-        <p className="samar teks-bawah">
-          Akun admin desa tidak bisa dinonaktifkan dari layar ini untuk mencegah terkunci di luar
-          sistem.
-        </p>
       </div>
+
+      {sunting && (
+        <div className="modal-latar" onClick={(e) => { if (e.target === e.currentTarget) setSunting(null) }}>
+          <div className="modal-wadah" role="dialog" aria-modal="true" aria-labelledby="judul-sunting-akun">
+            <div className="modal-kepala">
+              <div>
+                <h2 id="judul-sunting-akun">Sunting Data Akun</h2>
+                <span className="modal-subjudul">
+                  {sunting.nama_lengkap} · {NAMA_PERAN[sunting.peran] ?? sunting.peran}
+                </span>
+              </div>
+              <button
+                type="button"
+                className="tombol-ikon sekunder"
+                onClick={() => setSunting(null)}
+                aria-label="Tutup dialog sunting akun"
+              >
+                <Ikon nama="tutup" ukuran={18} />
+              </button>
+            </div>
+
+            <form onSubmit={simpanSunting} className="modal-isi">
+              <div className="seksi-grup">
+                <div className="seksi-grup-judul">Identitas Akun</div>
+                <div className="grid2">
+                  <div className="bidang">
+                    <label htmlFor="modal-akun-nama">
+                      <span>Nama lengkap</span>
+                      <span className="wajib" aria-hidden="true">*</span>
+                    </label>
+                    <input
+                      id="modal-akun-nama"
+                      maxLength={120}
+                      value={sunting.nama_lengkap}
+                      onChange={(e) => setSunting({ ...sunting, nama_lengkap: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div className="bidang">
+                    <label htmlFor="modal-akun-username">
+                      <span>Username</span>
+                      <span className="wajib" aria-hidden="true">*</span>
+                    </label>
+                    <input
+                      id="modal-akun-username"
+                      autoCapitalize="none"
+                      spellCheck={false}
+                      minLength={3}
+                      maxLength={50}
+                      pattern="[a-z0-9_.\-]{3,50}"
+                      title="3-50 karakter: huruf kecil, angka, titik, garis bawah, atau strip"
+                      value={sunting.nama_pengguna}
+                      onChange={(e) => setSunting({ ...sunting, nama_pengguna: e.target.value.toLowerCase() })}
+                      required
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="modal-kaki">
+                <button type="button" className="sekunder" onClick={() => setSunting(null)}>
+                  Batal
+                </button>
+                <button type="submit" disabled={menyimpan}>
+                  <Ikon nama="simpan" ukuran={18} />
+                  <span>{menyimpan ? 'Menyimpan…' : 'Simpan Perubahan'}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       <div className="kartu">
         <div className="kartu-judul">
@@ -432,12 +529,8 @@ export default function Pengguna({ sesi }) {
             {sesiAktif ? `${sesiAktif.length} sesi` : 'Memuat…'}
           </span>
         </div>
-        <p className="redup petunjuk-atas">
-          Cabut sesi bila tablet hilang atau dipinjamkan. Perangkat yang dicabut harus masuk lagi
-          dengan kata sandi.
-        </p>
         <div className="tabel-bungkus">
-          <table className="tabel">
+          <table className="tabel tabel-kartu tabel-aksi">
             <thead>
               <tr>
                 <th>Akun</th>
@@ -450,13 +543,13 @@ export default function Pengguna({ sesi }) {
             <tbody>
               {(sesiAktif ?? []).map((s) => (
                 <tr key={s.id}>
-                  <td>
+                  <td data-label="Akun">
                     <strong>{s.nama_lengkap}</strong>
                     <div className="samar">{s.nama_pengguna}</div>
                   </td>
-                  <td className="samar">{s.id_perangkat}</td>
-                  <td className="samar">{waktuPendek(s.dibuat_pada)}</td>
-                  <td className="samar">{waktuPendek(s.kadaluarsa_pada)}</td>
+                  <td className="samar" data-label="Perangkat">{s.id_perangkat}</td>
+                  <td className="samar" data-label="Masuk">{waktuPendek(s.dibuat_pada)}</td>
+                  <td className="samar" data-label="Kedaluwarsa">{waktuPendek(s.kadaluarsa_pada)}</td>
                   <td className="sel-aksi">
                     {cabutUntuk === s.id ? (
                       <span className="baris-rapat">
@@ -506,9 +599,6 @@ export default function Pengguna({ sesi }) {
         <div className="kartu-judul">
           <h3>Riwayat masuk perangkat</h3>
         </div>
-        <p className="redup petunjuk-atas">
-          Sesi lama tetap tercatat meski perangkatnya sudah keluar.
-        </p>
         <PanelRiwayatMasuk sesi={sesi} versi={versiRiwayat} />
       </div>
     </main>

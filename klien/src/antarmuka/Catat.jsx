@@ -3,6 +3,7 @@ import { db } from '../penyimpanan/db.js'
 import { simpanKunjungan, hapusKunjungan } from '../penyimpanan/kunjungan.js'
 import { usiaBulan, tanggalHariIni } from '../logika/waktu.js'
 import { LABEL, RENTANG, periksaRentang } from '../logika/rentang.js'
+import { rapikanDesimal } from '../logika/angka.js'
 import Ikon from './Ikon.jsx'
 import Bantuan from './Bantuan.jsx'
 
@@ -18,6 +19,9 @@ const AWAL = {
 
 // Draf hanya berisi angka ukur dan catatan; tidak pernah NIK atau kredensial.
 const KUNCI_DRAF = 'draf-catat:'
+
+// Kolom angka ukur: menerima koma sebagai pemisah desimal.
+const UKUR = ['berat_kg', 'tinggi_cm', 'lingkar_kepala_cm']
 
 function bacaDraf(idBalita) {
   try {
@@ -69,8 +73,9 @@ export default function Catat({ sesi, balitaAwal, setelahSimpan, kembali }) {
   }, [balitaAwal])
 
   function ubah(kolom, nilai) {
+    const bersih = UKUR.includes(kolom) ? rapikanDesimal(nilai) : nilai
     setIsi((lama) => {
-      const baru = { ...lama, [kolom]: nilai }
+      const baru = { ...lama, [kolom]: bersih }
       if (balita) tulisDraf(balita.id, baru)
       return baru
     })
@@ -193,7 +198,10 @@ export default function Catat({ sesi, balitaAwal, setelahSimpan, kembali }) {
       <div className="kepala-layar">
         <div>
           <h1>Catat kunjungan</h1>
-          <p>Simpan hasil ukur hari ini. Data langsung tersimpan di tablet.</p>
+          <p className="detail-balita-wali">
+            <Ikon nama="posyandu" ukuran={15} />
+            <span>{sesi?.pengguna?.nama_posyandu || 'Posyandu'}</span>
+          </p>
         </div>
         <button type="button" className="sekunder" onClick={kembali}>
           <Ikon nama="kembali" ukuran={18} />
@@ -314,9 +322,6 @@ export default function Catat({ sesi, balitaAwal, setelahSimpan, kembali }) {
             <div className="kartu-judul">
               <div>
                 <h3>2. Hasil ukur balita</h3>
-                <p className="redup kartu-petunjuk-sub">
-                  Catat hasil timbang dan ukur. Nilai di luar rentang wajar ditolak agar salah ukur tidak lolos diam-diam.
-                </p>
               </div>
               <span className="lencana-wajib-header">Berat wajib</span>
             </div>
@@ -343,11 +348,9 @@ export default function Catat({ sesi, balitaAwal, setelahSimpan, kembali }) {
                 <div className="wadah-satuan">
                   <input
                     id="berat"
-                    type="number"
+                    type="text"
                     inputMode="decimal"
-                    step="0.01"
-                    min={RENTANG.berat_kg[0]}
-                    max={RENTANG.berat_kg[1]}
+                    autoComplete="off"
                     placeholder="Contoh: 9.45"
                     value={isi.berat_kg}
                     onChange={(e) => ubah('berat_kg', e.target.value)}
@@ -361,7 +364,8 @@ export default function Catat({ sesi, balitaAwal, setelahSimpan, kembali }) {
                 <div className="panel-ukur-kaki" id="bantuan-berat">
                   {salahBerat ? (
                     <span className="teks-peringatan">
-                      ⚠️ Di luar rentang ({RENTANG.berat_kg[0]}–{RENTANG.berat_kg[1]} kg)
+                      <Ikon nama="peringatan" ukuran={14} />
+                      Di luar rentang ({RENTANG.berat_kg[0]}–{RENTANG.berat_kg[1]} kg)
                     </span>
                   ) : (
                     <span className="teks-petunjuk">
@@ -388,11 +392,9 @@ export default function Catat({ sesi, balitaAwal, setelahSimpan, kembali }) {
                 <div className="wadah-satuan">
                   <input
                     id="tinggi"
-                    type="number"
+                    type="text"
                     inputMode="decimal"
-                    step="0.1"
-                    min={RENTANG.tinggi_cm[0]}
-                    max={RENTANG.tinggi_cm[1]}
+                    autoComplete="off"
                     placeholder="Contoh: 74.0"
                     value={isi.tinggi_cm}
                     onChange={(e) => ubah('tinggi_cm', e.target.value)}
@@ -405,7 +407,8 @@ export default function Catat({ sesi, balitaAwal, setelahSimpan, kembali }) {
                 <div className="panel-ukur-kaki" id="bantuan-tinggi">
                   {salahTinggi ? (
                     <span className="teks-peringatan">
-                      ⚠️ Di luar rentang ({RENTANG.tinggi_cm[0]}–{RENTANG.tinggi_cm[1]} cm)
+                      <Ikon nama="peringatan" ukuran={14} />
+                      Di luar rentang ({RENTANG.tinggi_cm[0]}–{RENTANG.tinggi_cm[1]} cm)
                     </span>
                   ) : (
                     <span className="teks-petunjuk">
@@ -466,11 +469,9 @@ export default function Catat({ sesi, balitaAwal, setelahSimpan, kembali }) {
                 <div className="wadah-satuan">
                   <input
                     id="kepala"
-                    type="number"
+                    type="text"
                     inputMode="decimal"
-                    step="0.1"
-                    min={RENTANG.lingkar_kepala_cm[0]}
-                    max={RENTANG.lingkar_kepala_cm[1]}
+                    autoComplete="off"
                     placeholder="Contoh: 44.5"
                     value={isi.lingkar_kepala_cm}
                     onChange={(e) => ubah('lingkar_kepala_cm', e.target.value)}
@@ -483,7 +484,8 @@ export default function Catat({ sesi, balitaAwal, setelahSimpan, kembali }) {
                 <div className="panel-ukur-kaki" id="bantuan-kepala">
                   {salahKepala ? (
                     <span className="teks-peringatan">
-                      ⚠️ Di luar rentang ({RENTANG.lingkar_kepala_cm[0]}–{RENTANG.lingkar_kepala_cm[1]} cm)
+                      <Ikon nama="peringatan" ukuran={14} />
+                      Di luar rentang ({RENTANG.lingkar_kepala_cm[0]}–{RENTANG.lingkar_kepala_cm[1]} cm)
                     </span>
                   ) : (
                     <span className="teks-petunjuk">
@@ -527,9 +529,6 @@ export default function Catat({ sesi, balitaAwal, setelahSimpan, kembali }) {
           <Ikon nama="simpan" ukuran={19} />
           {mengirim ? 'Menyimpan…' : 'Simpan kunjungan'}
         </button>
-        <p className="samar teks-tengah spasi-atas-kecil">
-          Status gizi dihitung server setelah data terkirim.
-        </p>
       </form>
     </main>
   )

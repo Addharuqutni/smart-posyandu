@@ -29,11 +29,9 @@ import Catat from './antarmuka/Catat.jsx'
 import BalitaBaru from './antarmuka/BalitaBaru.jsx'
 import Validasi from './antarmuka/Validasi.jsx'
 import Pengguna from './antarmuka/Pengguna.jsx'
-import RiwayatMasuk from './antarmuka/RiwayatMasuk.jsx'
 import KelolaBalita from './antarmuka/KelolaBalita.jsx'
 import KelolaPosyandu from './antarmuka/KelolaPosyandu.jsx'
-import SuntingAkun from './antarmuka/SuntingAkun.jsx'
-import { daftarPengguna, keluar as cabutSesiApi, saya } from './jaringan/api.js'
+import { keluar as cabutSesiApi, saya } from './jaringan/api.js'
 import { bacaPengguna, hapusSesi, idPerangkat, simpanPengguna } from './penyimpanan/sesi.js'
 import { db } from './penyimpanan/db.js'
 import { jalankanSinkron, ambilPenanda } from './logika/sinkron.js'
@@ -48,7 +46,6 @@ const IKON_NAV = {
   pengguna: 'akun',
   balita: 'anak',
   posyandu: 'posyandu',
-  akun: 'akun',
 }
 /** Layar pembuka menurut peran. */
 function layarAwal(peran) {
@@ -72,7 +69,6 @@ export default function Aplikasi() {
   const [siap, setSiap] = useState(false)
   const [keluarProses, setKeluarProses] = useState(false)
   const [versiData, setVersiData] = useState(0)
-  const [daftarAkun, setDaftarAkun] = useState([])
   const sedangSinkron = useRef(false)
 
   const perbaruiAntrean = useCallback(async (pemilikId) => {
@@ -194,28 +190,6 @@ export default function Aplikasi() {
     setLayar(layarAwal(pengguna.peran))
   }
 
-  async function muatDaftarAkun() {
-    if (sesi?.pengguna.peran !== 'admin_desa') return
-    try {
-      setDaftarAkun((await daftarPengguna()).pengguna)
-    } catch {
-      setDaftarAkun([])
-    }
-  }
-
-  async function setelahUbahAkun(pengguna) {
-    if (pengguna) {
-      simpanPengguna(pengguna)
-      setSesi((lama) => ({ ...lama, pengguna }))
-    }
-    await muatDaftarAkun()
-  }
-
-  useEffect(() => {
-    if (layar.nama === 'akun') muatDaftarAkun()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [layar.nama, sesi?.pengguna.peran])
-
   if (!sesi) {
     return <Masuk saatMasuk={mulai} />
   }
@@ -231,7 +205,7 @@ export default function Aplikasi() {
       await cabutSesiApi()
     } catch {
       // Luring atau server tidak terjangkau: tetap keluar di sisi perangkat.
-      // Cookie akan kedaluwarsa sendiri; sesi server bisa dicabut admin dari layar Akun.
+      // Cookie akan kedaluwarsa sendiri; sesi server bisa dicabut admin dari layar Kelola Akun.
     }
     hapusSesi()
     setKeluarProses(false)
@@ -246,14 +220,12 @@ export default function Aplikasi() {
     navigasi.push({ nama: 'baru', label: 'Tambah' })
   }
   if (peran === 'nakes') navigasi.push({ nama: 'validasi', label: 'Validasi' })
-  if (kader || peran === 'nakes') navigasi.push({ nama: 'sesi', label: 'Perangkat' })
   if (peran === 'admin_desa') {
     navigasi.push({ nama: 'balita', label: 'Balita' })
     navigasi.push({ nama: 'laporan', label: 'Rekap' })
     navigasi.push({ nama: 'posyandu', label: 'Posyandu' })
     navigasi.push({ nama: 'pengguna', label: 'Kelola Akun' })
   }
-  navigasi.push({ nama: 'akun', label: 'Akun Saya' })
   const perluSiap = kader && !siap
 
   let isi
@@ -332,25 +304,6 @@ export default function Aplikasi() {
     )
   } else if (layar.nama === 'pengguna') {
     isi = <Pengguna sesi={sesi} />
-  } else if (layar.nama === 'sesi') {
-    isi = <RiwayatMasuk sesi={sesi} />
-  } else if (layar.nama === 'akun') {
-    isi = (
-      <main className="layar" id="isi-utama">
-        <div className="kepala-layar">
-          <div>
-            <h1>Akun Saya</h1>
-            <p>Perbarui nama dan username akun.</p>
-          </div>
-        </div>
-        <SuntingAkun
-          key={sesi.pengguna.id}
-          sesi={sesi}
-          daftar={daftarAkun}
-          setelahSimpan={setelahUbahAkun}
-        />
-      </main>
-    )
   } else {
     isi = (
       <Beranda
@@ -370,6 +323,7 @@ export default function Aplikasi() {
   const statusKelas = sinkron.mengirim ? 'mengirim' : sinkron.luring ? 'luring' : 'daring'
   const statusTeks = sinkron.mengirim ? 'Menyinkron…' : sinkron.luring ? 'Luring' : 'Tersambung'
   const namaPosyandu = sesi.pengguna.nama_posyandu || 'Desa Ketenger'
+  const tampilPosyandu = peran === 'admin_desa'
 
   return (
     <>
@@ -383,20 +337,18 @@ export default function Aplikasi() {
             <img className="merek-logo" src="/logo-192.png" alt="" width="36" height="36" />
             <span className="merek-teks">
               <span className="merek-nama">Smart Posyandu</span>
-              <span className="merek-sub" title={namaPosyandu}>
-                {namaPosyandu}
-              </span>
+              {tampilPosyandu && (
+                <span className="merek-sub" title={namaPosyandu}>
+                  {namaPosyandu}
+                </span>
+              )}
             </span>
           </div>
           <div className="status-wadah">
-            <span
-              className={`status ${statusKelas}`}
-              role="status"
-              aria-live="polite"
-              title={statusTeks}
-            >
-              <span className="status-dot" />
-              <span>{peranLabel} · {namaPengguna}</span>
+            <span className={`status ${statusKelas}`} role="status" aria-live="polite">
+              <span className="status-dot" aria-hidden="true" />
+              <span className="sr-only">{statusTeks}. </span>
+              <span aria-hidden="true">{peranLabel} · {namaPengguna}</span>
             </span>
             <button
               type="button"

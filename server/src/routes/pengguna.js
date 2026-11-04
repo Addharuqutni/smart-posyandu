@@ -24,7 +24,7 @@ router.get('/pengguna', Admin, async (minta, balas) => {
 })
 
 router.post('/pengguna', Admin, async (minta, balas) => {
-  const { nama_pengguna, nama_lengkap, kata_sandi, peran = 'kader' } = minta.body || {}
+  const { nama_pengguna, nama_lengkap, kata_sandi, peran = 'kader', posyandu_id = null } = minta.body || {}
   if (!nama_pengguna || !nama_lengkap || !kata_sandi) {
     return balas.status(422).json({ detail: 'muatan_tidak_lengkap' })
   }
@@ -35,10 +35,28 @@ router.post('/pengguna', Admin, async (minta, balas) => {
     return balas.status(422).json({ detail: 'peran_tidak_dikenal' })
   }
 
+  // Validasi posyandu_id: kader wajib terikat Posyandu; admin_desa selalu null;
+  // nakes boleh terikat satu Posyandu atau null (melihat semua).
+  let posyanduId = null
+  if (peran === 'kader') {
+    const kandidat = posyandu_id || minta.pengguna.posyandu_id
+    if (!kandidat) {
+      return balas.status(422).json({
+        detail: 'posyandu_wajib_diisi',
+        rincian: 'Akun kader wajib terikat pada satu Posyandu.',
+      })
+    }
+    const pos = await satu(`SELECT id FROM posyandu WHERE id = $1 AND dihapus_pada IS NULL`, [kandidat])
+    if (!pos) return balas.status(422).json({ detail: 'posyandu_tidak_ditemukan' })
+    posyanduId = pos.id
+  } else if (peran === 'nakes' && posyandu_id) {
+    const pos = await satu(`SELECT id FROM posyandu WHERE id = $1 AND dihapus_pada IS NULL`, [posyandu_id])
+    if (!pos) return balas.status(422).json({ detail: 'posyandu_tidak_ditemukan' })
+    posyanduId = pos.id
+  }
+
   const id = require('crypto').randomUUID()
   const hash = await hashSandi(String(kata_sandi))
-  // Admin desa tidak terikat satu Posyandu; kader memakai Posyandu pembuatnya.
-  const posyanduId = peran === 'admin_desa' ? null : minta.pengguna.posyandu_id
 
   await kueri(
     `INSERT INTO pengguna
@@ -53,9 +71,18 @@ router.post('/pengguna', Admin, async (minta, balas) => {
 })
 
 router.patch('/pengguna/:id', Admin, async (minta, balas) => {
-  const { aktif, kata_sandi_baru } = minta.body || {}
+  const { aktif, kata_sandi_baru, posyandu_id } = minta.body || {}
   const nilai = {}
   if (aktif !== undefined) nilai.aktif = Boolean(aktif)
+  if (posyandu_id !== undefined) {
+    if (posyandu_id === null || posyandu_id === '') {
+      nilai.posyandu_id = null
+    } else {
+      const pos = await satu(`SELECT id FROM posyandu WHERE id = $1 AND dihapus_pada IS NULL`, [posyandu_id])
+      if (!pos) return balas.status(422).json({ detail: 'posyandu_tidak_ditemukan' })
+      nilai.posyandu_id = pos.id
+    }
+  }
   if (kata_sandi_baru) {
     if (String(kata_sandi_baru).length < 8) {
       return balas.status(422).json({ detail: 'kata_sandi_terlalu_pendek' })

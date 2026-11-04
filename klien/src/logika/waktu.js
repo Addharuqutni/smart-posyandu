@@ -96,3 +96,30 @@ export function waktuPendek(iso) {
     minute: '2-digit',
   })
 }
+
+/**
+ * Usia untuk tabel: angka besar + satuan lengkap, dan keterangan tahun bila
+ * sudah genap satu tahun. `null` bila tanggal lahir di luar rentang balita.
+ */
+export function rincianUsia(tanggalLahir, tanggal = tanggalHariIni()) {
+  if (!usiaDiterima(tanggalLahir, tanggal)) return null
+  const bulan = usiaBulan(tanggalLahir, tanggal)
+  if (bulan === 0) {
+    const hari = (tanggalSah(tanggal).getTime() - tanggalSah(tanggalLahir).getTime()) / 86400000
+    return { nilai: Math.round(hari), satuan: 'hari', keterangan: null }
+  }
+  const tahun = Math.floor(bulan / 12)
+  const sisa = bulan % 12
+  return {
+    nilai: tahun > 0 ? tahun : sisa,
+    satuan: tahun > 0 ? 'tahun' : 'bulan',
+    keterangan: tahun > 0 && sisa > 0 ? `${sisa} bulan` : null,
+  }
+}
+
+/** Bentuk teks pendek untuk tempat yang tidak butuh rincian. */
+export function usiaRingkas(tanggalLahir, tanggal = tanggalHariIni()) {
+  const u = rincianUsia(tanggalLahir, tanggal)
+  if (!u) return null
+  return u.keterangan ? `${u.nilai} ${u.satuan} ${u.keterangan}` : `${u.nilai} ${u.satuan}`
+}

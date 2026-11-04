@@ -13,6 +13,7 @@ import {
 import { PESAN_STATUS } from '../logika/rentang.js'
 import Ikon from './Ikon.jsx'
 import Bantuan from './Bantuan.jsx'
+import { Kosong } from './Bersama.jsx'
 import { tanggalHariIni, waktuPendek } from '../logika/waktu.js'
 
 function bulanIni() {
@@ -308,13 +309,11 @@ export default function Laporan({ sesi }) {
       </div>
 
       {memuat && !isi && (
-        <div className="kosong">
-          <div className="kosong-ikon">
-            <Ikon nama="sinkron" ukuran={24} />
-          </div>
-          <h3>Memuat rekap…</h3>
-          <p>Mengambil angka dari server.</p>
-        </div>
+        <Kosong
+          ikon="sinkron"
+          judul="Memuat rekap…"
+          teks="Mengambil angka dari server."
+        />
       )}
 
       {isi && (
@@ -642,10 +641,6 @@ export default function Laporan({ sesi }) {
           <div className="baris baris-subjudul spasi-atas">
             <strong>Pulihkan dari berkas di perangkat</strong>
           </div>
-          <p className="petunjuk-atas">
-            Untuk memulihkan dari berkas yang disimpan di SSD/HDD kantor desa (misalnya setelah
-            server diganti), pilih berkasnya di sini. Berkas tetap terenkripsi selama dikirim.
-          </p>
           <label className={`berkas-pilih${memulihkanUnggah ? ' tak-aktif' : ''}`}>
             <span className="berkas-pilih-tombol">
               <Ikon nama="unduh" ukuran={16} />
@@ -723,6 +718,8 @@ export default function Laporan({ sesi }) {
           )}
         </div>
       )}
+
+      <p className="hak-cipta">© 2026 KodeNara. All rights reserved.</p>
 
     </main>
   )

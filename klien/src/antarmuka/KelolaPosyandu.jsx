@@ -6,6 +6,7 @@ import {
   ubahPosyandu,
 } from '../jaringan/api.js'
 import Ikon from './Ikon.jsx'
+import { Modal } from './Bersama.jsx'
 
 const KOSONG = {
   nama: '',
@@ -69,15 +70,9 @@ export default function KelolaPosyandu() {
     }
     setMenyimpan(true)
     try {
-      if (sunting) {
-        await ubahPosyandu(sunting.id, muatanDariForm())
-        setPesan(`Data ${isi.nama.trim()} diperbarui.`)
-      } else {
-        await buatPosyandu(muatanDariForm())
-        setPesan('Posyandu berhasil ditambahkan.')
-      }
+      await buatPosyandu(muatanDariForm())
+      setPesan('Posyandu berhasil ditambahkan.')
       setIsi(KOSONG)
-      setSunting(null)
       await muat()
     } catch (salah) {
       setGalat(pesanGalat(salah))
@@ -105,8 +100,8 @@ export default function KelolaPosyandu() {
   }
 
   function mulaiSunting(posyandu) {
-    setSunting(posyandu)
-    setIsi({
+    setSunting({
+      id: posyandu.id,
       nama: posyandu.nama ?? '',
       dusun: posyandu.dusun ?? '',
       desa: posyandu.desa ?? '',
@@ -116,13 +111,34 @@ export default function KelolaPosyandu() {
     })
     setGalat(null)
     setPesan(null)
-    window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
-  function batalSunting() {
-    setSunting(null)
-    setIsi(KOSONG)
+  async function simpanSunting(peristiwa) {
+    peristiwa.preventDefault()
     setGalat(null)
+    setPesan(null)
+    if (!sunting.nama.trim() || !sunting.desa.trim()) {
+      setGalat('Nama Posyandu dan desa wajib diisi.')
+      return
+    }
+    setMenyimpan(true)
+    try {
+      await ubahPosyandu(sunting.id, {
+        nama: sunting.nama.trim(),
+        dusun: sunting.dusun?.trim() || null,
+        desa: sunting.desa.trim(),
+        kecamatan: sunting.kecamatan?.trim() || null,
+        kabupaten: sunting.kabupaten?.trim() || null,
+        aktif: sunting.aktif,
+      })
+      setPesan(`Data Posyandu ${sunting.nama.trim()} diperbarui.`)
+      setSunting(null)
+      await muat()
+    } catch (salah) {
+      setGalat(pesanGalat(salah))
+    } finally {
+      setMenyimpan(false)
+    }
   }
 
   return (
@@ -153,12 +169,7 @@ export default function KelolaPosyandu() {
 
       <form className="kartu kartu-akun" onSubmit={simpan}>
         <div className="kartu-judul">
-          <h3>{sunting ? 'Sunting Posyandu' : 'Posyandu baru'}</h3>
-          {sunting && (
-            <button type="button" className="tombol-ikon sekunder" onClick={batalSunting} aria-label="Batalkan sunting">
-              <Ikon nama="tutup" ukuran={18} />
-            </button>
-          )}
+          <h3>Posyandu baru</h3>
         </div>
         <div className="grid2 grid-akun">
           <div className="bidang">
@@ -235,16 +246,101 @@ export default function KelolaPosyandu() {
         </div>
         <div className="aksi-akun">
           <button type="submit" disabled={menyimpan}>
-            <Ikon nama="simpan" ukuran={18} />
-            {menyimpan ? 'Menyimpan…' : sunting ? 'Simpan perubahan' : 'Tambah Posyandu'}
+            <Ikon nama="tambah" ukuran={18} />
+            {menyimpan ? 'Menyimpan…' : 'Tambah Posyandu'}
           </button>
-          {sunting && (
-            <button type="button" className="sekunder" onClick={batalSunting}>
-              Batal
-            </button>
-          )}
         </div>
       </form>
+
+      {sunting && (
+        <Modal
+          judul="Sunting Data Posyandu"
+          subjudul={sunting.nama}
+          onTutup={() => setSunting(null)}
+        >
+          <form onSubmit={simpanSunting} className="modal-isi">
+            <div className="seksi-grup">
+              <div className="seksi-grup-judul">Identitas & Wilayah</div>
+              <div className="grid2">
+                <div className="bidang">
+                  <label htmlFor="modal-ps-nama">
+                    <span>Nama Posyandu</span>
+                    <span className="wajib" aria-hidden="true">*</span>
+                  </label>
+                  <input
+                    id="modal-ps-nama"
+                    maxLength={120}
+                    value={sunting.nama}
+                    onChange={(e) => setSunting({ ...sunting, nama: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="bidang">
+                  <label htmlFor="modal-ps-dusun">Dusun / RT-RW</label>
+                  <input
+                    id="modal-ps-dusun"
+                    maxLength={120}
+                    value={sunting.dusun}
+                    onChange={(e) => setSunting({ ...sunting, dusun: e.target.value })}
+                  />
+                </div>
+                <div className="bidang">
+                  <label htmlFor="modal-ps-desa">
+                    <span>Desa</span>
+                    <span className="wajib" aria-hidden="true">*</span>
+                  </label>
+                  <input
+                    id="modal-ps-desa"
+                    maxLength={120}
+                    value={sunting.desa}
+                    onChange={(e) => setSunting({ ...sunting, desa: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="bidang">
+                  <label htmlFor="modal-ps-kecamatan">Kecamatan</label>
+                  <input
+                    id="modal-ps-kecamatan"
+                    maxLength={120}
+                    value={sunting.kecamatan}
+                    onChange={(e) => setSunting({ ...sunting, kecamatan: e.target.value })}
+                  />
+                </div>
+                <div className="bidang">
+                  <label htmlFor="modal-ps-kabupaten">Kabupaten</label>
+                  <input
+                    id="modal-ps-kabupaten"
+                    maxLength={120}
+                    value={sunting.kabupaten}
+                    onChange={(e) => setSunting({ ...sunting, kabupaten: e.target.value })}
+                  />
+                </div>
+                <div className="bidang">
+                  <label htmlFor="modal-ps-status">Status operasional</label>
+                  <select
+                    id="modal-ps-status"
+                    value={sunting.aktif ? 'aktif' : 'nonaktif'}
+                    onChange={(e) => setSunting({ ...sunting, aktif: e.target.value === 'aktif' })}
+                  >
+                    <option value="aktif">Aktif</option>
+                    <option value="nonaktif">Nonaktif</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div className="modal-kaki">
+              <button type="button" className="sekunder" onClick={() => setSunting(null)}>
+                Batal
+              </button>
+              <button type="submit" disabled={menyimpan}>
+                <Ikon nama="simpan" ukuran={18} />
+                <span>{menyimpan ? 'Menyimpan…' : 'Simpan perubahan'}</span>
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
 
       <div className="kartu">
         <div className="kartu-judul">
@@ -252,7 +348,7 @@ export default function KelolaPosyandu() {
           <span className="samar">{daftar ? `${daftar.length} Posyandu` : 'Memuat…'}</span>
         </div>
         <div className="tabel-bungkus">
-          <table className="tabel">
+          <table className="tabel tabel-kartu tabel-aksi">
             <thead>
               <tr>
                 <th>Nama</th>
@@ -264,11 +360,11 @@ export default function KelolaPosyandu() {
             <tbody>
               {(daftar ?? []).map((p) => (
                 <tr key={p.id}>
-                  <td><strong>{p.nama}</strong></td>
-                  <td className="samar">
+                  <td data-label="Nama"><strong>{p.nama}</strong></td>
+                  <td className="samar" data-label="Wilayah">
                     {[p.dusun, p.desa, p.kecamatan, p.kabupaten].filter(Boolean).join(', ') || '—'}
                   </td>
-                  <td>
+                  <td data-label="Status">
                     <span className={`lencana ${p.aktif ? 'aktif' : 'nonaktif'}`}>
                       {p.aktif ? 'Aktif' : 'Nonaktif'}
                     </span>

@@ -6,9 +6,10 @@ import {
   hapusBalita,
   ubahBalita,
 } from '../jaringan/api.js'
-import { batasTanggalLahir, tanggalHariIni, usiaBulan, usiaDiterima } from '../logika/waktu.js'
+import { batasTanggalLahir, tanggalHariIni, rincianUsia, usiaDiterima } from '../logika/waktu.js'
+import { rapikanDesimal } from '../logika/angka.js'
 import Ikon from './Ikon.jsx'
-
+import { Modal, Kosong, KotakCari, KendaliHalaman, UKURAN_HALAMAN } from './Bersama.jsx'
 const KOSONG = {
   nama_lengkap: '',
   jenis_kelamin: 'perempuan',
@@ -34,6 +35,7 @@ export default function KelolaBalita({ sesi }) {
   const [konfirm, setKonfirm] = useState(null)
   const [posyandu, setPosyandu] = useState([])
   const [posyanduId, setPosyanduId] = useState('')
+  const [filterPosyanduId, setFilterPosyanduId] = useState('')
   const [total, setTotal] = useState(0)
   const [halaman, setHalaman] = useState(0)
   const [memuatLagi, setMemuatLagi] = useState(false)
@@ -43,6 +45,7 @@ export default function KelolaBalita({ sesi }) {
     try {
       const hasil = await daftarPosyandu()
       setPosyandu(hasil.posyandu)
+      // Form "Balita baru" boleh terisi otomatis bila hanya ada satu Posyandu.
       if (hasil.posyandu.length === 1) setPosyanduId(hasil.posyandu[0].id)
     } catch {
       // pilihan tetap kosong bila server tidak terjangkau
@@ -54,14 +57,21 @@ export default function KelolaBalita({ sesi }) {
    * kebetulan sudah dimuat. Dulu daftar dipotong di 500 dan pencarian hanya
    * menyaring potongan itu, sehingga balita ke-501 ke atas seolah tidak ada.
    */
-  async function muat(kunci = cari, h = halaman) {
+  async function muat(kunci = cari, h = halaman, posId = filterPosyanduId) {
+    if (!posId) {
+      setDaftar([])
+      setTotal(0)
+      setMemuat(false)
+      return
+    }
     setMemuat(true)
     try {
       const hasil = await daftarBalita({
         aktif: false,
-        batas: 50,
-        offset: h * 50,
+        batas: UKURAN_HALAMAN,
+        offset: h * UKURAN_HALAMAN,
         q: kunci.trim(),
+        posyandu_id: posId,
       })
       setDaftar(hasil.balita)
       setTotal(hasil.total ?? hasil.balita.length)
@@ -75,17 +85,15 @@ export default function KelolaBalita({ sesi }) {
 
   useEffect(() => {
     setHalaman(0)
-    muat('', 0)
     muatPosyandu()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Ketik nama → tanya server setelah jeda, bukan menyaring daftar lokal.
   useEffect(() => {
     const jeda = setTimeout(() => { setHalaman(0); muat(cari, 0) }, 300)
     return () => clearTimeout(jeda)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cari])
+  }, [cari, filterPosyanduId])
 
   function angka(nilai) {
     const bersih = String(nilai).trim()
@@ -94,7 +102,7 @@ export default function KelolaBalita({ sesi }) {
 
   function muatanDariForm() {
     return {
-      posyandu_id: posyanduId || sesi.pengguna.posyandu_id,
+      posyandu_id: posyanduId,
       nama_lengkap: isi.nama_lengkap.trim(),
       jenis_kelamin: isi.jenis_kelamin,
       tanggal_lahir: isi.tanggal_lahir,
@@ -110,7 +118,7 @@ export default function KelolaBalita({ sesi }) {
     peristiwa.preventDefault()
     setGalat(null)
     setPesan(null)
-    if (!posyanduId && !sesi.pengguna.posyandu_id) {
+    if (!posyanduId) {
       setGalat('Pilih Posyandu lebih dulu.')
       return
     }
@@ -123,7 +131,9 @@ export default function KelolaBalita({ sesi }) {
       await buatBalita(muatanDariForm())
       setIsi(KOSONG)
       setPesan('Balita terdaftar.')
-      await muat()
+      setFilterPosyanduId(posyanduId)
+      await muat(cari, 0, posyanduId)
+    } catch (salah) {
       setGalat(salah.rincian ?? 'Gagal mendaftarkan balita.')
     } finally {
       setMenyimpan(false)
@@ -138,8 +148,13 @@ export default function KelolaBalita({ sesi }) {
       setGalat('Usia balita harus antara 0 hari dan 7 tahun (84 bulan).')
       return
     }
+    if (!sunting.posyandu_id) {
+      setGalat('Pilih Posyandu lebih dulu.')
+      return
+    }
     try {
       await ubahBalita(sunting.id, {
+        posyandu_id: sunting.posyandu_id,
         nama_lengkap: sunting.nama_lengkap.trim(),
         jenis_kelamin: sunting.jenis_kelamin,
         tanggal_lahir: sunting.tanggal_lahir,
@@ -149,8 +164,9 @@ export default function KelolaBalita({ sesi }) {
         aktif: sunting.aktif,
       })
       setPesan(`Data ${sunting.nama_lengkap} diperbarui.`)
+      setFilterPosyanduId(sunting.posyandu_id)
       setSunting(null)
-      await muat()
+      await muat(cari, 0, sunting.posyandu_id)
     } catch (salah) {
       setGalat(salah.rincian ?? 'Gagal menyimpan perubahan.')
     }
@@ -215,7 +231,6 @@ export default function KelolaBalita({ sesi }) {
           </span>
           <div>
             <h3>Balita baru</h3>
-            <p>Didaftarkan admin desa. NIK disimpan terenkripsi dan tidak pernah dikirim ke tablet.</p>
           </div>
         </div>
 
@@ -302,14 +317,12 @@ export default function KelolaBalita({ sesi }) {
             <label htmlFor="b-berat">Berat lahir (kg)</label>
             <input
               id="b-berat"
-              type="number"
+              type="text"
               inputMode="decimal"
-              step="0.01"
-              min="1"
-              max="40"
+              autoComplete="off"
               placeholder="cth. 3.2"
               value={isi.berat_lahir_kg}
-              onChange={(e) => setIsi({ ...isi, berat_lahir_kg: e.target.value })}
+              onChange={(e) => setIsi({ ...isi, berat_lahir_kg: rapikanDesimal(e.target.value) })}
             />
           </div>
 
@@ -317,14 +330,12 @@ export default function KelolaBalita({ sesi }) {
             <label htmlFor="b-panjang">Panjang lahir (cm)</label>
             <input
               id="b-panjang"
-              type="number"
+              type="text"
               inputMode="decimal"
-              step="0.1"
-              min="30"
-              max="130"
+              autoComplete="off"
               placeholder="cth. 49.5"
               value={isi.panjang_lahir_cm}
-              onChange={(e) => setIsi({ ...isi, panjang_lahir_cm: e.target.value })}
+              onChange={(e) => setIsi({ ...isi, panjang_lahir_cm: rapikanDesimal(e.target.value) })}
             />
           </div>
 
@@ -341,9 +352,6 @@ export default function KelolaBalita({ sesi }) {
               onChange={(e) => setIsi({ ...isi, nik: e.target.value.replace(/\D/g, '') })}
               aria-describedby="b-nik-bantuan"
             />
-            <p className="petunjuk" id="b-nik-bantuan">
-              Opsional. Dienkripsi di server; tidak ikut ke tablet.
-            </p>
           </div>
         </div>
 
@@ -356,100 +364,143 @@ export default function KelolaBalita({ sesi }) {
       </form>
 
       {sunting && (
-        <form className="kartu" onSubmit={simpanSunting}>
-          <div className="kartu-judul">
-            <h3>Sunting balita</h3>
-            <button
-              type="button"
-              className="tombol-ikon sekunder"
-              onClick={() => setSunting(null)}
-              aria-label="Tutup formulir sunting"
-            >
-              <Ikon nama="tutup" ukuran={18} />
-            </button>
-          </div>
-          <div className="grid2 grid-akun">
-            <div className="bidang">
-              <label htmlFor="s-nama">
-                <span>Nama lengkap</span>
-                <span className="wajib" aria-hidden="true">*</span>
-              </label>
-              <input
-                id="s-nama"
-                value={sunting.nama_lengkap}
-                onChange={(e) => setSunting({ ...sunting, nama_lengkap: e.target.value })}
-                required
-              />
+        <Modal
+          judul="Sunting Data Balita"
+          subjudul={sunting.nama_lengkap}
+          onTutup={() => setSunting(null)}
+        >
+          <form onSubmit={simpanSunting} className="modal-isi">
+            <div className="seksi-grup">
+              <div className="seksi-grup-judul">Identitas Utama</div>
+              <div className="grid2">
+                <div className="bidang">
+                  <label htmlFor="s-posyandu">
+                    <span>Posyandu</span>
+                    <span className="wajib" aria-hidden="true">*</span>
+                  </label>
+                  <select
+                    id="s-posyandu"
+                    value={sunting.posyandu_id ?? ''}
+                    onChange={(e) => setSunting({ ...sunting, posyandu_id: e.target.value })}
+                    required
+                  >
+                    <option value="">-- Pilih Posyandu --</option>
+                    {posyandu.filter((p) => p.aktif).map((p) => (
+                      <option key={p.id} value={p.id}>{p.nama}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="bidang">
+                  <label htmlFor="s-nama">
+                    <span>Nama lengkap</span>
+                    <span className="wajib" aria-hidden="true">*</span>
+                  </label>
+                  <input
+                    id="s-nama"
+                    value={sunting.nama_lengkap}
+                    onChange={(e) => setSunting({ ...sunting, nama_lengkap: e.target.value })}
+                    required
+                  />
+                </div>
+
+                <div className="bidang">
+                  <label htmlFor="s-lahir">
+                    <span>Tanggal lahir</span>
+                    <span className="wajib" aria-hidden="true">*</span>
+                  </label>
+                  <input
+                    id="s-lahir"
+                    type="date"
+                    max={tanggalHariIni()}
+                    min={batasTanggalLahir()}
+                    value={sunting.tanggal_lahir}
+                    onChange={(e) => setSunting({ ...sunting, tanggal_lahir: e.target.value })}
+                    required
+                  />
+                </div>
+
+                <div className="bidang">
+                  <label htmlFor="s-kelamin">
+                    <span>Jenis kelamin</span>
+                    <span className="wajib" aria-hidden="true">*</span>
+                  </label>
+                  <select
+                    id="s-kelamin"
+                    value={sunting.jenis_kelamin}
+                    onChange={(e) => setSunting({ ...sunting, jenis_kelamin: e.target.value })}
+                  >
+                    <option value="perempuan">Perempuan</option>
+                    <option value="laki-laki">Laki-laki</option>
+                  </select>
+                </div>
+              </div>
             </div>
-            <div className="bidang">
-              <label htmlFor="s-lahir">
-                <span>Tanggal lahir</span>
-                <span className="wajib" aria-hidden="true">*</span>
-              </label>
-              <input
-                id="s-lahir"
-                type="date"
-                max={tanggalHariIni()}
-                min={batasTanggalLahir()}
-                value={sunting.tanggal_lahir}
-                onChange={(e) => setSunting({ ...sunting, tanggal_lahir: e.target.value })}
-                required
-              />
+
+            <div className="seksi-grup">
+              <div className="seksi-grup-judul">Orang Tua & Data Lahir (Opsional)</div>
+              <div className="grid2">
+                <div className="bidang">
+                  <label htmlFor="s-ibu">Nama ibu kandung</label>
+                  <input
+                    id="s-ibu"
+                    placeholder="Nama ibu"
+                    value={sunting.nama_ibu_kandung ?? ''}
+                    onChange={(e) => setSunting({ ...sunting, nama_ibu_kandung: e.target.value })}
+                  />
+                </div>
+
+                <div className="bidang">
+                  <label htmlFor="s-status">Status balita</label>
+                  <select
+                    id="s-status"
+                    value={sunting.aktif ? 'aktif' : 'nonaktif'}
+                    onChange={(e) => setSunting({ ...sunting, aktif: e.target.value === 'aktif' })}
+                  >
+                    <option value="aktif">Aktif</option>
+                    <option value="nonaktif">Nonaktif</option>
+                  </select>
+                </div>
+
+                <div className="bidang">
+                  <label htmlFor="s-berat">Berat lahir (kg)</label>
+                  <input
+                    id="s-berat"
+                    type="text"
+                    inputMode="decimal"
+                    autoComplete="off"
+                    placeholder="Contoh: 3.2"
+                    value={sunting.berat_lahir_kg ?? ''}
+                    onChange={(e) => setSunting({ ...sunting, berat_lahir_kg: rapikanDesimal(e.target.value) })}
+                  />
+                </div>
+
+                <div className="bidang">
+                  <label htmlFor="s-panjang">Panjang lahir (cm)</label>
+                  <input
+                    id="s-panjang"
+                    type="text"
+                    inputMode="decimal"
+                    autoComplete="off"
+                    placeholder="Contoh: 49.5"
+                    value={sunting.panjang_lahir_cm ?? ''}
+                    onChange={(e) => setSunting({ ...sunting, panjang_lahir_cm: rapikanDesimal(e.target.value) })}
+                  />
+                </div>
+              </div>
             </div>
-            <div className="bidang">
-              <label htmlFor="s-kelamin">Jenis kelamin</label>
-              <select
-                id="s-kelamin"
-                value={sunting.jenis_kelamin}
-                onChange={(e) => setSunting({ ...sunting, jenis_kelamin: e.target.value })}
-              >
-                <option value="perempuan">Perempuan</option>
-                <option value="laki-laki">Laki-laki</option>
-              </select>
+
+            <div className="modal-kaki">
+              <button type="button" className="sekunder" onClick={() => setSunting(null)}>
+                Batal
+              </button>
+              <button type="submit" disabled={menyimpan}>
+                <Ikon nama="simpan" ukuran={18} />
+                <span>{menyimpan ? 'Menyimpan…' : 'Simpan perubahan'}</span>
+              </button>
             </div>
-            <div className="bidang">
-              <label htmlFor="s-ibu">Nama ibu kandung</label>
-              <input
-                id="s-ibu"
-                value={sunting.nama_ibu_kandung ?? ''}
-                onChange={(e) => setSunting({ ...sunting, nama_ibu_kandung: e.target.value })}
-              />
-            </div>
-            <div className="bidang">
-              <label htmlFor="s-berat">Berat lahir (kg)</label>
-              <input
-                id="s-berat"
-                type="number"
-                step="0.01"
-                min="1"
-                max="40"
-                value={sunting.berat_lahir_kg ?? ''}
-                onChange={(e) => setSunting({ ...sunting, berat_lahir_kg: e.target.value })}
-              />
-            </div>
-            <div className="bidang">
-              <label htmlFor="s-panjang">Panjang lahir (cm)</label>
-              <input
-                id="s-panjang"
-                type="number"
-                step="0.1"
-                min="30"
-                max="130"
-                value={sunting.panjang_lahir_cm ?? ''}
-                onChange={(e) => setSunting({ ...sunting, panjang_lahir_cm: e.target.value })}
-              />
-            </div>
-          </div>
-          <div className="baris-rapat spasi-atas">
-            <button type="submit">
-              <Ikon nama="simpan" ukuran={18} />
-              Simpan perubahan
-            </button>
-            <button type="button" className="sekunder" onClick={() => setSunting(null)}>
-              Batal
-            </button>
-          </div>
-        </form>
+          </form>
+        </Modal>
       )}
 
       <div className="kartu">
@@ -460,36 +511,58 @@ export default function KelolaBalita({ sesi }) {
           </span>
         </div>
 
-        <div className="cari">
-          <label className="sr-only" htmlFor="cari-balita">
-            Cari nama balita
-          </label>
-          <Ikon nama="cari" ukuran={20} />
-          <input
-            id="cari-balita"
-            type="search"
-            placeholder="Cari nama balita…"
-            autoComplete="off"
-            value={cari}
-            onChange={(e) => setCari(e.target.value)}
-          />
-        </div>
 
-        {memuat ? (
+        <div className="bidang bidang-filter daftar-posyandu">
+          <label htmlFor="filter-posyandu-balita">
+            <span>Posyandu</span>
+            <span className="wajib" aria-hidden="true">*</span>
+          </label>
+          <select
+            id="filter-posyandu-balita"
+            value={filterPosyanduId}
+            onChange={(e) => { setHalaman(0); setFilterPosyanduId(e.target.value) }}
+            required
+          >
+            <option value="">— pilih posyandu —</option>
+            {posyandu.map((p) => (
+              <option key={p.id} value={p.id}>{p.nama}</option>
+            ))}
+          </select>
+        </div>
+        <KotakCari id="cari-balita" nilai={cari} onUbah={setCari} />
+
+        {!filterPosyanduId ? (
+          <p className="redup">Pilih Posyandu untuk menampilkan daftar balita.</p>
+        ) : memuat ? (
           <div className="kerangka-tabel" role="status" aria-label="Memuat daftar balita">
             <div className="kerangka kerangka-baris" style={{ width: '85%' }} />
             <div className="kerangka kerangka-baris" style={{ width: '95%' }} />
             <div className="kerangka kerangka-baris" style={{ width: '60%' }} />
           </div>
         ) : daftar.length === 0 ? (
-          <p className="redup">Belum ada balita terdaftar.</p>
+          <Kosong
+            ikon="balita"
+            judul={cari.trim() ? 'Tidak ada nama yang cocok' : 'Belum ada balita terdaftar'}
+            teks={
+              cari.trim()
+                ? 'Periksa ejaan atau hapus kata pencarian.'
+                : 'Tambahkan balita lewat formulir di atas.'
+            }
+            aksi={
+              cari.trim() ? (
+                <button type="button" className="sekunder" onClick={() => setCari('')}>
+                  Hapus pencarian
+                </button>
+              ) : null
+            }
+          />
         ) : (
           <div className="tabel-bungkus">
-            <table className="tabel">
+            <table className="tabel tabel-balita tabel-kartu tabel-aksi">
               <thead>
                 <tr>
                   <th>Nama</th>
-                  <th>Usia</th>
+                  <th className="kolom-usia">Usia</th>
                   <th>Jenis kelamin</th>
                   <th>Status</th>
                   <th aria-label="Tindakan" />
@@ -497,21 +570,35 @@ export default function KelolaBalita({ sesi }) {
               </thead>
               <tbody>
                 {daftar.map((b) => {
-                  const bulan = usiaBulan(b.tanggal_lahir, tanggalHariIni())
+                  const usia = rincianUsia(b.tanggal_lahir, tanggalHariIni())
                   return (
                     <tr key={b.id}>
-                      <td>
-                        <strong>{b.nama_lengkap}</strong>
-                        {b.nama_ibu_kandung && (
-                          <div className="samar">Ibu: {b.nama_ibu_kandung}</div>
+                      <td data-label="Nama">
+                        <div className="tabel-nama-wadah">
+                          <strong>{b.nama_lengkap}</strong>
+                          {b.nama_ibu_kandung && (
+                            <span className="samar">Ibu: {b.nama_ibu_kandung}</span>
+                          )}
+                        </div>
+                      </td>
+                      <td data-label="Usia">
+                        {usia ? (
+                          <span className="chip-usia">
+                            <strong className="chip-usia-angka">{usia.nilai}</strong>
+                            <span className="chip-usia-satuan">{usia.satuan}</span>
+                            {usia.keterangan && (
+                              <span className="chip-usia-keterangan">({usia.keterangan})</span>
+                            )}
+                          </span>
+                        ) : (
+                          <span className="chip-usia perlu-diperbaiki" title="Di luar rentang usia balita 0–7 tahun">
+                            Perlu diperbaiki
+                          </span>
                         )}
                       </td>
-                      <td className="angka">
-                        {bulan === null ? '—' : `${bulan} bulan`}
-                      </td>
-                      <td>{LABEL_KELAMIN[b.jenis_kelamin] ?? b.jenis_kelamin}</td>
-                      <td>
-                        <span className={`lencana ${b.aktif ? 'aktif' : 'nonaktif'}`}>
+                      <td data-label="Jenis kelamin">{LABEL_KELAMIN[b.jenis_kelamin] ?? b.jenis_kelamin}</td>
+                      <td data-label="Status">
+                        <span className={`lencana-status ${b.aktif ? 'aktif' : 'nonaktif'}`}>
                           {b.aktif ? 'Aktif' : 'Nonaktif'}
                         </span>
                       </td>
@@ -559,36 +646,16 @@ export default function KelolaBalita({ sesi }) {
             </table>
           </div>
         )}
-        {total > 50 && (
-          <div className="baris baris-subjudul spasi-atas">
-            <span className="samar">
-              Halaman {halaman + 1} dari {Math.max(1, Math.ceil(total / 50))} ·{' '}
-              {daftar.length} baris (total {total})
-            </span>
-            <span className="baris-rapat">
-              <button
-                type="button"
-                className="sekunder"
-                onClick={() => { if (halaman > 0) { setHalaman(halaman - 1); muat(cari, halaman - 1) } }}
-                disabled={memuat || halaman === 0}
-              >
-                ‹ Sebelumnya
-              </button>
-              <button
-                type="button"
-                className="sekunder"
-                onClick={() => { if ((halaman + 1) * 50 < total) { setHalaman(halaman + 1); muat(cari, halaman + 1) } }}
-                disabled={memuat || (halaman + 1) * 50 >= total}
-              >
-                Berikutnya ›
-              </button>
-            </span>
-          </div>
-        )}
-        <p className="samar teks-bawah">
-          Hapus memakai hapus lunak: baris ditandai, riwayat kunjungan tetap tersimpan.
-          Menonaktifkan bisa dilakukan lewat formulir sunting.
-        </p>
+        <KendaliHalaman
+          halaman={halaman}
+          total={total}
+          nonaktif={memuat}
+          onPilih={(h) => {
+            setHalaman(h)
+            muat(cari, h)
+          }}
+          keterangan={`Halaman ${halaman + 1} dari ${Math.max(1, Math.ceil(total / UKURAN_HALAMAN))} · ${daftar.length} baris (total ${total})`}
+        />
       </div>
     </main>
   )

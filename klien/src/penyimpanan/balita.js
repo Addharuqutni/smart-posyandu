@@ -15,6 +15,7 @@ export async function simpanBalita({
   tanggal_lahir,
   nik = null,
   wali,
+  posyandu_id = null,
   pemilik_id = null,
 }) {
   if (!nama_lengkap?.trim()) throw new Error('Nama balita wajib diisi.')
@@ -22,6 +23,10 @@ export async function simpanBalita({
   if (!tanggal_lahir) throw new Error('Tanggal lahir wajib diisi.')
   if (!usiaDiterima(tanggal_lahir, tanggalHariIni())) {
     throw new Error('Usia balita harus antara 0 hari dan 7 tahun (84 bulan).')
+  }
+  const posyanduId = posyandu_id || wali?.posyandu_id
+  if (!posyanduId) {
+    throw new Error('Pilih Posyandu lebih dulu.')
   }
 
   const sekarang = sekarangIso()
@@ -32,7 +37,7 @@ export async function simpanBalita({
 
   const balita = {
     id: balitaId,
-    posyandu_id: wali.posyandu_id,
+    posyandu_id: posyanduId,
     nama_lengkap: nama_lengkap.trim(),
     jenis_kelamin,
     tanggal_lahir,

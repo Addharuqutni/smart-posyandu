@@ -111,6 +111,17 @@ router.post('/sinkron', butuhLogin, async (minta, balas) => {
         continue
       }
     }
+    if (namaTabel === 'balita' && !tersimpan) {
+      const posBaru = siapkan(namaTabel, muatan).posyandu_id
+      const pos = posBaru ? await satu(
+        `SELECT id FROM posyandu WHERE id = $1 AND dihapus_pada IS NULL`,
+        [posBaru],
+      ) : null
+      if (!pos) {
+        ditolak.push({ id_baris: idBaris, alasan: 'posyandu_tidak_ditemukan' })
+        continue
+      }
+    }
     if (namaTabel === 'kunjungan') {
       const b = await satu(`SELECT tanggal_lahir FROM balita WHERE id = $1`, [muatan.balita_id])
       const lahir = lahirTersimpan(b?.tanggal_lahir)
