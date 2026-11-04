@@ -65,6 +65,9 @@ server {
     location /assets/ {
         expires 1y;
         add_header Cache-Control "public, immutable";
+        add_header X-Content-Type-Options nosniff always;
+        add_header X-Frame-Options DENY always;
+        add_header Referrer-Policy strict-origin-when-cross-origin always;
         access_log off;
         try_files $uri =404;
     }
@@ -74,6 +77,9 @@ server {
     # perbaikan keamanan tidak pernah sampai.
     location = /sw.js {
         add_header Cache-Control "no-cache, no-store, must-revalidate";
+        add_header X-Content-Type-Options nosniff always;
+        add_header X-Frame-Options DENY always;
+        add_header Referrer-Policy strict-origin-when-cross-origin always;
         try_files $uri =404;
     }
 
@@ -99,6 +105,9 @@ server {
         try_files $uri $uri/ /index.html;
         # index.html tidak boleh di-cache: ia menunjuk berkas ber-hash terbaru.
         add_header Cache-Control "no-cache";
+        add_header X-Content-Type-Options nosniff always;
+        add_header X-Frame-Options DENY always;
+        add_header Referrer-Policy strict-origin-when-cross-origin always;
     }
 
     # --- Kompresi ----------------------------------------------------------
@@ -220,6 +229,9 @@ server {
     location /assets/ {
         expires 1y;
         add_header Cache-Control "public, immutable";
+        add_header X-Content-Type-Options nosniff always;
+        add_header X-Frame-Options DENY always;
+        add_header Referrer-Policy strict-origin-when-cross-origin always;
         access_log off;
         try_files $uri =404;
     }
@@ -229,6 +241,9 @@ server {
     # keamanan tidak pernah sampai.
     location = /sw.js {
         add_header Cache-Control "no-cache, no-store, must-revalidate";
+        add_header X-Content-Type-Options nosniff always;
+        add_header X-Frame-Options DENY always;
+        add_header Referrer-Policy strict-origin-when-cross-origin always;
         try_files $uri =404;
     }
 
@@ -252,6 +267,9 @@ server {
     location / {
         try_files $uri $uri/ /index.html;
         add_header Cache-Control "no-cache";
+        add_header X-Content-Type-Options nosniff always;
+        add_header X-Frame-Options DENY always;
+        add_header Referrer-Policy strict-origin-when-cross-origin always;
     }
 
     # --- Kompresi ----------------------------------------------------------
@@ -369,12 +387,18 @@ server {
     location /assets/ {
         expires 1y;
         add_header Cache-Control "public, immutable";
+        add_header X-Content-Type-Options nosniff always;
+        add_header X-Frame-Options DENY always;
+        add_header Referrer-Policy strict-origin-when-cross-origin always;
         access_log off;
         try_files $uri =404;
     }
 
     location = /sw.js {
         add_header Cache-Control "no-cache, no-store, must-revalidate";
+        add_header X-Content-Type-Options nosniff always;
+        add_header X-Frame-Options DENY always;
+        add_header Referrer-Policy strict-origin-when-cross-origin always;
         try_files $uri =404;
     }
 
@@ -432,6 +456,9 @@ server {
     location / {
         try_files $uri $uri/ /index.html;
         add_header Cache-Control "no-cache";
+        add_header X-Content-Type-Options nosniff always;
+        add_header X-Frame-Options DENY always;
+        add_header Referrer-Policy strict-origin-when-cross-origin always;
     }
 
     gzip on;
