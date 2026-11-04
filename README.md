@@ -33,7 +33,7 @@ Fitur disesuaikan dengan peran pengguna:
 
 ## Tech Stack
 
-- **Frontend:** React, Vite, Chart.js, IndexedDB (Dexie/PWA)
+- **Frontend:** React, Vite, Tailwind CSS v4, Chart.js, IndexedDB (Dexie/PWA)
 - **Backend:** Node.js (>=20), Express.js
 - **Database:** PostgreSQL (>=14)
 - **Keamanan:** Argon2 (password hash), AES-GCM (enkripsi data sensitif), Helmet

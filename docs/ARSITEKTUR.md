@@ -330,7 +330,7 @@ dengan basis data ujian untuk bagian `db/`.
 |---------|---------|
 | Basis data | PostgreSQL 14+ |
 | API | Express 5 + `pg` (SQL tulis tangan), `helmet`, `@node-rs/argon2` |
-| Klien | React 18 + Vite |
+| Klien | React 18 + Vite + Tailwind CSS v4 |
 | Penyimpanan lokal | Dexie.js (IndexedDB) |
 | Grafik KMS | Chart.js |
 | Enkripsi | AES-256-GCM (`node:crypto`) untuk NIK dan berkas cadangan |

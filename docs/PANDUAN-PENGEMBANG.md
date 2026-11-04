@@ -14,7 +14,7 @@ ekspor PDF, modul imunisasi, dan ibu hamil.
 | Bagian | Teknologi |
 |--------|-----------|
 | Server | Node + Express 5 + `pg` (SQL tulis tangan; tanpa ORM). |
-| Klien | React + Vite (PWA, IndexedDB lewat Dexie.js. |
+| Klien | React + Vite + Tailwind CSS v4 (PWA, IndexedDB lewat Dexie.js). |
 | Basis data | PostgreSQL 14+; `database/schema.sql` sumber kebenaran. |
 | Uji | Server: `node --test`. Klien: Vitest. |
 
