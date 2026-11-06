@@ -86,7 +86,7 @@ export function usiaDiterima(tanggalLahir, tanggal = tanggalHariIni()) {
 
 /** Waktu ringkas untuk tabel: "1 Nov, 09.57". Bentuk tak dikenal dikembalikan apa adanya. */
 export function waktuPendek(iso) {
-  if (!iso) return '—'
+  if (!iso) return '-'
   const waktu = new Date(iso)
   if (Number.isNaN(waktu.getTime())) return iso
   return waktu.toLocaleString('id-ID', {

@@ -9,7 +9,7 @@ import {
 import { batasTanggalLahir, tanggalHariIni, rincianUsia, usiaDiterima } from '../logika/waktu.js'
 import { rapikanDesimal } from '../logika/angka.js'
 import Ikon from './Ikon.jsx'
-import { Modal, Kosong, KotakCari, KendaliHalaman, UKURAN_HALAMAN } from './Bersama.jsx'
+import { Modal, Kosong, KotakCari, KendaliHalaman, UKURAN_HALAMAN, Layar } from './Bersama.jsx'
 const KOSONG = {
   nama_lengkap: '',
   jenis_kelamin: 'perempuan',
@@ -199,7 +199,7 @@ export default function KelolaBalita({ sesi }) {
   }
 
   return (
-    <main className="mx-auto min-h-[calc(100dvh_-_4rem)] max-w-lebar px-4 pt-4 pb-[calc(6.2rem_+_env(safe-area-inset-bottom))] max-sempit:px-3 max-sempit:pb-[calc(6.4rem_+_env(safe-area-inset-bottom))]" id="isi-utama">
+    <Layar>
       <div className="kepala-layar mb-4 flex items-start justify-between gap-4">
         <div>
           <h1>Data balita</h1>
@@ -224,18 +224,19 @@ export default function KelolaBalita({ sesi }) {
         </div>
       )}
 
-      <form className="kartu p-5 max-sempit:p-4" onSubmit={tambah}>
-        <div className="kepala-akun mb-5 flex items-start gap-3 max-sempit:mb-4">
-          <span className="grid size-[42px] shrink-0 place-items-center rounded-sedang border border-biru-100 bg-biru-50 text-biru-700 max-sempit:size-[38px]">
+      <form className="kartu" onSubmit={tambah}>
+        <div className="kepala-akun mb-5 flex items-center gap-3 max-sempit:mb-4">
+          <span className="grid size-[42px] shrink-0 place-items-center rounded-kecil border border-biru-100 bg-biru-50 text-biru-700 max-sempit:size-[38px]">
             <Ikon nama="tambah" ukuran={20} />
           </span>
           <div>
-            <h2>Balita baru</h2>
+            <h2 className="m-0 leading-tight">Balita baru</h2>
+            <p className="mt-1 mb-0 text-padat text-teks-redup">Daftarkan balita baru ke dalam pencatatan Posyandu.</p>
           </div>
         </div>
 
-        <div className="grid gap-4 [grid-template-columns:repeat(2,minmax(0,1fr))] max-sempit:grid-cols-1 max-sempit:gap-3">
-          <div className="bidang">
+        <div className="grid grid-cols-2 items-start gap-x-4 gap-y-4 max-sempit:grid-cols-1">
+          <div className="bidang flex flex-col">
             <label htmlFor="b-posyandu">
               <span>Posyandu</span>
               <span className="wajib" aria-hidden="true">*</span>
@@ -246,7 +247,7 @@ export default function KelolaBalita({ sesi }) {
               onChange={(e) => setPosyanduId(e.target.value)}
               required
             >
-              <option value="">— pilih posyandu —</option>
+              <option value="">(Pilih Posyandu)</option>
               {posyandu.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.nama}
@@ -255,13 +256,15 @@ export default function KelolaBalita({ sesi }) {
             </select>
           </div>
 
-          <div className="bidang">
+          <div className="bidang flex flex-col">
             <label htmlFor="b-nama">
               <span>Nama lengkap</span>
               <span className="wajib" aria-hidden="true">*</span>
             </label>
             <input
               id="b-nama"
+                name="nama_lengkap"
+
               autoComplete="off"
               placeholder="cth. Budi Santoso"
               value={isi.nama_lengkap}
@@ -270,13 +273,15 @@ export default function KelolaBalita({ sesi }) {
             />
           </div>
 
-          <div className="bidang">
+          <div className="bidang flex flex-col">
             <label htmlFor="b-lahir">
               <span>Tanggal lahir</span>
               <span className="wajib" aria-hidden="true">*</span>
             </label>
             <input
               id="b-lahir"
+                name="tanggal_lahir"
+
               type="date"
               max={tanggalHariIni()}
               min={batasTanggalLahir()}
@@ -284,10 +289,10 @@ export default function KelolaBalita({ sesi }) {
               onChange={(e) => setIsi({ ...isi, tanggal_lahir: e.target.value })}
               required
             />
-            <p className="petunjuk">Usia balita maksimal 7 tahun (84 bulan).</p>
+            <p className="petunjuk mt-1">Usia balita maksimal 7 tahun (84 bulan).</p>
           </div>
 
-          <div className="bidang">
+          <div className="bidang flex flex-col">
             <label htmlFor="b-kelamin">
               <span>Jenis kelamin</span>
               <span className="wajib" aria-hidden="true">*</span>
@@ -302,10 +307,14 @@ export default function KelolaBalita({ sesi }) {
             </select>
           </div>
 
-          <div className="bidang">
-            <label htmlFor="b-ibu">Nama ibu kandung</label>
+          <div className="bidang flex flex-col">
+            <label htmlFor="b-ibu">
+              <span>Nama ibu kandung</span>
+            </label>
             <input
               id="b-ibu"
+                name="nama_ibu"
+
               autoComplete="off"
               placeholder="cth. Siti"
               value={isi.nama_ibu_kandung}
@@ -313,10 +322,14 @@ export default function KelolaBalita({ sesi }) {
             />
           </div>
 
-          <div className="bidang">
-            <label htmlFor="b-berat">Berat lahir (kg)</label>
+          <div className="bidang flex flex-col">
+            <label htmlFor="b-berat">
+              <span>Berat lahir (kg)</span>
+            </label>
             <input
               id="b-berat"
+                name="berat_lahir_kg"
+
               type="text"
               inputMode="decimal"
               autoComplete="off"
@@ -326,10 +339,14 @@ export default function KelolaBalita({ sesi }) {
             />
           </div>
 
-          <div className="bidang">
-            <label htmlFor="b-panjang">Panjang lahir (cm)</label>
+          <div className="bidang flex flex-col">
+            <label htmlFor="b-panjang">
+              <span>Panjang lahir (cm)</span>
+            </label>
             <input
               id="b-panjang"
+                name="panjang_lahir_cm"
+
               type="text"
               inputMode="decimal"
               autoComplete="off"
@@ -339,10 +356,14 @@ export default function KelolaBalita({ sesi }) {
             />
           </div>
 
-          <div className="bidang">
-            <label htmlFor="b-nik">NIK balita</label>
+          <div className="bidang flex flex-col">
+            <label htmlFor="b-nik">
+              <span>NIK balita</span>
+            </label>
             <input
               id="b-nik"
+                name="nik"
+
               inputMode="numeric"
               pattern="[0-9]*"
               maxLength={16}
@@ -355,7 +376,7 @@ export default function KelolaBalita({ sesi }) {
           </div>
         </div>
 
-        <div className="mt-4 flex justify-end border-t border-garis pt-4 max-sempit:[&>button]:w-full">
+        <div className="mt-4 flex justify-end gap-2 border-t border-garis pt-4 max-sempit:[&>button]:w-full">
           <button type="submit" disabled={menyimpan}>
             <Ikon nama="tambah" ukuran={18} />
             {menyimpan ? 'Menyimpan…' : 'Daftarkan balita'}
@@ -369,9 +390,9 @@ export default function KelolaBalita({ sesi }) {
           subjudul={sunting.nama_lengkap}
           onTutup={() => setSunting(null)}
         >
-          <form onSubmit={simpanSunting} className="flex flex-col gap-5 overflow-y-auto px-5 py-5 max-dialog:gap-4 max-dialog:p-4">
+          <form onSubmit={simpanSunting} className="flex flex-col gap-5 overflow-y-auto p-4">
             <div className="flex flex-col gap-3">
-              <div className="border-b border-garis pb-1.5 text-2xs font-bold uppercase tracking-[0.05em] text-aksen-biru-ink">Identitas Utama</div>
+              <div className="border-b border-garis pb-1.5 text-2xs font-bold uppercase tracking-[0.075em] text-aksen-biru-ink">Identitas Utama</div>
               <div className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(190px,1fr))]">
                 <div className="bidang">
                   <label htmlFor="s-posyandu">
@@ -398,6 +419,8 @@ export default function KelolaBalita({ sesi }) {
                   </label>
                   <input
                     id="s-nama"
+                name="nama_lengkap"
+
                     value={sunting.nama_lengkap}
                     onChange={(e) => setSunting({ ...sunting, nama_lengkap: e.target.value })}
                     required
@@ -411,6 +434,8 @@ export default function KelolaBalita({ sesi }) {
                   </label>
                   <input
                     id="s-lahir"
+                name="tanggal_lahir"
+
                     type="date"
                     max={tanggalHariIni()}
                     min={batasTanggalLahir()}
@@ -438,12 +463,14 @@ export default function KelolaBalita({ sesi }) {
             </div>
 
             <div className="flex flex-col gap-3">
-              <div className="border-b border-garis pb-1.5 text-2xs font-bold uppercase tracking-[0.05em] text-aksen-biru-ink">Orang Tua & Data Lahir (Opsional)</div>
+              <div className="border-b border-garis pb-1.5 text-2xs font-bold uppercase tracking-[0.075em] text-aksen-biru-ink">Orang Tua & Data Lahir (Opsional)</div>
               <div className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(190px,1fr))]">
                 <div className="bidang">
                   <label htmlFor="s-ibu">Nama ibu kandung</label>
                   <input
                     id="s-ibu"
+                name="nama_ibu"
+
                     placeholder="Nama ibu"
                     value={sunting.nama_ibu_kandung ?? ''}
                     onChange={(e) => setSunting({ ...sunting, nama_ibu_kandung: e.target.value })}
@@ -466,6 +493,8 @@ export default function KelolaBalita({ sesi }) {
                   <label htmlFor="s-berat">Berat lahir (kg)</label>
                   <input
                     id="s-berat"
+                name="berat_lahir_kg"
+
                     type="text"
                     inputMode="decimal"
                     autoComplete="off"
@@ -479,6 +508,8 @@ export default function KelolaBalita({ sesi }) {
                   <label htmlFor="s-panjang">Panjang lahir (cm)</label>
                   <input
                     id="s-panjang"
+                name="panjang_lahir_cm"
+
                     type="text"
                     inputMode="decimal"
                     autoComplete="off"
@@ -490,7 +521,7 @@ export default function KelolaBalita({ sesi }) {
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-2.5 border-t border-garis bg-biru-50 px-5 py-4 max-dialog:flex-col-reverse max-dialog:gap-2 max-dialog:p-3 max-dialog:[&>button]:w-full">
+            <div className="flex items-center justify-end gap-2 border-t border-garis bg-biru-50 p-4 max-dialog:flex-col-reverse max-dialog:gap-2 max-dialog:[&>button]:w-full">
               <button type="button" className="sekunder" onClick={() => setSunting(null)}>
                 Batal
               </button>
@@ -512,24 +543,24 @@ export default function KelolaBalita({ sesi }) {
         </div>
 
 
-        <div className="bidang mb-4 max-w-[22rem] min-w-0 flex-[1_1_190px]">
-          <label htmlFor="filter-posyandu-balita">
-            <span>Posyandu</span>
-            <span className="wajib" aria-hidden="true">*</span>
-          </label>
-          <select
-            id="filter-posyandu-balita"
-            value={filterPosyanduId}
-            onChange={(e) => { setHalaman(0); setFilterPosyanduId(e.target.value) }}
-            required
-          >
-            <option value="">— pilih posyandu —</option>
-            {posyandu.map((p) => (
-              <option key={p.id} value={p.id}>{p.nama}</option>
-            ))}
-          </select>
+        <div className="mb-4 grid items-end gap-2.5 mini:grid-cols-[minmax(0,18rem)_minmax(0,1fr)]">
+          <div className="bidang mb-0 min-w-0">
+            <label htmlFor="filter-posyandu-balita">
+              <span>Posyandu</span>
+            </label>
+            <select
+              id="filter-posyandu-balita"
+              value={filterPosyanduId}
+              onChange={(e) => { setHalaman(0); setFilterPosyanduId(e.target.value) }}
+            >
+              <option value="">(Pilih Posyandu)</option>
+              {posyandu.map((p) => (
+                <option key={p.id} value={p.id}>{p.nama}</option>
+              ))}
+            </select>
+          </div>
+          <KotakCari id="cari-balita" nilai={cari} onUbah={setCari} className="mb-0" />
         </div>
-        <KotakCari id="cari-balita" nilai={cari} onUbah={setCari} />
 
         {!filterPosyanduId ? (
           <p className="text-isi text-teks-redup">Pilih Posyandu untuk menampilkan daftar balita.</p>
@@ -657,6 +688,6 @@ export default function KelolaBalita({ sesi }) {
           keterangan={`Halaman ${halaman + 1} dari ${Math.max(1, Math.ceil(total / UKURAN_HALAMAN))} · ${daftar.length} baris (total ${total})`}
         />
       </div>
-    </main>
+    </Layar>
   )
 }

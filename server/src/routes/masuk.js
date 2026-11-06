@@ -1,11 +1,12 @@
 // Masuk, keluar, dan identitas sesi (F-01, ARSITEKTUR 5).
 
 const express = require('express')
-const { satu, kueri } = require('../db/pool')
+const { satu } = require('../db/pool')
 const { sandiCocok, buatToken, hashToken } = require('../domain/keamanan')
 const { muatPengguna, tokenSesi } = require('../middleware/auth')
 const cookie = require('../domain/sesi-cookie')
 const env = require('../env')
+const { catatAktivitas } = require('../domain/aktivitas')
 
 const router = express.Router()
 
@@ -70,6 +71,14 @@ router.post('/masuk', async (minta, balas) => {
   const cocok = baris ? await sandiCocok(baris.hash_kata_sandi, kata_sandi) : false
   if (!baris || !cocok) {
     catatGagal(nama_pengguna, ip)
+    // Percobaan gagal juga jejak keamanan: admin perlu melihat tebakan sandi.
+    // Nama yang dicoba disimpan, kata sandinya tidak pernah.
+    await catatAktivitas({
+      idPerangkat: id_perangkat,
+      aksi: 'gagal_masuk',
+      rincian: { nama_pengguna, alasan: baris ? 'kata_sandi_salah' : 'akun_tidak_ada' },
+      ip,
+    }).catch(() => {})
     return balas.status(401).json({ detail: 'nama_pengguna_atau_kata_sandi_salah' })
   }
   hapusGagal(nama_pengguna, ip)
@@ -78,12 +87,21 @@ router.post('/masuk', async (minta, balas) => {
   const menit =
     baris.peran === 'admin_desa' ? pengaturan.menitSesiAdmin : pengaturan.menitSesiTablet
   const token = buatToken()
-  await kueri(
+  const sesi = await satu(
     `INSERT INTO sesi_login
        (id, pengguna_id, token_hash, id_perangkat, dibuat_pada, kadaluarsa_pada)
-     VALUES (gen_random_uuid(), $1, $2, $3, now(), now() + ($4 || ' minutes')::interval)`,
+     VALUES (gen_random_uuid(), $1, $2, $3, now(), now() + ($4 || ' minutes')::interval)
+     RETURNING id`,
     [baris.id, hashToken(token), id_perangkat, String(menit)],
   )
+  await catatAktivitas({
+    penggunaId: baris.id,
+    idPerangkat: id_perangkat,
+    aksi: 'masuk',
+    barisId: sesi?.id,
+    rincian: { peran: baris.peran },
+    ip,
+  })
   // Token hanya lewat cookie HttpOnly; badan balasan tidak lagi memuatnya.
   cookie.set(balas, token, menit)
 
@@ -114,11 +132,22 @@ router.get('/saya', muatPengguna, (minta, balas) => {
 router.post('/keluar', muatPengguna, async (minta, balas) => {
   const token = tokenSesi(minta)
   if (token) {
-    await kueri(
+    const sesi = await satu(
       `UPDATE sesi_login SET dicabut_pada = now()
-       WHERE token_hash = $1 AND dicabut_pada IS NULL`,
+       WHERE token_hash = $1 AND dicabut_pada IS NULL
+       RETURNING id, id_perangkat`,
       [hashToken(token)],
     )
+    if (sesi) {
+      await catatAktivitas({
+        penggunaId: minta.pengguna?.id ?? null,
+        idPerangkat: sesi.id_perangkat,
+        aksi: 'keluar',
+        barisId: sesi.id,
+        rincian: { peran: minta.pengguna?.peran ?? null },
+        ip: minta.ip,
+      }).catch(() => {})
+    }
   }
   cookie.hapus(balas)
   balas.status(204).send()

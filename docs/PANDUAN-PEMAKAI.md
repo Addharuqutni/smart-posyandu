@@ -148,7 +148,6 @@ dan rata-rata persen median. Ada tombol **Unduh CSV** untuk diolah di Excel.
 - **Tambah akun**: layar **Akun** → Tambah. Pilih peran: kader / petugas kesehatan / admin desa.
 - **Nonaktifkan akun**: layar **Akun** → Nonaktifkan.
 - **Cabut sesi tablet**: layar **Akun** → bagian sesi tablet → **Cabut**. Ini menghentikan akses jika tablet hilang.
-- **Lihat riwayat masuk perangkat**: layar **Perangkat** (untuk kader & nakes) menampilkan riwayat login perangkat.
 
 ---
 

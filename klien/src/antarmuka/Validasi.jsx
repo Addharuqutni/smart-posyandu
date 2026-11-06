@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { daftarPosyandu, daftarValidasi, tindakLanjut, validasiKunjungan, validasiSemua } from '../jaringan/api.js'
 import { PESAN_STATUS } from '../logika/rentang.js'
 import Ikon from './Ikon.jsx'
-import { Kosong, KotakCari, Modal } from './Bersama.jsx'
+import { Kosong, KotakCari, Modal, Layar } from './Bersama.jsx'
 import { idBaru } from '../logika/waktu.js'
 export default function Validasi({ sesi }) {
   const [daftar, setDaftar] = useState([])
@@ -113,7 +113,7 @@ export default function Validasi({ sesi }) {
   }
 
   return (
-    <main className="mx-auto min-h-[calc(100dvh_-_4rem)] max-w-lebar px-4 pt-4 pb-[calc(6.2rem_+_env(safe-area-inset-bottom))] max-sempit:px-3 max-sempit:pb-[calc(6.4rem_+_env(safe-area-inset-bottom))]" id="isi-utama">
+    <Layar>
       <div className="kepala-layar mb-4 flex items-start justify-between gap-4">
         <div>
           <h1>Validasi pengukuran</h1>
@@ -145,7 +145,7 @@ export default function Validasi({ sesi }) {
 
       {konfirmMassal && (
         <Modal judul="Validasi semua pengukuran?" onTutup={() => setKonfirmMassal(false)}>
-          <div className="flex flex-col gap-5 overflow-y-auto px-5 py-5 max-dialog:gap-4 max-dialog:p-4">
+          <div className="flex flex-col gap-5 overflow-y-auto p-4">
             <p className="m-0">
               {cari.trim()
                 ? `${total} pengukuran yang cocok dengan “${cari.trim()}” akan ditandai tervalidasi.`
@@ -155,7 +155,7 @@ export default function Validasi({ sesi }) {
               Setelah divalidasi, pengukuran tidak bisa diubah lagi oleh kader.
             </p>
           </div>
-          <div className="flex items-center justify-end gap-2.5 border-t border-garis bg-biru-50 px-5 py-4 max-dialog:flex-col-reverse max-dialog:gap-2 max-dialog:p-3 max-dialog:[&>button]:w-full">
+          <div className="flex items-center justify-end gap-2 border-t border-garis bg-biru-50 p-4 max-dialog:flex-col-reverse max-dialog:gap-2 max-dialog:[&>button]:w-full">
             <button type="button" className="sekunder" onClick={() => setKonfirmMassal(false)}>
               Batal
             </button>
@@ -167,10 +167,12 @@ export default function Validasi({ sesi }) {
         </Modal>
       )}
 
-      <div className="kartu px-4 py-4">
-        <div className="flex flex-wrap items-end gap-3">
-          <div className="mb-0 min-w-0 flex-[1_1_190px]">
-            <label htmlFor="filter-posyandu">Posyandu</label>
+      <div className="kartu">
+        <div className="grid grid-cols-2 items-start gap-x-4 gap-y-4 max-sempit:grid-cols-1">
+          <div className="flex min-w-0 flex-col">
+            <label htmlFor="filter-posyandu">
+              <span>Posyandu</span>
+            </label>
             <select
               id="filter-posyandu"
               value={posyanduId}
@@ -186,8 +188,10 @@ export default function Validasi({ sesi }) {
               ))}
             </select>
           </div>
-          <div className="mb-0 min-w-0 flex-[1_1_190px]">
-            <span className="label-segmen" id="label-cari-validasi">Cari nama balita</span>
+          <div className="flex flex-col min-w-0">
+            <span className="label-segmen" id="label-cari-validasi">
+              Cari nama balita
+            </span>
             <div role="search" aria-labelledby="label-cari-validasi">
               <KotakCari
                 id="cari-validasi"
@@ -195,6 +199,7 @@ export default function Validasi({ sesi }) {
                 onUbah={setCari}
                 label="Cari nama balita"
                 placeholder="Cari balita…"
+                className="mb-0"
               />
             </div>
           </div>
@@ -249,32 +254,32 @@ export default function Validasi({ sesi }) {
             </button>
           </div>
 
-          <div className="mb-3 grid grid-cols-3 gap-2">
-            <div className="flex flex-col gap-1 rounded-kecil border border-biru-100 bg-biru-50 px-2.5 py-2">
-              <span className="text-2xs font-semibold uppercase tracking-[0.03em] text-teks-samar">Berat</span>
-              <span className="text-subjudul leading-[1.15] font-bold text-biru-950">
-                {k.pengukuran?.berat_kg ?? '—'}
-                <span className="ml-0.5 text-padat font-semibold text-teks-redup"> kg</span>
-              </span>
+          <dl className="mb-3 grid grid-cols-3 gap-px overflow-hidden rounded-kecil border border-garis bg-garis">
+            <div className="bg-kartu px-2.5 py-2">
+              <dt className="text-2xs font-semibold uppercase tracking-[0.075em] text-teks-samar">Berat</dt>
+              <dd className="m-0 mt-0.5 flex items-baseline gap-0.5 text-subjudul leading-none font-bold tabular-nums text-biru-950">
+                {k.pengukuran?.berat_kg ?? '-'}
+                <span className="text-padat font-semibold text-teks-redup">kg</span>
+              </dd>
             </div>
-            <div className="flex flex-col gap-1 rounded-kecil border border-biru-100 bg-biru-50 px-2.5 py-2">
-              <span className="text-2xs font-semibold uppercase tracking-[0.03em] text-teks-samar">Tinggi</span>
-              <span className="text-subjudul leading-[1.15] font-bold text-biru-950">
-                {k.pengukuran?.tinggi_cm ?? '—'}
-                <span className="ml-0.5 text-padat font-semibold text-teks-redup"> cm</span>
-              </span>
+            <div className="bg-kartu px-2.5 py-2">
+              <dt className="text-2xs font-semibold uppercase tracking-[0.075em] text-teks-samar">Tinggi</dt>
+              <dd className="m-0 mt-0.5 flex items-baseline gap-0.5 text-subjudul leading-none font-bold tabular-nums text-biru-950">
+                {k.pengukuran?.tinggi_cm ?? '-'}
+                <span className="text-padat font-semibold text-teks-redup">cm</span>
+              </dd>
             </div>
-            <div className="flex flex-col gap-1 rounded-kecil border border-biru-100 bg-biru-50 px-2.5 py-2">
-              <span className="text-2xs font-semibold uppercase tracking-[0.03em] text-teks-samar">Status gizi</span>
-              <span
-                className={`lencana-gizi mt-0 w-fit ${k.pengukuran?.status_gizi ?? 'menunggu'}`}
-              >
-                {k.pengukuran?.status_gizi
-                  ? PESAN_STATUS[k.pengukuran.status_gizi]
-                  : 'Belum dinilai'}
-              </span>
+            <div className="bg-kartu px-2.5 py-2">
+              <dt className="text-2xs font-semibold uppercase tracking-[0.075em] text-teks-samar">Status gizi</dt>
+              <dd className="m-0 mt-1">
+                <span className={`lencana-gizi w-fit ${k.pengukuran?.status_gizi ?? 'menunggu'}`}>
+                  {k.pengukuran?.status_gizi
+                    ? PESAN_STATUS[k.pengukuran.status_gizi]
+                    : 'Belum dinilai'}
+                </span>
+              </dd>
             </div>
-          </div>
+          </dl>
 
           {k.catatan && (
             <div className="mb-3 rounded-kecil bg-biru-50 px-3 py-2.5 text-padat text-teks-redup">
@@ -341,6 +346,6 @@ export default function Validasi({ sesi }) {
           </button>
         </div>
       )}
-    </main>
+    </Layar>
   )
 }

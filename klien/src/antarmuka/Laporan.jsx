@@ -13,7 +13,7 @@ import {
 import { PESAN_STATUS } from '../logika/rentang.js'
 import Ikon from './Ikon.jsx'
 import Bantuan from './Bantuan.jsx'
-import { Kosong } from './Bersama.jsx'
+import { BarisPetak, Kosong, Petak, Layar } from './Bersama.jsx'
 import { tanggalHariIni, waktuPendek } from '../logika/waktu.js'
 
 function bulanIni() {
@@ -24,6 +24,14 @@ function judulBulan(nilai) {
   const [tahun, bulan] = nilai.split('-')
   const tanggal = new Date(Number(tahun), Number(bulan) - 1, 1)
   return tanggal.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })
+}
+
+const WARNA_SEBARAN = {
+  gizi_baik: 'bg-hijau-700',
+  gizi_kurang: 'bg-kuning-800',
+  gizi_buruk: 'bg-merah-700',
+  gizi_buruk_berat: 'bg-merah-800',
+  belum_dinilai: 'bg-garis-kuat',
 }
 
 const NAMA_BULAN = [
@@ -222,9 +230,10 @@ export default function Laporan({ sesi }) {
   }
 
   const sebaran = isi?.sebaran_status_gizi ?? {}
+  const totalUkur = Object.values(sebaran).reduce((jumlah, n) => jumlah + n, 0)
 
   return (
-    <main className="mx-auto min-h-[calc(100dvh_-_4rem)] max-w-lebar px-4 pt-4 pb-[calc(6.2rem_+_env(safe-area-inset-bottom))] max-sempit:px-3 max-sempit:pb-[calc(6.4rem_+_env(safe-area-inset-bottom))]" id="isi-utama">
+    <Layar>
       <div className="kepala-layar mb-4 flex items-start justify-between gap-4">
         <div>
           <h1>Rekap bulanan</h1>
@@ -232,7 +241,7 @@ export default function Laporan({ sesi }) {
         </div>
         <button
           type="button"
-          className="sekunder"
+          className="sekunder shrink-0 whitespace-nowrap"
           onClick={() => muat(bulan)}
           disabled={memuat}
           aria-label="Muat ulang rekap"
@@ -255,60 +264,6 @@ export default function Laporan({ sesi }) {
         </div>
       )}
 
-      <div className="kartu px-4 py-4">
-        <div className="flex flex-wrap items-end gap-3">
-          <div className="mb-0 min-w-0 flex-[1_1_190px]">
-            <span className="label-segmen" id="label-bulan">Bulan rekap</span>
-            <div className="flex flex-wrap items-center gap-1.5" role="group" aria-labelledby="label-bulan">
-              <button
-                type="button"
-                className="inline-flex min-h-12 min-w-12 items-center justify-center rounded-kecil border border-garis bg-kartu px-2 text-tombol leading-none font-bold text-biru-800 shadow-none hover:border-garis-kuat hover:bg-biru-50 hover:text-biru-950 disabled:border-garis disabled:bg-latar disabled:text-garis-kuat"
-                onClick={() => gantiBulan(-1)}
-                disabled={memuat || bulan <= `${TAHUN_AWAL}-01`}
-                aria-label="Bulan sebelumnya"
-              >
-                ‹
-              </button>
-              <select
-                className="w-auto min-w-[8.25rem] flex-none"
-                value={bulanTerpilih}
-                onChange={(e) => pilihBagian(e.target.value, tahunTerpilih)}
-                disabled={memuat}
-                aria-label="Bulan"
-              >
-                {NAMA_BULAN.map((nama, i) => (
-                  <option key={nama} value={String(i + 1).padStart(2, '0')}>
-                    {nama}
-                  </option>
-                ))}
-              </select>
-              <select
-                className="w-auto min-w-[5.5rem] flex-none"
-                value={tahunTerpilih}
-                onChange={(e) => pilihBagian(bulanTerpilih, e.target.value)}
-                disabled={memuat}
-                aria-label="Tahun"
-              >
-                {tahunTersedia.map((t) => (
-                  <option key={t} value={String(t)}>
-                    {t}
-                  </option>
-                ))}
-              </select>
-              <button
-                type="button"
-                className="inline-flex min-h-12 min-w-12 items-center justify-center rounded-kecil border border-garis bg-kartu px-2 text-tombol leading-none font-bold text-biru-800 shadow-none hover:border-garis-kuat hover:bg-biru-50 hover:text-biru-950 disabled:border-garis disabled:bg-latar disabled:text-garis-kuat"
-                onClick={() => gantiBulan(1)}
-                disabled={memuat || bulan >= bulanIni()}
-                aria-label="Bulan berikutnya"
-              >
-                ›
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
       {memuat && !isi && (
         <Kosong
           ikon="sinkron"
@@ -319,104 +274,125 @@ export default function Laporan({ sesi }) {
 
       {isi && (
         <>
-          <div className="mb-2.5 flex items-start justify-between gap-4 [&_h2]:m-0 [&_h2]:text-subjudul [&_p]:mt-1 [&_p]:mb-0 [&_p]:text-isi [&_p]:text-teks-redup">
-            <div>
-              <h2>{judulBulan(isi.bulan)}</h2>
-              <p>{isi.posyandu.nama ?? 'Semua Posyandu'}</p>
-            </div>
-          </div>
+          <section className="mb-4" aria-labelledby="judul-rekap">
+            <div className="mb-2.5 flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <h2 id="judul-rekap" className="m-0 text-subjudul leading-tight font-bold text-biru-950">
+                  {judulBulan(isi.bulan)}
+                </h2>
+                <p className="mt-0.5 mb-0 text-isi text-teks-redup">
+                  {isi.posyandu.nama ?? 'Semua Posyandu'}
+                </p>
+              </div>
 
-          <div className="mb-4 grid gap-2.5 [grid-template-columns:repeat(5,minmax(0,1fr))] max-sempit:[grid-template-columns:repeat(auto-fit,minmax(130px,1fr))] max-sempit:gap-2">
-            <div className="relative flex min-h-[5.4rem] flex-col justify-between rounded-sedang border border-garis bg-kartu px-4 py-4 shadow-halus transition-[border-color,box-shadow] hover:border-garis-kuat hover:shadow-naik max-sempit:min-h-[4.8rem] max-sempit:px-3 max-sempit:py-2.5">
-              <div className="mb-2 flex items-center justify-between">
-                <span className="grid size-8 shrink-0 place-items-center rounded-kecil max-sempit:size-6 bg-aksen-biru-tint text-aksen-biru-ink">
-                  <Ikon nama="kunjungan" ukuran={16} />
-                </span>
-                <Bantuan
-                  id="bantuan-jumlah-kunjungan"
-                  label="Penjelasan jumlah kunjungan"
-                  teks="Total kedatangan balita bulan ini. Satu balita bisa dihitung lebih dari satu kali bila datang beberapa kali."
-                />
-              </div>
-              <div className="flex flex-col gap-1">
-                <div className="text-judul leading-[1.15] font-bold tabular-nums tracking-[-0.02em] text-biru-950">{isi.jumlah_kunjungan}</div>
-                <div className="text-2xs leading-tight font-medium text-teks-redup">Jumlah kunjungan</div>
-              </div>
-            </div>
-
-            <div className="relative flex min-h-[5.4rem] flex-col justify-between rounded-sedang border border-garis bg-kartu px-4 py-4 shadow-halus transition-[border-color,box-shadow] hover:border-garis-kuat hover:shadow-naik max-sempit:min-h-[4.8rem] max-sempit:px-3 max-sempit:py-2.5">
-              <div className="mb-2 flex items-center justify-between">
-                <span className="grid size-8 shrink-0 place-items-center rounded-kecil max-sempit:size-6 bg-aksen-hijau-tint text-aksen-hijau-ink">
-                  <Ikon nama="balita-hadir" ukuran={16} />
-                </span>
-                <Bantuan
-                  id="bantuan-balita-datang"
-                  label="Penjelasan balita yang datang"
-                  teks="Jumlah balita berbeda yang datang bulan ini. Bukan total kunjungan, dan bukan semua balita terdaftar."
-                />
-              </div>
-              <div className="flex flex-col gap-1">
-                <div className="text-judul leading-[1.15] font-bold tabular-nums tracking-[-0.02em] text-biru-950">{isi.jumlah_balita_tercatat}</div>
-                <div className="text-2xs leading-tight font-medium text-teks-redup">Balita yang datang</div>
-              </div>
-            </div>
-
-            <div className="relative flex min-h-[5.4rem] flex-col justify-between rounded-sedang border border-garis bg-kartu px-4 py-4 shadow-halus transition-[border-color,box-shadow] hover:border-garis-kuat hover:shadow-naik max-sempit:min-h-[4.8rem] max-sempit:px-3 max-sempit:py-2.5">
-              <div className="mb-2 flex items-center justify-between">
-                <span className="grid size-8 shrink-0 place-items-center rounded-kecil max-sempit:size-6 bg-aksen-slate-tint text-aksen-slate-ink">
-                  <Ikon nama="balita" ukuran={16} />
-                </span>
-                <Bantuan
-                  id="bantuan-terdaftar"
-                  label="Penjelasan balita terdaftar"
-                  teks="Semua balita aktif di Posyandu ini, datang atau tidak bulan ini."
-                />
-              </div>
-              <div className="flex flex-col gap-1">
-                <div className="text-judul leading-[1.15] font-bold tabular-nums tracking-[-0.02em] text-biru-950">{isi.balita_terdaftar ?? '—'}</div>
-                <div className="text-2xs leading-tight font-medium text-teks-redup">Balita terdaftar</div>
-              </div>
-            </div>
-
-            <div className="relative flex min-h-[5.4rem] flex-col justify-between rounded-sedang border border-garis bg-kartu px-4 py-4 shadow-halus transition-[border-color,box-shadow] hover:border-garis-kuat hover:shadow-naik max-sempit:min-h-[4.8rem] max-sempit:px-3 max-sempit:py-2.5">
-              <div className="mb-2 flex items-center justify-between">
-                <span className="grid size-8 shrink-0 place-items-center rounded-kecil max-sempit:size-6 bg-aksen-amber-tint text-aksen-amber-ink">
-                  <Ikon nama="balita-absen" ukuran={16} />
-                </span>
-                <Bantuan
-                  id="bantuan-tidak-datang"
-                  label="Penjelasan balita tidak datang"
-                  teks="Balita aktif yang sama sekali tidak datang bulan ini. Perlu ditindaklanjuti kader."
-                />
-              </div>
-              <div className="flex flex-col gap-1">
-                <div className="text-judul leading-[1.15] font-bold tabular-nums tracking-[-0.02em] text-biru-950">{isi.balita_tidak_berkunjung ?? '—'}</div>
-                <div className="text-2xs leading-tight font-medium text-teks-redup">Balita tidak datang</div>
+              <div className="flex items-center gap-1" role="group" aria-label="Bulan rekap">
+                <button
+                  type="button"
+                  className="inline-flex size-11 items-center justify-center rounded-kecil border border-garis bg-kartu p-0 text-tombol leading-none font-bold text-biru-800 shadow-none hover:border-garis-kuat hover:bg-biru-50 hover:text-biru-950 disabled:border-garis disabled:text-garis-kuat"
+                  onClick={() => gantiBulan(-1)}
+                  disabled={memuat || bulan <= `${TAHUN_AWAL}-01`}
+                  aria-label="Bulan sebelumnya"
+                >
+                  ‹
+                </button>
+                <select
+                  className="w-auto min-w-[7.75rem] flex-none py-2 pr-7 pl-2.5 text-isi font-semibold text-biru-950"
+                  value={bulanTerpilih}
+                  onChange={(e) => pilihBagian(e.target.value, tahunTerpilih)}
+                  disabled={memuat}
+                  aria-label="Bulan"
+                >
+                  {NAMA_BULAN.map((nama, i) => (
+                    <option key={nama} value={String(i + 1).padStart(2, '0')}>
+                      {nama}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  className="w-auto min-w-[5.25rem] flex-none py-2 pr-7 pl-2.5 text-isi font-semibold text-biru-950"
+                  value={tahunTerpilih}
+                  onChange={(e) => pilihBagian(bulanTerpilih, e.target.value)}
+                  disabled={memuat}
+                  aria-label="Tahun"
+                >
+                  {tahunTersedia.map((t) => (
+                    <option key={t} value={String(t)}>
+                      {t}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  className="inline-flex size-11 items-center justify-center rounded-kecil border border-garis bg-kartu p-0 text-tombol leading-none font-bold text-biru-800 shadow-none hover:border-garis-kuat hover:bg-biru-50 hover:text-biru-950 disabled:border-garis disabled:text-garis-kuat"
+                  onClick={() => gantiBulan(1)}
+                  disabled={memuat || bulan >= bulanIni()}
+                  aria-label="Bulan berikutnya"
+                >
+                  ›
+                </button>
               </div>
             </div>
 
-            <div className="relative flex min-h-[5.4rem] flex-col justify-between rounded-sedang border border-garis bg-kartu px-4 py-4 shadow-halus transition-[border-color,box-shadow] hover:border-garis-kuat hover:shadow-naik max-sempit:min-h-[4.8rem] max-sempit:px-3 max-sempit:py-2.5">
-              <div className="mb-2 flex items-center justify-between">
-                <span className="grid size-8 shrink-0 place-items-center rounded-kecil max-sempit:size-6 bg-aksen-teal-tint text-aksen-teal-ink">
-                  <Ikon nama="grafik" ukuran={16} />
-                </span>
-                <Bantuan
-                  id="bantuan-median"
-                  label="Penjelasan persen median"
-                  teks="Berat balita dibanding berat rata-rata anak seusianya. 100% = sama dengan rata-rata. Di bawah 80% perlu perhatian."
-                />
-              </div>
-              <div className="flex flex-col gap-1">
-                <div className="text-judul leading-[1.15] font-bold tabular-nums tracking-[-0.02em] text-biru-950">
-                  {isi.rata_persen_median ?? '—'}
-                  {isi.rata_persen_median != null && (
-                    <span className="ml-0.5 text-padat font-semibold text-teks-redup">%</span>
-                  )}
-                </div>
-                <div className="text-2xs leading-tight font-medium text-teks-redup">Rata-rata persen median</div>
-              </div>
-            </div>
-          </div>
+            <BarisPetak jumlah={5} label="Ringkasan bulan ini">
+              <Petak
+                utama
+                ikon="kunjungan"
+                warna="biru"
+                nilai={isi.jumlah_kunjungan}
+                label="Jumlah kunjungan"
+                bantuan={{
+                  id: 'bantuan-jumlah-kunjungan',
+                  label: 'Penjelasan jumlah kunjungan',
+                  teks: 'Total kedatangan balita bulan ini. Satu balita bisa dihitung lebih dari satu kali bila datang beberapa kali.',
+                }}
+              />
+              <Petak
+                ikon="balita-hadir"
+                warna="hijau"
+                nilai={isi.jumlah_balita_tercatat}
+                label="Balita yang datang"
+                bantuan={{
+                  id: 'bantuan-balita-datang',
+                  label: 'Penjelasan balita yang datang',
+                  teks: 'Jumlah balita berbeda yang datang bulan ini. Bukan total kunjungan, dan bukan semua balita terdaftar.',
+                }}
+              />
+              <Petak
+                ikon="balita"
+                warna="slate"
+                nilai={isi.balita_terdaftar ?? '-'}
+                label="Balita terdaftar"
+                bantuan={{
+                  id: 'bantuan-terdaftar',
+                  label: 'Penjelasan balita terdaftar',
+                  teks: 'Semua balita aktif di Posyandu ini, datang atau tidak bulan ini.',
+                }}
+              />
+              <Petak
+                ikon="balita-absen"
+                warna="amber"
+                nilai={isi.balita_tidak_berkunjung ?? '-'}
+                label="Balita tidak datang"
+                bantuan={{
+                  id: 'bantuan-tidak-datang',
+                  label: 'Penjelasan balita tidak datang',
+                  teks: 'Balita aktif yang sama sekali tidak datang bulan ini. Perlu ditindaklanjuti kader.',
+                }}
+              />
+              <Petak
+                ikon="grafik"
+                warna="teal"
+                nilai={isi.rata_persen_median ?? '-'}
+                satuan={isi.rata_persen_median != null ? '%' : undefined}
+                label="Rata-rata persen median"
+                bantuan={{
+                  id: 'bantuan-median',
+                  label: 'Penjelasan persen median',
+                  teks: 'Berat balita dibanding berat rata-rata anak seusianya. 100% = sama dengan rata-rata. Di bawah 80% perlu perhatian.',
+                }}
+              />
+            </BarisPetak>
+          </section>
 
           <div className="kartu">
             <div className="kartu-judul">
@@ -426,45 +402,46 @@ export default function Laporan({ sesi }) {
                   id="bantuan-sebaran"
                   label="Penjelasan sebaran status gizi"
                   teks="Status gizi dihitung server dari berat dan tinggi menurut umur. Jumlah di sini hanya kunjungan bulan ini."
+                  ukuran={15}
                 />
               </h3>
-              <span className="text-padat text-teks-samar">Pengukuran bulan ini</span>
+              <span className="text-padat text-teks-samar tabular-nums">
+                {totalUkur > 0 ? `${totalUkur} pengukuran` : 'Belum ada'}
+              </span>
             </div>
-            {Object.keys(sebaran).length === 0 ? (
-              <p className="text-isi text-teks-redup">
-                Belum ada pengukuran pada bulan ini.
+
+            {totalUkur === 0 ? (
+              <p className="mb-0 text-isi text-teks-redup">
+                Belum ada pengukuran pada bulan ini. Angka muncul setelah kunjungan terkirim dan divalidasi.
               </p>
             ) : (
-              <div className="tabel-bungkus">
-                <table className="tabel min-w-80">
-                  <tbody>
-                    {Object.entries(sebaran).map(([kode, cacah]) => (
-                      <tr key={kode}>
-                        <td>
-                          <span className={`lencana-gizi ${kode}`}>
-                            {PESAN_STATUS[kode] ?? 'Belum dinilai'}
-                          </span>
-                        </td>
-                        <td className="angka font-bold">
-                          {cacah}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <ul className="m-0 grid list-none gap-2.5 p-0">
+                {Object.entries(sebaran).map(([kode, cacah]) => (
+                  <li key={kode} className="grid grid-cols-[8.5rem_minmax(0,1fr)_2.5rem] items-center gap-3 max-mini:grid-cols-[7rem_minmax(0,1fr)_2.25rem] max-mini:gap-2">
+                    <span className={`lencana-gizi ${kode} w-fit`}>
+                      {PESAN_STATUS[kode] ?? 'Belum dinilai'}
+                    </span>
+                    <span className="h-2 overflow-hidden rounded-full bg-latar" aria-hidden="true">
+                      <span
+                        className={`block h-full rounded-full ${WARNA_SEBARAN[kode] ?? 'bg-garis-kuat'}`}
+                        style={{ width: `${Math.round((cacah / totalUkur) * 100)}%` }}
+                      />
+                    </span>
+                    <span className="text-right text-isi font-bold tabular-nums text-biru-950">{cacah}</span>
+                  </li>
+                ))}
+              </ul>
             )}
-            <button
-              type="button"
-              className="sekunder mt-3"
-              onClick={ekspor}
-            >
-              <Ikon nama="unduh" ukuran={18} />
-              Unduh CSV {judulBulan(bulan)}
-            </button>
-            <p className="mb-0 text-padat text-teks-samar">
-              Ekspor dibubuhi cap waktu dan nama pemakai, serta dicatat di log audit.
-            </p>
+
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-garis pt-3">
+              <p className="m-0 max-w-[42ch] text-padat text-teks-samar">
+                Ekspor dibubuhi cap waktu dan nama pemakai, serta dicatat di log audit.
+              </p>
+              <button type="button" className="sekunder" onClick={ekspor}>
+                <Ikon nama="unduh" ukuran={18} />
+                Unduh CSV {judulBulan(bulan)}
+              </button>
+            </div>
           </div>
         </>
       )}
@@ -476,35 +453,32 @@ export default function Laporan({ sesi }) {
           </div>
 
           {mutu && (
-            <div className="tabel-bungkus mb-4">
-              <table className="tabel min-w-80">
-                <tbody>
-                  <tr>
-                    <td>Pengukuran belum divalidasi</td>
-                    <td className="angka">{mutu.belum_divalidasi}</td>
-                  </tr>
-                  {(mutu.kunjungan_tanpa_ukur ?? 0) > 0 && (
-                    <tr>
-                      <td>
-                        Kunjungan tidak hadir
-                        <div className="text-padat text-teks-samar">
-                          Tidak ada timbangan atau ukur, jadi tidak ada yang divalidasi
-                        </div>
-                      </td>
-                      <td className="angka">{mutu.kunjungan_tanpa_ukur}</td>
-                    </tr>
-                  )}
-                  <tr>
-                    <td>Perlu tinjauan jam perangkat</td>
-                    <td className="angka">{mutu.perlu_tinjauan.length}</td>
-                  </tr>
-                  <tr>
-                    <td>Sinkron terakhir tablet</td>
-                    <td className="angka">{waktuPendek(mutu.sinkron_terakhir)}</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
+            <dl className="mb-4 grid grid-cols-2 gap-px overflow-hidden rounded-kecil border border-garis bg-garis mini:grid-cols-4">
+              <div className="bg-kartu px-3 py-2.5">
+                <dt className="text-2xs leading-tight font-medium text-teks-samar">Belum divalidasi</dt>
+                <dd className="m-0 mt-0.5 text-subjudul leading-none font-bold tabular-nums text-biru-950">
+                  {mutu.belum_divalidasi}
+                </dd>
+              </div>
+              <div className="bg-kartu px-3 py-2.5">
+                <dt className="text-2xs leading-tight font-medium text-teks-samar">Tanpa pengukuran</dt>
+                <dd className="m-0 mt-0.5 text-subjudul leading-none font-bold tabular-nums text-biru-950">
+                  {mutu.kunjungan_tanpa_ukur ?? 0}
+                </dd>
+              </div>
+              <div className="bg-kartu px-3 py-2.5">
+                <dt className="text-2xs leading-tight font-medium text-teks-samar">Perlu tinjauan jam</dt>
+                <dd className="m-0 mt-0.5 text-subjudul leading-none font-bold tabular-nums text-biru-950">
+                  {mutu.perlu_tinjauan.length}
+                </dd>
+              </div>
+              <div className="bg-kartu px-3 py-2.5">
+                <dt className="text-2xs leading-tight font-medium text-teks-samar">Sinkron terakhir</dt>
+                <dd className="m-0 mt-0.5 text-padat font-semibold tabular-nums text-biru-950">
+                  {waktuPendek(mutu.sinkron_terakhir)}
+                </dd>
+              </div>
+            </dl>
           )}
           <div className="mb-2 flex flex-wrap items-center justify-between gap-3 [&_strong]:text-isi">
             <strong>Berkas cadangan</strong>
@@ -513,14 +487,16 @@ export default function Laporan({ sesi }) {
               {mencadangkan ? 'Mencadangkan…' : 'Cadangkan sekarang'}
             </button>
           </div>
-          <ul className="grid list-disc gap-1.5 pl-4 text-isi text-teks-redup">
+          <ul className="m-0 -mb-3 list-none divide-y divide-garis p-0">
             {cadangan.map((c) => (
-              <li key={c.nama} className="flex flex-wrap items-center justify-between gap-3">
-                <span>
-                  <span className="rounded-kecil border border-garis bg-latar px-1 py-0.5 font-mono text-padat">{c.nama}</span> · {Math.round(c.ukuran_byte / 1024)} KB ·{' '}
-                  {waktuPendek(c.dibuat_pada)}
+              <li key={c.nama} className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 py-2.5">
+                <span className="min-w-0 text-padat text-teks-redup">
+                  <span className="block truncate font-mono text-isi text-teks" title={c.nama}>{c.nama}</span>
+                  <span className="tabular-nums">
+                    {Math.round(c.ukuran_byte / 1024)} KB · {waktuPendek(c.dibuat_pada)}
+                  </span>
                 </span>
-                <span className="flex flex-wrap items-center gap-2">
+                <span className="flex flex-wrap items-center gap-1.5">
                   <button
                     type="button"
                     className="sekunder"
@@ -542,7 +518,9 @@ export default function Laporan({ sesi }) {
                 </span>
               </li>
             ))}
-            {cadangan.length === 0 && <li>Belum ada berkas cadangan.</li>}
+            {cadangan.length === 0 && (
+              <li className="py-2.5 text-isi text-teks-redup">Belum ada berkas cadangan.</li>
+            )}
           </ul>
 
           {konfirmPulih && (
@@ -595,6 +573,8 @@ export default function Laporan({ sesi }) {
                 </label>
                 <input
                   id="sandi-pulih"
+                name="kata_sandi_pemulihan"
+
                   type="password"
                   autoComplete="current-password"
                   value={sandiPulih}
@@ -642,7 +622,7 @@ export default function Laporan({ sesi }) {
           <div className="mt-4 mb-2 flex flex-wrap items-center justify-between gap-3 [&_strong]:text-isi">
             <strong>Pulihkan dari berkas di perangkat</strong>
           </div>
-          <label className={`relative flex min-h-12 cursor-pointer items-center gap-3 rounded-kecil border border-garis bg-kartu px-4 py-2.5 transition-[border-color,box-shadow] hover:border-biru-800 hover:shadow-[0_0_0_3px_var(--color-biru-100)] ${memulihkanUnggah ? 'pointer-events-none opacity-60' : ''}`}>
+          <label className={`relative flex min-h-12 cursor-pointer items-center gap-3 rounded-kecil border border-garis bg-kartu px-4 py-2.5 transition-[border-color,box-shadow] duration-200 ease-ui hover:border-biru-800 hover:shadow-[0_0_0_3px_var(--color-biru-100)] ${memulihkanUnggah ? 'pointer-events-none opacity-60' : ''}`}>
             <span className="inline-flex shrink-0 items-center gap-1.5 rounded-kecil bg-biru-800 px-3 py-2 text-isi font-semibold whitespace-nowrap text-kartu">
               <Ikon nama="unduh" ukuran={16} />
               Pilih berkas
@@ -652,9 +632,14 @@ export default function Laporan({ sesi }) {
                 ? `${berkasPulih.name} · ${Math.round(berkasPulih.size / 1024)} KB`
                 : 'Belum ada berkas dipilih'}
             </span>
+            {/* Input asli disembunyikan: kontrol bawaan browser tidak bisa
+                digayakan dan memecah baris label. Label tetap jadi pemicunya. */}
             <input
               id="berkas-cadangan"
+                name="berkas_cadangan"
+
               type="file"
+              className="sr-only"
               accept=".enc,application/octet-stream"
               onChange={(e) => setBerkasPulih(e.target.files?.[0] ?? null)}
               disabled={memulihkanUnggah}
@@ -683,6 +668,8 @@ export default function Laporan({ sesi }) {
                 </label>
                 <input
                   id="sandi-pulih-unggah"
+                name="kata_sandi_pemulihan"
+
                   type="password"
                   autoComplete="current-password"
                   value={sandiPulih}
@@ -722,6 +709,6 @@ export default function Laporan({ sesi }) {
 
       <p className="mt-4 text-center text-2xs tracking-[0.01em] text-teks-samar">© 2026 KodeNara. All rights reserved.</p>
 
-    </main>
+    </Layar>
   )
 }

@@ -5,6 +5,7 @@ import { usiaBulan, tanggalHariIni } from '../logika/waktu.js'
 import { LABEL, RENTANG, periksaRentang } from '../logika/rentang.js'
 import { rapikanDesimal } from '../logika/angka.js'
 import Ikon from './Ikon.jsx'
+import { Layar } from './Bersama.jsx'
 import Bantuan from './Bantuan.jsx'
 
 const AWAL = {
@@ -194,7 +195,7 @@ export default function Catat({ sesi, balitaAwal, setelahSimpan, kembali }) {
   const salahKepala = diLuarRentang('lingkar_kepala_cm')
 
   return (
-    <main className="mx-auto min-h-[calc(100dvh_-_4rem)] max-w-lebar px-4 pt-4 pb-[calc(6.2rem_+_env(safe-area-inset-bottom))] max-sempit:px-3 max-sempit:pb-[calc(6.4rem_+_env(safe-area-inset-bottom))]" id="isi-utama">
+    <Layar>
       <div className="kepala-layar mb-4 flex items-start justify-between gap-4">
         <div>
           <h1>Catat kunjungan</h1>
@@ -234,7 +235,7 @@ export default function Catat({ sesi, balitaAwal, setelahSimpan, kembali }) {
       )}
 
       <form onSubmit={simpan} noValidate>
-        <section className="kartu">
+        <section className="mb-6 border-t border-garis pt-4 [&:first-of-type]:border-t-0 [&:first-of-type]:pt-0">
           <div className="kartu-judul">
             <h2>1. Balita dan kunjungan</h2>
             <span className="text-padat text-teks-samar">Wajib</span>
@@ -246,8 +247,8 @@ export default function Catat({ sesi, balitaAwal, setelahSimpan, kembali }) {
               <span className="wajib" aria-hidden="true">*</span>
             </label>
             {balitaAwal ? (
-              <div className="kartu kartu-warnai mx-0 flex items-center gap-3 rounded-kecil px-4 py-3 shadow-none">
-                <span className="grid size-10 shrink-0 place-items-center rounded-full border border-garis-kuat bg-biru-50 text-biru-700" aria-hidden="true">
+              <div className="flex items-center gap-3 rounded-kecil border border-biru-100 bg-biru-50 px-4 py-3">
+                <span className="grid size-10 shrink-0 place-items-center rounded-kecil border border-garis-kuat bg-biru-50 text-biru-700" aria-hidden="true">
                   <Ikon nama="anak" ukuran={20} />
                 </span>
                 <div>
@@ -265,7 +266,7 @@ export default function Catat({ sesi, balitaAwal, setelahSimpan, kembali }) {
                 onChange={(e) => pilihBalita(e.target.value)}
                 required
               >
-                <option value="">— pilih balita —</option>
+                <option value="">(Pilih Balita)</option>
                 {daftar.map((b) => (
                   <option key={b.id} value={b.id}>
                     {b.nama_lengkap}
@@ -283,6 +284,8 @@ export default function Catat({ sesi, balitaAwal, setelahSimpan, kembali }) {
               </label>
               <input
                 id="tanggal"
+                name="tanggal_kunjungan"
+
                 type="date"
                 value={isi.tanggal}
                 max={tanggalHariIni()}
@@ -295,7 +298,12 @@ export default function Catat({ sesi, balitaAwal, setelahSimpan, kembali }) {
                 <span>Kehadiran</span>
                 <span className="wajib" aria-hidden="true">*</span>
               </span>
-              <div className="segmen" role="group" aria-labelledby="label-kehadiran">
+              <div
+                className="segmen"
+                role="group"
+                aria-labelledby="label-kehadiran"
+                style={{ '--segmen-jumlah': '2', '--segmen-posisi': isi.status_kehadiran === 'tidak_hadir' ? '1' : '0' }}
+              >
                 <button
                   type="button"
                   className={isi.status_kehadiran === 'hadir' ? 'aktif' : ''}
@@ -318,7 +326,7 @@ export default function Catat({ sesi, balitaAwal, setelahSimpan, kembali }) {
         </section>
 
         {isi.status_kehadiran !== 'tidak_hadir' && (
-          <section className="kartu">
+          <section className="mb-6 border-t border-garis pt-4 [&:first-of-type]:border-t-0 [&:first-of-type]:pt-0">
             <div className="kartu-judul items-start gap-4">
               <div>
                 <h2>2. Hasil ukur balita</h2>
@@ -329,10 +337,10 @@ export default function Catat({ sesi, balitaAwal, setelahSimpan, kembali }) {
             <div className="grid items-stretch gap-4 [grid-template-columns:repeat(auto-fit,minmax(240px,1fr))]">
               {/* 1. BERAT BADAN */}
               <div
-                className={`flex flex-col rounded-kecil border bg-kartu p-5 shadow-halus transition-[border-color,box-shadow] focus-within:border-biru-600 focus-within:shadow-naik ${bidangSalah.includes('berat_kg') ? 'border-merah-700 bg-merah-100' : salahBerat ? 'border-aksen-amber-ink bg-aksen-amber-tint' : 'border-garis'}`}
+                className={`flex flex-col rounded-kecil border bg-kartu p-4 transition-colors duration-200 ease-ui focus-within:border-biru-600 ${bidangSalah.includes('berat_kg') ? 'border-merah-700 bg-merah-100' : salahBerat ? 'border-aksen-amber-ink bg-aksen-amber-tint' : 'border-garis'}`}
               >
                 <div className="mb-2.5 flex items-center justify-between">
-                  <label htmlFor="berat" className="m-0 text-lega font-bold text-teks">
+                  <label htmlFor="berat" className="m-0 text-isi font-bold text-teks">
                     Berat badan <span className="wajib">*</span>
                   </label>
                   <span className="rounded-kecil bg-biru-100 px-2 py-0.5 text-2xs font-bold tracking-[0.02em] text-biru-800">
@@ -348,6 +356,8 @@ export default function Catat({ sesi, balitaAwal, setelahSimpan, kembali }) {
                 <div className="wadah-satuan">
                   <input
                     id="berat"
+                name="berat_kg"
+
                     type="text"
                     inputMode="decimal"
                     autoComplete="off"
@@ -380,10 +390,10 @@ export default function Catat({ sesi, balitaAwal, setelahSimpan, kembali }) {
 
               {/* 2. TINGGI / PANJANG BADAN */}
               <div
-                className={`flex flex-col rounded-kecil border bg-kartu p-5 shadow-halus transition-[border-color,box-shadow] focus-within:border-biru-600 focus-within:shadow-naik ${bidangSalah.includes('tinggi_cm') ? 'border-merah-700 bg-merah-100' : salahTinggi ? 'border-aksen-amber-ink bg-aksen-amber-tint' : 'border-garis'}`}
+                className={`flex flex-col rounded-kecil border bg-kartu p-4 transition-colors duration-200 ease-ui focus-within:border-biru-600 ${bidangSalah.includes('tinggi_cm') ? 'border-merah-700 bg-merah-100' : salahTinggi ? 'border-aksen-amber-ink bg-aksen-amber-tint' : 'border-garis'}`}
               >
                 <div className="mb-2.5 flex items-center justify-between">
-                  <label htmlFor="tinggi" className="m-0 text-lega font-bold text-teks">
+                  <label htmlFor="tinggi" className="m-0 text-isi font-bold text-teks">
                     {isi.cara_ukur_tinggi === 'terlentang' ? 'Panjang badan (PB)' : 'Tinggi badan (TB)'}
                   </label>
                   <span className="rounded-kecil bg-garis px-2 py-0.5 text-2xs font-bold tracking-[0.02em] text-teks-redup">Disarankan</span>
@@ -392,6 +402,8 @@ export default function Catat({ sesi, balitaAwal, setelahSimpan, kembali }) {
                 <div className="wadah-satuan">
                   <input
                     id="tinggi"
+                name="tinggi_cm"
+
                     type="text"
                     inputMode="decimal"
                     autoComplete="off"
@@ -427,13 +439,18 @@ export default function Catat({ sesi, balitaAwal, setelahSimpan, kembali }) {
                       </span>
                     )}
                   </div>
-                  <div className="segmen [&>button]:min-h-10 [&>button]:px-2 [&>button]:text-padat [&>button]:font-semibold max-sempit:[&>button]:min-h-12" role="group" aria-label="Cara ukur tinggi">
+                  <div
+                    className="segmen [&>button]:min-h-10 [&>button]:px-2 [&>button]:text-padat [&>button]:font-semibold max-sempit:[&>button]:min-h-12"
+                    role="group"
+                    aria-label="Cara ukur tinggi"
+                    style={{ '--segmen-jumlah': '2', '--segmen-posisi': isi.cara_ukur_tinggi === 'berdiri' ? '1' : '0' }}
+                  >
                     <button
                       type="button"
                       className={isi.cara_ukur_tinggi === 'terlentang' ? 'aktif' : ''}
                       aria-pressed={isi.cara_ukur_tinggi === 'terlentang'}
                       onClick={() => ubah('cara_ukur_tinggi', 'terlentang')}
-                      title="Panjang Badan (PB) posisi telentang — standar balita usia < 2 tahun"
+                      title="Panjang Badan (PB) posisi telentang: standar balita usia < 2 tahun"
                     >
                       Terlentang (PB)
                     </button>
@@ -442,7 +459,7 @@ export default function Catat({ sesi, balitaAwal, setelahSimpan, kembali }) {
                       className={isi.cara_ukur_tinggi === 'berdiri' ? 'aktif' : ''}
                       aria-pressed={isi.cara_ukur_tinggi === 'berdiri'}
                       onClick={() => ubah('cara_ukur_tinggi', 'berdiri')}
-                      title="Tinggi Badan (TB) posisi berdiri — standar balita usia ≥ 2 tahun"
+                      title="Tinggi Badan (TB) posisi berdiri: standar balita usia ≥ 2 tahun"
                     >
                       Berdiri (TB)
                     </button>
@@ -457,10 +474,10 @@ export default function Catat({ sesi, balitaAwal, setelahSimpan, kembali }) {
 
               {/* 3. LINGKAR KEPALA */}
               <div
-                className={`flex flex-col rounded-kecil border bg-kartu p-5 shadow-halus transition-[border-color,box-shadow] focus-within:border-biru-600 focus-within:shadow-naik ${bidangSalah.includes('lingkar_kepala_cm') ? 'border-merah-700 bg-merah-100' : salahKepala ? 'border-aksen-amber-ink bg-aksen-amber-tint' : 'border-garis'}`}
+                className={`flex flex-col rounded-kecil border bg-kartu p-4 transition-colors duration-200 ease-ui focus-within:border-biru-600 ${bidangSalah.includes('lingkar_kepala_cm') ? 'border-merah-700 bg-merah-100' : salahKepala ? 'border-aksen-amber-ink bg-aksen-amber-tint' : 'border-garis'}`}
               >
                 <div className="mb-2.5 flex items-center justify-between">
-                  <label htmlFor="kepala" className="m-0 text-lega font-bold text-teks">
+                  <label htmlFor="kepala" className="m-0 text-isi font-bold text-teks">
                     Lingkar kepala
                   </label>
                   <span className="rounded-kecil bg-garis px-2 py-0.5 text-2xs font-bold tracking-[0.02em] text-teks-redup">Opsional</span>
@@ -469,6 +486,8 @@ export default function Catat({ sesi, balitaAwal, setelahSimpan, kembali }) {
                 <div className="wadah-satuan">
                   <input
                     id="kepala"
+                name="lingkar_kepala_cm"
+
                     type="text"
                     inputMode="decimal"
                     autoComplete="off"
@@ -508,7 +527,7 @@ export default function Catat({ sesi, balitaAwal, setelahSimpan, kembali }) {
           </div>
         )}
 
-        <section className="kartu">
+        <section className="mb-6 border-t border-garis pt-4 [&:first-of-type]:border-t-0 [&:first-of-type]:pt-0">
           <div className="kartu-judul">
             <h2>3. Catatan</h2>
             <span className="text-padat text-teks-samar">Opsional</span>
@@ -530,6 +549,6 @@ export default function Catat({ sesi, balitaAwal, setelahSimpan, kembali }) {
           {mengirim ? 'Menyimpan…' : 'Simpan kunjungan'}
         </button>
       </form>
-    </main>
+    </Layar>
   )
 }

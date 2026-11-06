@@ -36,6 +36,9 @@ const JALUR = {
   anak: 'M12 22a8 8 0 1 0 0-16 8 8 0 0 0 0 16Z M9 9h.01 M15 9h.01 M9.5 14a3.5 3.5 0 0 0 5 0',
   tutup: 'M18 6 6 18 M6 6l12 12',
   centang: 'M20 6 9 17l-5-5',
+  kirim: 'M22 2 11 13 M22 2l-7 20-4-9-9-4 20-7Z',
+  waktu: 'M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20Z M12 6v6l4 2',
+  masuk: 'M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4 M10 17l5-5-5-5 M15 12H3',
 }
 
 export default function Ikon({ nama, ukuran = 20, className = '', tebal = 2 }) {

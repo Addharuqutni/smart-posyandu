@@ -6,7 +6,7 @@ import {
   ubahPosyandu,
 } from '../jaringan/api.js'
 import Ikon from './Ikon.jsx'
-import { Modal } from './Bersama.jsx'
+import { Modal, Layar } from './Bersama.jsx'
 
 const KOSONG = {
   nama: '',
@@ -142,7 +142,7 @@ export default function KelolaPosyandu() {
   }
 
   return (
-    <main className="mx-auto min-h-[calc(100dvh_-_4rem)] max-w-lebar px-4 pt-4 pb-[calc(6.2rem_+_env(safe-area-inset-bottom))] max-sempit:px-3 max-sempit:pb-[calc(6.4rem_+_env(safe-area-inset-bottom))]" id="isi-utama">
+    <Layar>
       <div className="kepala-layar mb-4 flex items-start justify-between gap-4">
         <div>
           <h1>Kelola Posyandu</h1>
@@ -167,11 +167,20 @@ export default function KelolaPosyandu() {
         </div>
       )}
 
-      <form className="kartu p-5 max-sempit:p-4" onSubmit={simpan}>
-        <div className="kartu-judul">
-          <h2>Posyandu baru</h2>
+      <form className="kartu" onSubmit={simpan}>
+        <div className="kepala-akun mb-5 flex items-center gap-3 max-sempit:mb-4">
+          <span className="grid size-[42px] shrink-0 place-items-center rounded-kecil border border-biru-100 bg-biru-50 text-biru-700 max-sempit:size-[38px]">
+            <Ikon nama="posyandu" ukuran={20} />
+          </span>
+          <div>
+            <h2 className="m-0 leading-tight">Posyandu baru</h2>
+            <p className="mt-1 mb-0 text-padat text-teks-redup">
+              Nama dan wilayah dipakai di pilihan kader serta kanal publik.
+            </p>
+          </div>
         </div>
-        <div className="grid gap-4 [grid-template-columns:repeat(2,minmax(0,1fr))] max-sempit:grid-cols-1 max-sempit:gap-3">
+
+        <div className="grid items-start gap-x-4 gap-y-4 [grid-template-columns:repeat(2,minmax(0,1fr))] max-sempit:grid-cols-1">
           <div className="bidang">
             <label htmlFor="ps-nama">
               <span>Nama Posyandu</span>
@@ -179,6 +188,8 @@ export default function KelolaPosyandu() {
             </label>
             <input
               id="ps-nama"
+                name="nama"
+
               maxLength={120}
               placeholder="cth. Posyandu Melati"
               value={isi.nama}
@@ -190,6 +201,8 @@ export default function KelolaPosyandu() {
             <label htmlFor="ps-dusun">Dusun / RT-RW</label>
             <input
               id="ps-dusun"
+                name="dusun"
+
               maxLength={120}
               placeholder="cth. Dusun Melati"
               value={isi.dusun}
@@ -203,6 +216,8 @@ export default function KelolaPosyandu() {
             </label>
             <input
               id="ps-desa"
+                name="desa"
+
               maxLength={120}
               placeholder="cth. Ketenger"
               value={isi.desa}
@@ -214,6 +229,8 @@ export default function KelolaPosyandu() {
             <label htmlFor="ps-kecamatan">Kecamatan</label>
             <input
               id="ps-kecamatan"
+                name="kecamatan"
+
               maxLength={120}
               placeholder="cth. Baturraden"
               value={isi.kecamatan}
@@ -224,6 +241,8 @@ export default function KelolaPosyandu() {
             <label htmlFor="ps-kabupaten">Kabupaten</label>
             <input
               id="ps-kabupaten"
+                name="kabupaten"
+
               maxLength={120}
               placeholder="cth. Banyumas"
               value={isi.kabupaten}
@@ -231,20 +250,23 @@ export default function KelolaPosyandu() {
             />
           </div>
           <div className="bidang">
-            <label className="flex flex-wrap items-center gap-2" htmlFor="ps-aktif">
-              <input
-                id="ps-aktif"
-                type="checkbox"
-                checked={isi.aktif}
-                onChange={(e) => setIsi({ ...isi, aktif: e.target.checked })}
-                style={{ width: '20px', height: '20px', minHeight: 0 }}
-              />
-              <span>Aktif</span>
-            </label>
-            <p className="petunjuk">Posyandu nonaktif tidak muncul di pilihan kader.</p>
+            <label htmlFor="ps-status">Status</label>
+            <select
+              id="ps-status"
+              value={isi.aktif ? 'aktif' : 'nonaktif'}
+              onChange={(e) => setIsi({ ...isi, aktif: e.target.value === 'aktif' })}
+            >
+              <option value="aktif">Aktif</option>
+              <option value="nonaktif">Nonaktif</option>
+            </select>
           </div>
         </div>
-        <div className="mt-4 flex justify-end border-t border-garis pt-4 max-sempit:[&>button]:w-full">
+
+        <p className="mt-3 mb-0 text-padat text-teks-samar">
+          Posyandu nonaktif tidak muncul di pilihan kader.
+        </p>
+
+        <div className="mt-4 flex justify-end gap-2 border-t border-garis pt-4 max-sempit:[&>button]:w-full">
           <button type="submit" disabled={menyimpan}>
             <Ikon nama="tambah" ukuran={18} />
             {menyimpan ? 'Menyimpan…' : 'Tambah Posyandu'}
@@ -258,9 +280,9 @@ export default function KelolaPosyandu() {
           subjudul={sunting.nama}
           onTutup={() => setSunting(null)}
         >
-          <form onSubmit={simpanSunting} className="flex flex-col gap-5 overflow-y-auto px-5 py-5 max-dialog:gap-4 max-dialog:p-4">
+          <form onSubmit={simpanSunting} className="flex flex-col gap-5 overflow-y-auto p-4">
             <div className="flex flex-col gap-3">
-              <div className="border-b border-garis pb-1.5 text-2xs font-bold uppercase tracking-[0.05em] text-aksen-biru-ink">Identitas & Wilayah</div>
+              <div className="border-b border-garis pb-1.5 text-2xs font-bold uppercase tracking-[0.075em] text-aksen-biru-ink">Identitas & Wilayah</div>
               <div className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(190px,1fr))]">
                 <div className="bidang">
                   <label htmlFor="modal-ps-nama">
@@ -269,6 +291,8 @@ export default function KelolaPosyandu() {
                   </label>
                   <input
                     id="modal-ps-nama"
+                name="nama"
+
                     maxLength={120}
                     value={sunting.nama}
                     onChange={(e) => setSunting({ ...sunting, nama: e.target.value })}
@@ -279,6 +303,8 @@ export default function KelolaPosyandu() {
                   <label htmlFor="modal-ps-dusun">Dusun / RT-RW</label>
                   <input
                     id="modal-ps-dusun"
+                name="dusun"
+
                     maxLength={120}
                     value={sunting.dusun}
                     onChange={(e) => setSunting({ ...sunting, dusun: e.target.value })}
@@ -291,6 +317,8 @@ export default function KelolaPosyandu() {
                   </label>
                   <input
                     id="modal-ps-desa"
+                name="desa"
+
                     maxLength={120}
                     value={sunting.desa}
                     onChange={(e) => setSunting({ ...sunting, desa: e.target.value })}
@@ -301,6 +329,8 @@ export default function KelolaPosyandu() {
                   <label htmlFor="modal-ps-kecamatan">Kecamatan</label>
                   <input
                     id="modal-ps-kecamatan"
+                name="kecamatan"
+
                     maxLength={120}
                     value={sunting.kecamatan}
                     onChange={(e) => setSunting({ ...sunting, kecamatan: e.target.value })}
@@ -310,6 +340,8 @@ export default function KelolaPosyandu() {
                   <label htmlFor="modal-ps-kabupaten">Kabupaten</label>
                   <input
                     id="modal-ps-kabupaten"
+                name="kabupaten"
+
                     maxLength={120}
                     value={sunting.kabupaten}
                     onChange={(e) => setSunting({ ...sunting, kabupaten: e.target.value })}
@@ -329,7 +361,7 @@ export default function KelolaPosyandu() {
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-2.5 border-t border-garis bg-biru-50 px-5 py-4 max-dialog:flex-col-reverse max-dialog:gap-2 max-dialog:p-3 max-dialog:[&>button]:w-full">
+            <div className="flex items-center justify-end gap-2 border-t border-garis bg-biru-50 p-4 max-dialog:flex-col-reverse max-dialog:gap-2 max-dialog:[&>button]:w-full">
               <button type="button" className="sekunder" onClick={() => setSunting(null)}>
                 Batal
               </button>
@@ -362,7 +394,7 @@ export default function KelolaPosyandu() {
                 <tr key={p.id}>
                   <td data-label="Nama"><strong>{p.nama}</strong></td>
                   <td className="text-padat text-teks-samar" data-label="Wilayah">
-                    {[p.dusun, p.desa, p.kecamatan, p.kabupaten].filter(Boolean).join(', ') || '—'}
+                    {[p.dusun, p.desa, p.kecamatan, p.kabupaten].filter(Boolean).join(', ') || '-'}
                   </td>
                   <td data-label="Status">
                     <span className={`lencana ${p.aktif ? 'aktif' : 'nonaktif'}`}>
@@ -408,6 +440,6 @@ export default function KelolaPosyandu() {
           Gunakan status nonaktif bila sudah tidak dipakai.
         </p>
       </div>
-    </main>
+    </Layar>
   )
 }

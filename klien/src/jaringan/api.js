@@ -157,6 +157,43 @@ export function daftarPosyandu() {
   return minta('/posyandu')
 }
 
+export function daftarPosyanduPublik() {
+  return minta('/posyandu/publik')
+}
+
+export function daftarKontenPublik(jenis = '') {
+  const q = jenis ? `?jenis=${encodeURIComponent(jenis)}` : ''
+  return minta(`/konten-publik${q}`)
+}
+
+export function daftarSemuaKontenPublik(jenis = '', status = '') {
+  const p = new URLSearchParams()
+  if (jenis) p.set('jenis', jenis)
+  if (status) p.set('status', status)
+  const q = p.toString()
+  return minta(`/konten-publik/semua${q ? `?${q}` : ''}`)
+}
+
+export function buatKontenPublik(muatan) {
+  return minta('/konten-publik', { metode: 'POST', isi: muatan })
+}
+
+export function ubahKontenPublik(id, muatan) {
+  return minta(`/konten-publik/${id}`, { metode: 'PATCH', isi: muatan })
+}
+
+export function hapusKontenPublik(id) {
+  return minta(`/konten-publik/${id}`, { metode: 'DELETE' })
+}
+
+/** Nakes/admin memutuskan jadwal: keputusan = 'disetujui' | 'ditolak'. */
+export function putuskanKontenPublik(id, keputusan, catatan = null) {
+  return minta(`/konten-publik/${id}/putuskan`, {
+    metode: 'POST',
+    isi: { keputusan, catatan },
+  })
+}
+
 export function detailPosyandu(id) {
   return minta(`/posyandu/${encodeURIComponent(id)}`)
 }
@@ -262,6 +299,23 @@ export function ubahPengguna(id, muatan) {
 }
 
 /** Sesi tablet yang masih hidup. Hanya admin desa. */
+/** Log aktivitas (admin desa): perubahan data, ekspor, masuk/keluar. */
+export function daftarAktivitas({
+  batas = 50,
+  offset = 0,
+  aksi = '',
+  tabel = '',
+  pengguna_id = '',
+  dari = '',
+  sampai = '',
+} = {}) {
+  const param = new URLSearchParams({ batas: String(batas), offset: String(offset) })
+  for (const [kunci, nilai] of Object.entries({ aksi, tabel, pengguna_id, dari, sampai })) {
+    if (nilai) param.set(kunci, nilai)
+  }
+  return minta(`/aktivitas?${param}`)
+}
+
 export function daftarSesi() {
   return minta('/sesi')
 }
@@ -269,10 +323,6 @@ export function daftarSesi() {
 /** Cabut satu sesi; tablet itu harus masuk ulang. */
 export function cabutSesi(id) {
   return minta(`/sesi/${id}`, { metode: 'DELETE' })
-}
-
-export function riwayatSesi({ batas = 20, offset = 0 } = {}) {
-  return minta(`/sesi/riwayat?batas=${batas}&offset=${offset}`)
 }
 
 export async function unduhEkspor(bulan) {

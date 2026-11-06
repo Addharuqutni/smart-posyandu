@@ -9,7 +9,7 @@ import { usiaBulan, tanggalHariIni } from '../logika/waktu.js'
 import { inisial } from '../logika/nama.js'
 import Ikon from './Ikon.jsx'
 import Bantuan from './Bantuan.jsx'
-import { Kosong } from './Bersama.jsx'
+import { BarisPetak, Kosong, Petak, Layar } from './Bersama.jsx'
 import { detailPosyandu } from '../jaringan/api.js'
 
 const NAMA_BULAN = [
@@ -18,13 +18,13 @@ const NAMA_BULAN = [
 ]
 
 function tanggalPendek(iso) {
-  if (!iso) return '—'
+  if (!iso) return '-'
   const [tahun, bulan, hari] = iso.split('-')
   return `${Number(hari)}/${Number(bulan)}/${tahun}`
 }
 
 function tanggalLengkap(iso) {
-  if (!iso) return '—'
+  if (!iso) return '-'
   const [tahun, bulan, hari] = iso.split('-')
   const idx = Number(bulan) - 1
   return `${Number(hari)} ${NAMA_BULAN[idx] ?? bulan} ${tahun}`
@@ -41,31 +41,34 @@ export default function Riwayat({ sesi, balita, kembali, setelahUbah }) {
   const grafik = useRef(null)
 
   async function muat() {
+    let kunjungan
     try {
-      const [kunjungan, waliBalitaData, posyanduData] = await Promise.all([
-        db.kunjungan
-          .where('balita_id')
-          .equals(balita.id)
-          .filter((k) => !k.dihapus_pada)
-          .toArray(),
-        waliBalita(balita.id),
-        balita.posyandu_id ? detailPosyandu(balita.posyandu_id) : Promise.resolve(null),
-      ])
-      kunjungan.sort((a, b) => a.tanggal_kunjungan.localeCompare(b.tanggal_kunjungan))
-      const lengkap = []
-      for (const k of kunjungan) {
-        const ukur = await db.pengukuran.where('kunjungan_id').equals(k.id).first()
-        // Kunjungan tanpa ukur (tidak hadir) tetap tampil di riwayat.
-        lengkap.push({ ...k, pengukuran: ukur && !ukur.dihapus_pada ? ukur : null })
-      }
-      setBaris(lengkap)
-      setWali(waliBalitaData)
-      setPosyandu(posyanduData)
-      setGalat(null)
-    } catch (salah) {
-      // Riwayat tetap bisa dibaca luring; detail Posyandu menyusul saat daring.
-      setGalat(salah?.message && !salah.status ? null : 'Detail Posyandu belum bisa dimuat.')
-      setWali(await waliBalita(balita.id))
+      kunjungan = await db.kunjungan
+        .where('balita_id')
+        .equals(balita.id)
+        .filter((k) => !k.dihapus_pada)
+        .toArray()
+    } catch {
+      // Gagal baca lokal bukan "belum ada kunjungan": menampilkan keadaan
+      // kosong di sini membuat kader mengira balita belum pernah diukur.
+      setGalat('Riwayat tidak bisa dibaca dari perangkat ini. Muat ulang aplikasi.')
+      return
+    }
+    kunjungan.sort((a, b) => a.tanggal_kunjungan.localeCompare(b.tanggal_kunjungan))
+    const lengkap = []
+    for (const k of kunjungan) {
+      const ukur = await db.pengukuran.where('kunjungan_id').equals(k.id).first()
+      // Kunjungan tanpa ukur (tidak hadir) tetap tampil di riwayat.
+      lengkap.push({ ...k, pengukuran: ukur && !ukur.dihapus_pada ? ukur : null })
+    }
+    setBaris(lengkap)
+    // Riwayat tetap bisa dibaca luring; detail Posyandu menyusul saat daring.
+    setGalat(null)
+    setWali(await waliBalita(balita.id))
+    try {
+      setPosyandu(balita.posyandu_id ? await detailPosyandu(balita.posyandu_id) : null)
+    } catch {
+      setGalat('Detail Posyandu belum bisa dimuat.')
     }
   }
 
@@ -169,12 +172,12 @@ export default function Riwayat({ sesi, balita, kembali, setelahUbah }) {
     : 'Wali belum tercatat'
 
   return (
-    <main className="mx-auto min-h-[calc(100dvh_-_4rem)] max-w-lebar px-4 pt-4 pb-[calc(6.2rem_+_env(safe-area-inset-bottom))] max-sempit:px-3 max-sempit:pb-[calc(6.4rem_+_env(safe-area-inset-bottom))]" id="isi-utama">
-      <div className="kartu shadow-kontrol">
+    <Layar>
+      <div className="kartu">
         <div className="mb-4 flex flex-wrap items-start justify-between gap-4">
           <div className="flex min-w-0 flex-1 basis-[280px] items-center gap-3">
             <span
-              className={`grid size-[50px] shrink-0 place-items-center rounded-kecil border text-judul font-bold shadow-kontrol ${balita.jenis_kelamin === 'laki-laki' ? 'border-biru-100 bg-aksen-biru-tint text-aksen-biru-ink' : 'border-merah-100 bg-aksen-rose-tint text-aksen-rose-ink'}`}
+              className={`grid size-[50px] shrink-0 place-items-center rounded-kecil border text-judul font-bold ${balita.jenis_kelamin === 'laki-laki' ? 'border-biru-100 bg-aksen-biru-tint text-aksen-biru-ink' : 'border-merah-100 bg-aksen-rose-tint text-aksen-rose-ink'}`}
               aria-hidden="true"
             >
               {inisial(balita.nama_lengkap)}
@@ -183,7 +186,7 @@ export default function Riwayat({ sesi, balita, kembali, setelahUbah }) {
               <div className="flex flex-wrap items-center gap-2">
                 <h1 className="m-0 text-judul leading-tight font-bold tracking-[-0.015em] text-biru-950">{balita.nama_lengkap}</h1>
                 <span
-                  className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs leading-tight font-semibold ${balita.jenis_kelamin === 'laki-laki' ? 'border-aksen-biru-ink bg-aksen-biru-tint text-aksen-biru-ink' : 'border-aksen-rose-ink bg-aksen-rose-tint text-aksen-rose-ink'}`}
+                  className={`inline-flex items-center rounded-mikro border px-2 py-0.5 text-2xs leading-tight font-semibold ${balita.jenis_kelamin === 'laki-laki' ? 'border-aksen-biru-ink bg-aksen-biru-tint text-aksen-biru-ink' : 'border-aksen-rose-ink bg-aksen-rose-tint text-aksen-rose-ink'}`}
                 >
                   {balita.jenis_kelamin === 'laki-laki' ? 'Laki-laki' : 'Perempuan'}
                 </span>
@@ -215,32 +218,26 @@ export default function Riwayat({ sesi, balita, kembali, setelahUbah }) {
           </button>
         </div>
 
-        <div className="grid gap-3 border-t border-garis pt-3.5 [grid-template-columns:repeat(auto-fit,minmax(220px,1fr))]" aria-label="Informasi Usia dan Tanggal Lahir">
-          <div className="flex items-center gap-3 rounded-kecil border px-4 py-2.5 transition-[transform,box-shadow] hover:shadow-kontrol border-aksen-biru-ink bg-aksen-biru-tint">
-            <div className="grid size-[38px] shrink-0 place-items-center rounded-kecil bg-kartu text-aksen-biru-ink">
-              <Ikon nama="anak" ukuran={20} />
-            </div>
-            <div className="flex min-w-0 flex-col gap-0.5">
-              <span className="text-mikro font-bold tracking-[0.05em] uppercase text-aksen-biru-ink">Usia Balita</span>
-              <span className="flex items-baseline gap-1 text-subjudul leading-tight font-bold tabular-nums text-biru-950">
-                <strong>{umur >= 0 ? `${umur}` : '—'}</strong>
-                <span className="text-padat font-semibold text-teks-redup">{umur >= 0 ? ' bulan' : ''}</span>
-              </span>
-            </div>
+        <dl className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-1.5 border-t border-garis pt-3">
+          <div className="flex items-baseline gap-1.5">
+            <dt className="text-padat text-teks-samar">Usia</dt>
+            <dd className="m-0 text-padat font-semibold tabular-nums text-biru-950">
+              {umur >= 0 ? `${umur} bulan` : '-'}
+            </dd>
           </div>
-
-          <div className="flex items-center gap-3 rounded-kecil border px-4 py-2.5 transition-[transform,box-shadow] hover:shadow-kontrol border-aksen-hijau-ink bg-aksen-hijau-tint">
-            <div className="grid size-[38px] shrink-0 place-items-center rounded-kecil bg-kartu text-aksen-hijau-ink">
-              <Ikon nama="kunjungan" ukuran={20} />
-            </div>
-            <div className="flex min-w-0 flex-col gap-0.5">
-              <span className="text-mikro font-bold tracking-[0.05em] uppercase text-aksen-hijau-ink">Tanggal Lahir</span>
-              <span className="flex items-baseline gap-1 text-subjudul leading-tight font-bold tabular-nums text-biru-950">
-                <strong>{tanggalLengkap(balita.tanggal_lahir)}</strong>
-              </span>
-            </div>
+          <div className="flex items-baseline gap-1.5">
+            <dt className="text-padat text-teks-samar">Tanggal lahir</dt>
+            <dd className="m-0 text-padat font-semibold tabular-nums text-biru-950">
+              {tanggalLengkap(balita.tanggal_lahir)}
+            </dd>
           </div>
-        </div>
+          <div className="flex items-baseline gap-1.5">
+            <dt className="text-padat text-teks-samar">Kunjungan</dt>
+            <dd className="m-0 text-padat font-semibold tabular-nums text-biru-950">
+              {baris.length} tercatat
+            </dd>
+          </div>
+        </dl>
       </div>
       {galat && (
         <div className="mb-3 flex items-start gap-2 rounded-kecil border px-3 py-3 text-isi font-semibold leading-snug border-merah-100 bg-merah-100 text-merah-800" role="alert">
@@ -249,54 +246,33 @@ export default function Riwayat({ sesi, balita, kembali, setelahUbah }) {
         </div>
       )}
 
-      <div className="mb-4 grid grid-cols-3 gap-2.5 max-sempit:gap-2">
-        <div className="relative flex min-h-[5.4rem] flex-col justify-between rounded-sedang border border-garis bg-kartu px-4 py-4 shadow-halus transition-[border-color,box-shadow] hover:border-garis-kuat hover:shadow-naik max-sempit:min-h-[4.8rem] max-sempit:px-3 max-sempit:py-2.5">
-          <div className="mb-2 flex items-center justify-between">
-            <span className="grid size-8 shrink-0 place-items-center rounded-kecil max-sempit:size-6 bg-aksen-biru-tint text-aksen-biru-ink">
-              <Ikon nama="kunjungan" ukuran={16} />
-            </span>
-          </div>
-          <div className="flex flex-col gap-1">
-            <div className="text-judul leading-[1.15] font-bold tabular-nums tracking-[-0.02em] text-biru-950">{baris.length}</div>
-            <div className="text-2xs leading-tight font-medium text-teks-redup">Total kunjungan</div>
-          </div>
-        </div>
-
-        <div className="relative flex min-h-[5.4rem] flex-col justify-between rounded-sedang border border-garis bg-kartu px-4 py-4 shadow-halus transition-[border-color,box-shadow] hover:border-garis-kuat hover:shadow-naik max-sempit:min-h-[4.8rem] max-sempit:px-3 max-sempit:py-2.5">
-          <div className="mb-2 flex items-center justify-between">
-            <span className="grid size-8 shrink-0 place-items-center rounded-kecil max-sempit:size-6 bg-aksen-teal-tint text-aksen-teal-ink">
-              <Ikon nama="grafik" ukuran={16} />
-            </span>
-          </div>
-          <div className="flex flex-col gap-1">
-            <div className="text-judul leading-[1.15] font-bold tabular-nums tracking-[-0.02em] text-biru-950">
-              {terakhir ? `${terakhir.pengukuran.berat_kg}` : '—'}
-              {terakhir && <span className="ml-0.5 text-padat font-semibold text-teks-redup"> kg</span>}
-            </div>
-            <div className="text-2xs leading-tight font-medium text-teks-redup">Berat terakhir</div>
-          </div>
-        </div>
-
-        <div className="relative flex min-h-[5.4rem] flex-col justify-between rounded-sedang border border-garis bg-kartu px-4 py-4 shadow-halus transition-[border-color,box-shadow] hover:border-garis-kuat hover:shadow-naik max-sempit:min-h-[4.8rem] max-sempit:px-3 max-sempit:py-2.5">
-          <div className="mb-2 flex items-center justify-between">
-            <span
-              className={`lencana-gizi mt-1.5 w-fit ${statusTerakhir ?? 'menunggu'}`}
-            >
+      <BarisPetak jumlah={3} label="Ringkasan balita">
+        <Petak ikon="kunjungan" warna="biru" nilai={baris.length} label="Total kunjungan" />
+        <Petak
+          ikon="grafik"
+          warna="teal"
+          nilai={terakhir ? terakhir.pengukuran.berat_kg : '-'}
+          satuan={terakhir ? 'kg' : undefined}
+          label="Berat terakhir"
+        />
+        <Petak
+          ikon="info"
+          warna="hijau"
+          nilai={
+            <span className={`lencana-gizi w-fit ${statusTerakhir ?? 'menunggu'}`}>
               {statusTerakhir ? PESAN_STATUS[statusTerakhir] : 'Belum dinilai'}
             </span>
-            <Bantuan
-              id="bantuan-gizi-riwayat"
-              label="Penjelasan status gizi"
-              teks="Dihitung server dari berat menurut umur. Muncul setelah kunjungan terkirim dan divalidasi petugas."
-            />
-          </div>
-          <div className="flex flex-col gap-1">
-            <div className="text-2xs leading-tight font-medium text-teks-redup">Status gizi terakhir</div>
-          </div>
-        </div>
-      </div>
+          }
+          label="Status gizi terakhir"
+          bantuan={{
+            id: 'bantuan-gizi-riwayat',
+            label: 'Penjelasan status gizi',
+            teks: 'Dihitung server dari berat menurut umur. Muncul setelah kunjungan terkirim dan divalidasi petugas.',
+          }}
+        />
+      </BarisPetak>
 
-      {baris.length === 0 ? (
+      {baris.length === 0 && !galat ? (
         <Kosong
           ikon="riwayat"
           judul="Belum ada kunjungan"
@@ -351,8 +327,8 @@ export default function Riwayat({ sesi, balita, kembali, setelahUbah }) {
                   {baris.map((b) => (
                     <tr key={b.id}>
                       <td>{tanggalPendek(b.tanggal_kunjungan)}</td>
-                      <td>{b.pengukuran ? `${b.pengukuran.berat_kg} kg` : '—'}</td>
-                      <td>{b.pengukuran ? `${b.pengukuran.tinggi_cm ?? '—'} cm` : '—'}</td>
+                      <td>{b.pengukuran ? `${b.pengukuran.berat_kg} kg` : '-'}</td>
+                      <td>{b.pengukuran ? `${b.pengukuran.tinggi_cm ?? '-'} cm` : '-'}</td>
                       <td>
                         {!b.pengukuran ? (
                           <span className="lencana-gizi menunggu">Tidak hadir</span>
@@ -402,6 +378,8 @@ export default function Riwayat({ sesi, balita, kembali, setelahUbah }) {
               <div className="wadah-satuan">
                 <input
                   id="u-berat"
+                name="berat_kg"
+
                   type="text"
                   inputMode="decimal"
                   autoComplete="off"
@@ -418,6 +396,8 @@ export default function Riwayat({ sesi, balita, kembali, setelahUbah }) {
               <div className="wadah-satuan">
                 <input
                   id="u-tinggi"
+                name="tinggi_cm"
+
                   type="text"
                   inputMode="decimal"
                   autoComplete="off"
@@ -433,6 +413,8 @@ export default function Riwayat({ sesi, balita, kembali, setelahUbah }) {
               <div className="wadah-satuan">
                 <input
                   id="u-kepala"
+                name="lingkar_kepala_cm"
+
                   type="text"
                   inputMode="decimal"
                   autoComplete="off"
@@ -464,6 +446,6 @@ export default function Riwayat({ sesi, balita, kembali, setelahUbah }) {
       <p className="text-padat text-teks-samar">
         Status gizi dihitung server. Setelah divalidasi petugas, pengukuran tidak bisa diubah.
       </p>
-    </main>
+    </Layar>
   )
 }

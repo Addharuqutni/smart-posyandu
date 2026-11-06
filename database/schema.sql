@@ -205,9 +205,10 @@ CREATE TABLE IF NOT EXISTS log_audit (
     id_perangkat    TEXT,
     nama_tabel      TEXT        NOT NULL,
     id_baris        UUID        NOT NULL,
-    aksi            TEXT        NOT NULL CHECK (aksi IN ('buat', 'ubah', 'hapus')),
+    aksi            TEXT        NOT NULL CHECK (aksi IN ('buat', 'ubah', 'hapus', 'masuk', 'keluar', 'gagal_masuk')),
     nilai_lama      JSONB,
     nilai_baru      JSONB,
+    alamat_ip       TEXT,
     terjadi_pada    TIMESTAMPTZ NOT NULL,   -- waktu menurut perangkat
     diterima_pada   TIMESTAMPTZ NOT NULL DEFAULT now()  -- waktu menurut server
 );
@@ -246,6 +247,8 @@ CREATE INDEX IF NOT EXISTS idx_tindak_lanjut_kunjungan    ON tindak_lanjut (kunj
 CREATE INDEX IF NOT EXISTS idx_balita_orang_tua_balita    ON balita_orang_tua (balita_id);
 
 CREATE INDEX IF NOT EXISTS idx_log_audit_baris            ON log_audit (nama_tabel, id_baris, terjadi_pada DESC);
+CREATE INDEX IF NOT EXISTS idx_log_audit_waktu            ON log_audit (diterima_pada DESC);
+CREATE INDEX IF NOT EXISTS idx_log_audit_pengguna_waktu   ON log_audit (pengguna_id, diterima_pada DESC);
 CREATE INDEX IF NOT EXISTS idx_uji_cadangan_waktu         ON uji_cadangan (diperiksa_pada DESC);
 CREATE INDEX IF NOT EXISTS idx_sesi_pengguna              ON sesi_login (pengguna_id) WHERE dicabut_pada IS NULL;
 

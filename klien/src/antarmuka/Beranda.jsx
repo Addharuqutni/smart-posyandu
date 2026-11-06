@@ -5,7 +5,7 @@ import { usiaBulan, tanggalHariIni } from '../logika/waktu.js'
 import { inisial } from '../logika/nama.js'
 import { kunjunganTerbaruPerBalita, idDiukurBulanIni, rentangBulan } from '../logika/terakhir.js'
 import Ikon from './Ikon.jsx'
-import { Kosong, KotakCari, KendaliHalaman, UKURAN_HALAMAN } from './Bersama.jsx'
+import { BarisPetak, Kosong, KotakCari, KendaliHalaman, Petak, UKURAN_HALAMAN, Layar } from './Bersama.jsx'
 
 export default function Beranda({
   sesi,
@@ -22,6 +22,7 @@ export default function Beranda({
   const [diukurBulanIni, setDiukurBulanIni] = useState(0)
   const [ditolak, setDitolak] = useState([])
   const [memuat, setMemuat] = useState(true)
+  const [galatBaca, setGalatBaca] = useState(null)
   const [halaman, setHalaman] = useState(0)
   // Hasil per halaman disimpan supaya kembali ke halaman sebelumnya instan.
   const cacheStatus = useRef(new Map())
@@ -30,26 +31,34 @@ export default function Beranda({
     let hidup = true
     async function muat() {
       setMemuat(true)
-      const semua = await db.balita.filter((b) => !b.dihapus_pada && b.aktif !== false).toArray()
-      if (!hidup) return
-      semua.sort((a, b) => a.nama_lengkap.localeCompare(b.nama_lengkap))
-      setBalita(semua)
+      try {
+        const semua = await db.balita.filter((b) => !b.dihapus_pada && b.aktif !== false).toArray()
+        if (!hidup) return
+        semua.sort((a, b) => a.nama_lengkap.localeCompare(b.nama_lengkap))
+        setBalita(semua)
 
-      // Yang dibaca hanya daftar balita (3.001 baris) dan satu bulan kunjungan.
-      // Versi sebelumnya membaca SELURUH riwayat kunjungan (209.495) dan
-      // pengukuran (192.543) ke memori setiap kali layar dibuka, dan itu
-      // lambat di tablet kelas menengah. Status gizi per balita sekarang
-      // dihitung hanya untuk 50 baris yang sedang tampil (lihat efek di bawah).
-      const bulanIni = tanggalHariIni().slice(0, 7)
-      const { awal, akhir } = rentangBulan(bulanIni)
-      const kunjunganBulan = await db.kunjungan
-        .where('tanggal_kunjungan')
-        .between(awal, akhir, true, false)
-        .toArray()
-      if (!hidup) return
-      cacheStatus.current.clear()
-      setDiukurBulanIni(idDiukurBulanIni(kunjunganBulan, bulanIni).size)
-      setMemuat(false)
+        // Yang dibaca hanya daftar balita (3.001 baris) dan satu bulan kunjungan.
+        // Versi sebelumnya membaca SELURUH riwayat kunjungan (209.495) dan
+        // pengukuran (192.543) ke memori setiap kali layar dibuka, dan itu
+        // lambat di tablet kelas menengah. Status gizi per balita sekarang
+        // dihitung hanya untuk 50 baris yang sedang tampil (lihat efek di bawah).
+        const bulanIni = tanggalHariIni().slice(0, 7)
+        const { awal, akhir } = rentangBulan(bulanIni)
+        const kunjunganBulan = await db.kunjungan
+          .where('tanggal_kunjungan')
+          .between(awal, akhir, true, false)
+          .toArray()
+        if (!hidup) return
+        cacheStatus.current.clear()
+        setDiukurBulanIni(idDiukurBulanIni(kunjunganBulan, bulanIni).size)
+      } catch (salah) {
+        // Tanpa penjagaan ini `setMemuat(false)` tidak pernah jalan dan layar
+        // berputar di "Memuat daftar balita…" selamanya saat penyimpanan lokal
+        // gagal dibuka (mode privat, kuota penuh, basis data rusak).
+        if (hidup) setGalatBaca(salah?.message || 'Daftar balita tidak bisa dibaca dari perangkat ini.')
+      } finally {
+        if (hidup) setMemuat(false)
+      }
     }
     muat()
     db.antrean_sinkron
@@ -129,9 +138,9 @@ export default function Beranda({
   const namaPosyandu = sesi.pengguna.nama_posyandu || 'Posyandu'
 
   return (
-    <main className="mx-auto min-h-[calc(100dvh_-_4rem)] max-w-lebar px-4 pt-4 pb-[calc(6.2rem_+_env(safe-area-inset-bottom))] max-sempit:px-3 max-sempit:pb-[calc(6.4rem_+_env(safe-area-inset-bottom))]" id="isi-utama">
+    <Layar>
       {sinkron.luring && (
-        <div className="mb-3 flex items-start gap-2 rounded-kecil border px-3 py-3 text-isi font-semibold leading-snug border-garis bg-biru-100 text-biru-800" role="status">
+        <div className="pita pita-tenang mb-3 flex items-start gap-2 text-isi font-semibold leading-snug" role="status">
           <Ikon nama="luring" ukuran={19} />
           <span>
             Tidak ada jaringan. Pencatatan tetap tersimpan di tablet dan akan terkirim otomatis.
@@ -168,6 +177,13 @@ export default function Beranda({
       <div className="kepala-layar mb-4 flex items-start justify-between gap-4">
         <div>
           <h1>Balita</h1>
+          {sesi.pengguna.peran === 'kader' && (
+            <p className="mt-1 mb-0 text-isi text-teks-redup">
+              {sesi.pengguna.nama_posyandu
+                ? `Posyandu ${sesi.pengguna.nama_posyandu.replace(/^Posyandu\s+/i, '')}`
+                : 'Pencatatan kunjungan dan pengukuran'}
+            </p>
+          )}
         </div>
         <button
           type="button"
@@ -180,43 +196,11 @@ export default function Beranda({
         </button>
       </div>
 
-      <div className="mb-4 grid grid-cols-3 gap-2.5 max-sempit:gap-2" aria-label="Ringkasan bulan ini">
-        <div className="relative flex min-h-[5.4rem] flex-col justify-between rounded-sedang border border-garis bg-kartu px-4 py-4 shadow-halus transition-[border-color,box-shadow] hover:border-garis-kuat hover:shadow-naik max-sempit:min-h-[4.8rem] max-sempit:px-3 max-sempit:py-2.5">
-          <div className="mb-2 flex items-center justify-between">
-            <span className="grid size-8 shrink-0 place-items-center rounded-kecil max-sempit:size-6 bg-aksen-slate-tint text-aksen-slate-ink">
-              <Ikon nama="balita" ukuran={16} />
-            </span>
-          </div>
-          <div className="flex flex-col gap-1">
-            <div className="text-judul leading-[1.15] font-bold tabular-nums tracking-[-0.02em] text-biru-950">{balita.length}</div>
-            <div className="text-2xs leading-tight font-medium text-teks-redup">Balita aktif</div>
-          </div>
-        </div>
-
-        <div className="relative flex min-h-[5.4rem] flex-col justify-between rounded-sedang border border-garis bg-kartu px-4 py-4 shadow-halus transition-[border-color,box-shadow] hover:border-garis-kuat hover:shadow-naik max-sempit:min-h-[4.8rem] max-sempit:px-3 max-sempit:py-2.5">
-          <div className="mb-2 flex items-center justify-between">
-            <span className="grid size-8 shrink-0 place-items-center rounded-kecil max-sempit:size-6 bg-aksen-hijau-tint text-aksen-hijau-ink">
-              <Ikon nama="balita-hadir" ukuran={16} />
-            </span>
-          </div>
-          <div className="flex flex-col gap-1">
-            <div className="text-judul leading-[1.15] font-bold tabular-nums tracking-[-0.02em] text-biru-950">{diukurBulanIni}</div>
-            <div className="text-2xs leading-tight font-medium text-teks-redup">Diukur bulan ini</div>
-          </div>
-        </div>
-
-        <div className="relative flex min-h-[5.4rem] flex-col justify-between rounded-sedang border border-garis bg-kartu px-4 py-4 shadow-halus transition-[border-color,box-shadow] hover:border-garis-kuat hover:shadow-naik max-sempit:min-h-[4.8rem] max-sempit:px-3 max-sempit:py-2.5">
-          <div className="mb-2 flex items-center justify-between">
-            <span className="grid size-8 shrink-0 place-items-center rounded-kecil max-sempit:size-6 bg-aksen-biru-tint text-aksen-biru-ink">
-              <Ikon nama="sinkron" ukuran={16} />
-            </span>
-          </div>
-          <div className="flex flex-col gap-1">
-            <div className="text-judul leading-[1.15] font-bold tabular-nums tracking-[-0.02em] text-biru-950">{sinkron.menunggu}</div>
-            <div className="text-2xs leading-tight font-medium text-teks-redup">Catatan tertunda</div>
-          </div>
-        </div>
-      </div>
+      <BarisPetak jumlah={3} label="Ringkasan bulan ini">
+        <Petak ikon="balita" warna="biru" nilai={balita.length} label="Balita aktif" utama />
+        <Petak ikon="kunjungan" warna="hijau" nilai={diukurBulanIni} label="Diukur bulan ini" />
+        <Petak ikon="sinkron" warna="amber" nilai={sinkron.menunggu} label="Catatan tertunda" />
+      </BarisPetak>
 
       <KotakCari id="cari" nilai={cari} onUbah={setCari} />
 
@@ -234,7 +218,20 @@ export default function Beranda({
         />
       )}
 
-      {!memuat && balita.length === 0 && (
+      {!memuat && galatBaca && (
+        <Kosong
+          ikon="peringatan"
+          judul="Data balita tidak bisa dibaca"
+          teks={galatBaca}
+          aksi={
+            <button type="button" className="sekunder" onClick={() => window.location.reload()}>
+              Muat ulang aplikasi
+            </button>
+          }
+        />
+      )}
+
+      {!memuat && !galatBaca && balita.length === 0 && (
         <Kosong
           ikon="balita"
           judul="Belum ada data balita"
@@ -248,7 +245,7 @@ export default function Beranda({
         />
       )}
 
-      {!memuat && balita.length > 0 && tersaring.length === 0 && (
+      {!memuat && !galatBaca && balita.length > 0 && tersaring.length === 0 && (
         <Kosong
           ikon="cari"
           judul="Tidak ada nama yang cocok"
@@ -262,25 +259,23 @@ export default function Beranda({
       )}
 
       {tersaring.length > 0 && (
-        <ul className="m-0 grid list-none gap-2.5 p-0">
+        <ul className="m-0 grid list-none divide-y divide-garis overflow-hidden rounded-sedang border border-garis bg-kartu p-0">
           {ditampilkan.map((b) => {
             const umur = usiaBulan(b.tanggal_lahir, hariIni)
             const status = statusTerakhir[b.id]
             const gender = b.jenis_kelamin === 'laki-laki' ? 'laki' : 'perempuan'
             return (
-              <li key={b.id} className="flex items-center gap-3 rounded-sedang border border-garis bg-kartu px-5 py-4 shadow-halus transition-[border-color,box-shadow] hover:border-garis-kuat hover:shadow-naik max-sempit:flex-wrap max-sempit:p-3">
-                <span className={`grid size-11 shrink-0 place-items-center rounded-kecil border text-base font-bold ${gender === 'laki' ? 'border-biru-100 bg-aksen-biru-tint text-aksen-biru-ink' : 'border-merah-100 bg-aksen-rose-tint text-aksen-rose-ink'}`} aria-hidden="true">
+              <li key={b.id} className="flex items-center gap-3 px-4 py-2.5 max-sempit:flex-wrap max-sempit:p-3">
+                <span className={`grid size-11 shrink-0 place-items-center rounded-kecil border text-dasar font-bold ${gender === 'laki' ? 'border-biru-100 bg-aksen-biru-tint text-aksen-biru-ink' : 'border-merah-100 bg-aksen-rose-tint text-aksen-rose-ink'}`} aria-hidden="true">
                   {inisial(b.nama_lengkap)}
                 </span>
                 <div className="grid min-w-0 flex-1 gap-1 max-sempit:basis-[calc(100%_-_60px)]">
-                  <span className="text-base leading-tight font-bold text-teks">{b.nama_lengkap}</span>
+                  <span className="text-dasar leading-tight font-bold text-teks">{b.nama_lengkap}</span>
                   <span className="flex flex-wrap items-center gap-1.5 text-padat text-teks-redup">
                     {umur >= 0 ? `${umur} bulan` : 'Tanggal lahir belum benar'}
                     <span aria-hidden="true">·</span>
                     {gender === 'laki' ? 'Laki-laki' : 'Perempuan'}
-                  </span>
-                  <span className="flex flex-wrap items-center gap-1.5 text-padat text-teks-redup">
-                    <span>Status gizi</span>
+                    <span aria-hidden="true">·</span>
                     <span
                       className={`lencana-gizi ${status ?? 'menunggu'}`}
                       aria-label={`Status gizi terakhir: ${status ? PESAN_STATUS[status] : 'belum diukur'}`}
@@ -310,6 +305,6 @@ export default function Beranda({
         onPilih={setHalaman}
         keterangan={`Halaman ${halaman + 1} dari ${Math.max(1, Math.ceil(tersaring.length / UKURAN_HALAMAN))} · ${ditampilkan.length} dari ${tersaring.length} nama`}
       />
-    </main>
+    </Layar>
   )
 }

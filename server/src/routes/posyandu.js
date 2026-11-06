@@ -42,6 +42,17 @@ function muatanSah(badan, wajib) {
   return Object.keys(keluar).length ? keluar : null
 }
 
+
+// Endpoint publik: jadwal posyandu desa, tanpa perlu login.
+router.get('/posyandu/publik', async (_minta, balas) => {
+  const baris = await banyak(
+    `SELECT id, nama, dusun, desa, kecamatan, kabupaten, aktif
+     FROM posyandu
+     WHERE dihapus_pada IS NULL AND aktif = TRUE
+     ORDER BY nama`,
+  )
+  balas.json({ posyandu: baris })
+})
 router.get('/posyandu/semua', Admin, async (minta, balas) => {
   const baris = await banyak(
     `SELECT * FROM posyandu WHERE dihapus_pada IS NULL ORDER BY nama`,

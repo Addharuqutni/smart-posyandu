@@ -84,7 +84,7 @@ server {
     }
 
     # --- API diteruskan ke Node -------------------------------------------
-    location ~ ^/(masuk|keluar|saya|akun-saya|sinkron|balita|kunjungan|validasi|pengguna|sesi|rekap|ekspor\\.csv|kualitas|cadangan|posyandu|sehat|waktu)(/|$|\\?) {
+    location ~ ^/(masuk|keluar|saya|akun-saya|sinkron|balita|kunjungan|validasi|pengguna|sesi|rekap|ekspor\.csv|kualitas|cadangan|posyandu|konten-publik|sehat|waktu)(/|$|\?) {
         proxy_pass http://127.0.0.1:3000;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
@@ -248,7 +248,7 @@ server {
     }
 
     # --- API diteruskan ke Node -------------------------------------------
-    location ~ ^/(masuk|keluar|saya|akun-saya|sinkron|balita|kunjungan|validasi|pengguna|sesi|rekap|ekspor\\.csv|kualitas|cadangan|posyandu|sehat|waktu)(/|$|\\?) {
+    location ~ ^/(masuk|keluar|saya|akun-saya|sinkron|balita|kunjungan|validasi|pengguna|sesi|rekap|ekspor\.csv|kualitas|cadangan|posyandu|konten-publik|sehat|waktu)(/|$|\?) {
         proxy_pass http://127.0.0.1:3000;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
@@ -435,7 +435,7 @@ server {
     }
 
     # --- API ----------------------------------------------------------------
-    location ~ ^/(keluar|saya|akun-saya|balita|kunjungan|validasi|pengguna|sesi|rekap|ekspor\\.csv|kualitas|cadangan|posyandu|sehat|waktu)(/|$|\\?) {
+    location ~ ^/(keluar|saya|akun-saya|balita|kunjungan|validasi|pengguna|sesi|rekap|ekspor\.csv|kualitas|cadangan|posyandu|konten-publik|sehat|waktu)(/|$|\?) {
         limit_req zone=posyandu_api burst=30 nodelay;
         limit_req_status 429;
 

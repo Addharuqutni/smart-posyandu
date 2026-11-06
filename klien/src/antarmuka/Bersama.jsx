@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef } from 'react'
 import Ikon from './Ikon.jsx'
+import Bantuan from './Bantuan.jsx'
 
 /**
  * Potongan antarmuka yang dipakai lintas layar. Sebelumnya tiap layar
@@ -8,17 +9,97 @@ import Ikon from './Ikon.jsx'
  * yang lain tidak; satu dialog bisa ditutup Escape, yang lain tidak.
  */
 
+/**
+ * Kerangka satu layar kerja: kontainer, padding, dan `<main>`.
+ *
+ * Sebelumnya tiga belas layar menyalin string kontainer 200 karakter yang
+ * sama persis. Akibatnya `id="isi-utama"` (target tautan "Lewati ke isi")
+ * hidup di empat belas tempat, dan setiap perubahan tinggi nav bawah harus
+ * disunting tiga belas kali.
+ */
+export function Layar({ children, kelas = '' }) {
+  return (
+    <main
+      id="isi-utama"
+      className={`masuk-pudar mx-auto min-h-[calc(100dvh_-_4rem)] max-w-lebar px-4 pt-4 pb-[calc(6.2rem_+_env(safe-area-inset-bottom))] max-sempit:px-3 max-sempit:pb-[calc(6.4rem_+_env(safe-area-inset-bottom))] ${kelas}`}
+    >
+      {children}
+    </main>
+  )
+}
+
 /** Keadaan kosong: satu bentuk untuk semua layar. */
 export function Kosong({ ikon = 'info', judul, teks, aksi }) {
   return (
-    <div className="mb-4 rounded-sedang border border-dashed border-garis-kuat bg-kartu px-5 py-8 text-center">
-      <div className="mx-auto mb-3 grid size-[52px] place-items-center rounded-full bg-biru-100 text-biru-700">
+    <div className="mb-4 rounded-sedang border border-dashed border-garis-kuat bg-kartu px-5 py-7 text-center">
+      <div className="mx-auto mb-3 grid size-[52px] place-items-center rounded-sedang bg-biru-100 text-biru-700">
         <Ikon nama={ikon} ukuran={26} />
       </div>
       <h2 className="mb-1.5 text-dasar font-bold text-teks">{judul}</h2>
       {teks && <p className="mx-auto mb-4 max-w-[34ch] text-isi text-teks-redup">{teks}</p>}
       {aksi}
     </div>
+  )
+}
+
+
+const WARNA_PETAK = {
+  biru: 'bg-aksen-biru-tint text-aksen-biru-ink',
+  hijau: 'bg-aksen-hijau-tint text-aksen-hijau-ink',
+  teal: 'bg-aksen-teal-tint text-aksen-teal-ink',
+  amber: 'bg-aksen-amber-tint text-aksen-amber-ink',
+  slate: 'bg-aksen-slate-tint text-aksen-slate-ink',
+  rose: 'bg-aksen-rose-tint text-aksen-rose-ink',
+}
+
+/**
+ * Petak angka: ikon berwarna, angka besar, label di bawahnya.
+ * `utama` membuat petak mengambil dua kolom dan dua baris, dengan angka
+ * seukuran judul halaman. Satu petak utama per baris: hierarki dibaca dari
+ * ukuran sebelum angkanya dibaca. `nilai` boleh simpul React (mis. lencana).
+ */
+export function Petak({ ikon, warna = 'biru', nilai, satuan, label, bantuan, utama = false }) {
+  return (
+    <div
+      className={`flex flex-col rounded-sedang border border-garis bg-kartu ${utama ? 'col-span-2 row-span-2 px-4 py-3.5' : 'px-3.5 py-3'}`}
+    >
+      <div className="mb-2.5 flex items-start justify-between gap-2">
+        <span className={`grid shrink-0 place-items-center rounded-kecil ${utama ? 'size-9' : 'size-8'} ${WARNA_PETAK[warna] ?? WARNA_PETAK.biru}`}>
+          <Ikon nama={ikon} ukuran={utama ? 18 : 16} />
+        </span>
+        {bantuan && <Bantuan ukuran={15} {...bantuan} />}
+      </div>
+      <div className="mt-auto flex flex-col-reverse">
+        <div className={`mt-1 leading-tight font-semibold text-teks-redup ${utama ? 'text-padat' : 'text-padat'}`}>{label}</div>
+        <div
+          className={`flex items-baseline gap-0.5 leading-none font-bold tracking-[-0.02em] tabular-nums text-biru-950 ${
+            utama ? 'text-[2.1rem]' : 'text-[1.6rem]'
+          }`}
+        >
+          {nilai}
+          {satuan && <span className="text-padat font-semibold tracking-normal text-teks-redup">{satuan}</span>}
+        </div>
+        {utama && <div className="mt-1.5 text-2xs leading-snug text-teks-samar">Angka utama bulan ini</div>}
+      </div>
+    </div>
+  )
+}
+
+/**
+ * Baris petak angka dengan satu petak utama.
+ *
+ * Sebelumnya semua petak sama besar, sehingga lima angka terbaca setara
+ * padahal yang dibaca admin desa selalu satu: jumlah kunjungan. Petak
+ * pertama kini mengambil span 2x2; sisanya mengalir di sebelahnya.
+ * Kelas ditulis utuh karena Tailwind memindai teks sumber, bukan nilai
+ * variabel.
+ */
+export function BarisPetak({ jumlah, children, label }) {
+  const kolom = jumlah === 2 ? 'grid-cols-2' : jumlah === 3 ? 'grid-cols-3' : 'grid-cols-4'
+  return (
+    <dl className={`mb-4 grid auto-rows-min grid-flow-row-dense gap-2.5 ${kolom} max-sempit:grid-cols-2`} aria-label={label}>
+      {children}
+    </dl>
   )
 }
 
@@ -29,10 +110,11 @@ export function KotakCari({
   onUbah,
   label = 'Cari nama balita',
   placeholder = 'Cari nama balita…',
-  labelTampil = false,
-}) {
-  return (
-    <div className="relative mb-4">
+   labelTampil = false,
+  className = 'mb-4',
+ }) {
+   return (
+    <div className={`relative ${className}`}>
       <label className={labelTampil ? 'mb-1.5 text-padat font-semibold text-teks-redup' : 'sr-only'} htmlFor={id}>
         {label}
       </label>
@@ -49,7 +131,7 @@ export function KotakCari({
       {nilai && (
         <button
           type="button"
-          className="absolute top-1/2 right-2 size-12 -translate-y-1/2 rounded-full bg-transparent p-0 text-teks-samar hover:bg-latar"
+          className="absolute top-1/2 right-2 size-12 -translate-y-1/2 rounded-kecil bg-transparent p-0 text-teks-samar hover:bg-latar"
           onClick={() => onUbah('')}
           aria-label="Hapus pencarian"
         >
@@ -98,7 +180,7 @@ const TERFOKUS =
 /**
  * Dialog modal: fokus awal masuk, Tab berputar di dalam, Escape menutup,
  * fokus kembali ke tombol pemicu. Tanpa ini `aria-modal` hanya menipu
- * pembaca layar — sisanya dinyatakan inert padahal Tab tetap menembus.
+ * pembaca layar, sedangkan sisanya dinyatakan inert padahal Tab tetap menembus.
  */
 export function Modal({ judul, subjudul, onTutup, children }) {
   const idJudul = useId()
@@ -144,13 +226,13 @@ export function Modal({ judul, subjudul, onTutup, children }) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-biru-950/55 p-5 backdrop-blur-[4px] max-dialog:p-2.5"
+      className="animate-pudar fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-biru-950/55 p-5 backdrop-blur-[4px] max-dialog:p-2.5"
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) tutupRef.current()
       }}
     >
-      <div className="flex max-h-[90vh] w-full max-w-[680px] flex-col overflow-hidden rounded-besar border border-garis bg-kartu shadow-timbul max-dialog:max-h-[94vh]" role="dialog" aria-modal="true" aria-labelledby={idJudul} ref={wadah}>
-        <div className="flex items-center justify-between gap-4 border-b border-garis bg-biru-50 px-5 py-5">
+      <div className="animate-panel flex max-h-[90vh] w-full max-w-[680px] flex-col overflow-hidden rounded-besar border border-garis bg-kartu shadow-timbul max-dialog:max-h-[94vh]" role="dialog" aria-modal="true" aria-labelledby={idJudul} ref={wadah}>
+        <div className="flex items-center justify-between gap-4 border-b border-garis bg-biru-50 p-4">
           <div>
             <h2 id={idJudul} className="m-0 text-subjudul font-bold tracking-[-0.015em] text-biru-950">{judul}</h2>
             {subjudul && <span className="text-padat font-medium text-teks-samar">{subjudul}</span>}

@@ -25,3 +25,16 @@ test('perubahan akun tercatat di log_audit', () => {
   assert.match(sumber, /INSERT INTO log_audit/)
   assert.match(sumber, /nilai_lama, nilai_baru/)
 })
+
+test('penambahan akun admin_desa tidak mewajibkan posyandu_id sedangkan kader wajib', () => {
+  const sumberPost = semua.slice(semua.indexOf("router.post('/pengguna'"), semua.indexOf("router.patch('/pengguna/:id'"))
+  assert.match(sumberPost, /if \(peran === 'admin_desa'\) \{\s*posyanduId = null/)
+  assert.match(sumberPost, /else if \(peran === 'kader'\)/)
+  assert.match(sumberPost, /detail: 'posyandu_wajib_diisi'/)
+})
+
+test('pengubahan akun kader menolak posyandu_id kosong', () => {
+  const sumberPatch = semua.slice(semua.indexOf("router.patch('/pengguna/:id'"), semua.indexOf("router.patch('/akun-saya'"))
+  assert.match(sumberPatch, /target\.peran === 'kader' && \(!posyandu_id \|\| posyandu_id === ''\)/)
+  assert.match(sumberPatch, /detail: 'posyandu_wajib_diisi'/)
+})

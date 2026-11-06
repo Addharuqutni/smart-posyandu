@@ -160,6 +160,8 @@ function buatAplikasi() {
   aplikasi.use(require('./routes/sesi'))
   aplikasi.use(require('./routes/laporan'))
   aplikasi.use(require('./routes/cadangan'))
+  aplikasi.use(require('./routes/konten'))
+  aplikasi.use(require('./routes/aktivitas'))
 
   aplikasi.use((minta, balas) => {
     balas.status(404).json({ detail: 'endpoint_tidak_ditemukan' })

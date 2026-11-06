@@ -38,7 +38,9 @@ router.post('/pengguna', Admin, async (minta, balas) => {
   // Validasi posyandu_id: kader wajib terikat Posyandu; admin_desa selalu null;
   // nakes boleh terikat satu Posyandu atau null (melihat semua).
   let posyanduId = null
-  if (peran === 'kader') {
+  if (peran === 'admin_desa') {
+    posyanduId = null
+  } else if (peran === 'kader') {
     const kandidat = posyandu_id || minta.pengguna.posyandu_id
     if (!kandidat) {
       return balas.status(422).json({
@@ -67,6 +69,17 @@ router.post('/pengguna', Admin, async (minta, balas) => {
   )
 
   const baris = await satu(`SELECT id, nama_pengguna, nama_lengkap, peran, posyandu_id, aktif FROM pengguna WHERE id = $1`, [id])
+  // Pembuatan akun adalah aktivitas admin yang harus terlihat di log.
+  await kueri(
+    `INSERT INTO log_audit
+       (id, pengguna_id, id_perangkat, nama_tabel, id_baris, aksi,
+        nilai_lama, nilai_baru, alamat_ip, terjadi_pada, diterima_pada)
+     VALUES (gen_random_uuid(), $1, 'server', 'pengguna', $2, 'buat',
+             NULL, $3, $4, now(), now())`,
+    [minta.pengguna.id, id,
+      JSON.stringify({ nama_lengkap: baris.nama_lengkap, nama_pengguna: baris.nama_pengguna, peran: baris.peran }),
+      minta.ip ?? null],
+  )
   balas.status(201).json(baris)
 })
 
@@ -75,6 +88,14 @@ router.patch('/pengguna/:id', Admin, async (minta, balas) => {
   const nilai = {}
   if (aktif !== undefined) nilai.aktif = Boolean(aktif)
   if (posyandu_id !== undefined) {
+    const target = await satu(`SELECT peran FROM pengguna WHERE id = $1 AND dihapus_pada IS NULL`, [minta.params.id])
+    if (!target) return balas.status(404).json({ detail: 'pengguna_tidak_ditemukan' })
+    if (target.peran === 'kader' && (!posyandu_id || posyandu_id === '')) {
+      return balas.status(422).json({
+        detail: 'posyandu_wajib_diisi',
+        rincian: 'Akun kader wajib terikat pada satu Posyandu.',
+      })
+    }
     if (posyandu_id === null || posyandu_id === '') {
       nilai.posyandu_id = null
     } else {
@@ -175,12 +196,13 @@ router.patch('/akun-saya', butuhLogin, async (minta, balas) => {
     await kueri(
       `INSERT INTO log_audit
          (id, pengguna_id, id_perangkat, nama_tabel, id_baris, aksi,
-          nilai_lama, nilai_baru, terjadi_pada, diterima_pada)
+          nilai_lama, nilai_baru, alamat_ip, terjadi_pada, diterima_pada)
        VALUES (gen_random_uuid(), $1, 'server', 'pengguna', $2, 'ubah',
-               $3, $4, now(), now())`,
+               $3, $4, $5, now(), now())`,
       [minta.pengguna.id, id,
         JSON.stringify(lama),
-        JSON.stringify({ nama_pengguna: baris.nama_pengguna, nama_lengkap: baris.nama_lengkap })],
+        JSON.stringify({ nama_pengguna: baris.nama_pengguna, nama_lengkap: baris.nama_lengkap }),
+        minta.ip ?? null],
     )
     balas.json(baris)
   } catch (salah) {
