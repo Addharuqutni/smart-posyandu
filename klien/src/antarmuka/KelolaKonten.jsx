@@ -9,31 +9,83 @@ import {
 import Ikon from './Ikon.jsx'
 import { Modal, Layar } from './Bersama.jsx'
 import { RincianKonten, LencanaStatus, TabelKonten } from './KontenTabel.jsx'
-import { SKEMA, URUT_JENIS, bidangKurang, kosong, muatanDari } from '../logika/konten-skema.js'
+import {
+  SKEMA,
+  URUT_JENIS,
+  bidangKurang,
+  formatJadwal,
+  gabungRentang,
+  gabungTanggalJam,
+  kosong,
+  muatanDari,
+  pecahRentang,
+  pecahTanggalJam,
+} from '../logika/konten-skema.js'
 
 /** Bidang tambahan khusus jenis konten yang dipilih. */
 function BidangJenis({ nilai, ubah, idAwal }) {
   const bidang = SKEMA[nilai.jenis]?.bidang ?? []
   if (!bidang.length) return null
-  return bidang.map((b) => (
-    <div key={b.kunci} className="bidang flex flex-col">
-      <label htmlFor={`${idAwal}-${b.kunci}`}>
-        <span>{b.label}</span>
-        {b.wajib ? (
-          <span className="wajib" aria-hidden="true">*</span>
-        ) : (
-          <span className="text-padat text-teks-samar">(opsional)</span>
-        )}
-      </label>
-      <input
-        id={`${idAwal}-${b.kunci}`}
-        placeholder={b.placeholder}
-        value={nilai[b.kunci] ?? ''}
-        onChange={(e) => ubah(b.kunci, e.target.value)}
-        required={b.wajib}
-      />
-    </div>
-  ))
+  return bidang.map((b) => {
+    const id = `${idAwal}-${b.kunci}`
+    const wajib = b.wajib ? <span className="wajib" aria-hidden="true">*</span> : (
+      <span className="text-padat text-teks-samar">(opsional)</span>
+    )
+
+    if (b.tipe === 'tanggal-jam' || b.tipe === 'rentang') {
+      const jam = b.tipe === 'tanggal-jam'
+      const { a, bb } = jam
+        ? (() => { const p = pecahTanggalJam(nilai[b.kunci] ?? ''); return { a: p.tanggal, bb: p.jam } })()
+        : (() => { const p = pecahRentang(nilai[b.kunci] ?? ''); return { a: p.mulai, bb: p.akhir } })()
+      const gabung = (x, y) => (jam ? gabungTanggalJam(x, y) : gabungRentang(x, y))
+      return (
+        <fieldset key={b.kunci} className="bidang m-0 flex flex-col border-0 p-0">
+          <legend className="label-bidang p-0">
+            {b.label}
+            {wajib}
+          </legend>
+          <div className="grid grid-cols-2 gap-2 max-sempit:grid-cols-1">
+            <input
+              id={`${id}-a`}
+              type="date"
+              required={b.wajib}
+              max={jam ? undefined : bb || undefined}
+              value={a}
+              onChange={(e) => ubah(b.kunci, gabung(e.target.value, bb))}
+              aria-label={jam ? 'Tanggal' : 'Tanggal mulai'}
+            />
+            <input
+              id={`${id}-b`}
+              type={jam ? 'time' : 'date'}
+              min={jam ? undefined : a || undefined}
+              value={bb}
+              onChange={(e) => ubah(b.kunci, gabung(a, e.target.value))}
+              aria-label={jam ? 'Jam mulai' : 'Tanggal akhir'}
+            />
+          </div>
+          <span className="mt-1 text-2xs text-teks-samar">
+            {jam ? 'Jam boleh dikosongkan.' : 'Kosongkan akhir bila berlaku sampai dicabut.'}
+          </span>
+        </fieldset>
+      )
+    }
+
+    return (
+      <div key={b.kunci} className="bidang flex flex-col">
+        <label htmlFor={id}>
+          <span>{b.label}</span>
+          {wajib}
+        </label>
+        <input
+          id={id}
+          placeholder={b.placeholder}
+          value={nilai[b.kunci] ?? ''}
+          onChange={(e) => ubah(b.kunci, e.target.value)}
+          required={b.wajib}
+        />
+      </div>
+    )
+  })
 }
 
 /** Pilih jenis konten; kader terkunci pada jadwal. */
@@ -199,6 +251,8 @@ export default function KelolaKonten({ sesi }) {
     setPutuskanUntuk(k)
     setKeputusan('disetujui')
     setCatatanTinjau('')
+    // Galat lama milik aksi sebelumnya; dialog baru mulai dari keadaan bersih.
+    setGalat(null)
   }
 
   const aksiTabel = { putuskan: bukaPutuskan, sunting: setSunting, hapus: setHapusUntuk }
@@ -343,7 +397,7 @@ export default function KelolaKonten({ sesi }) {
                     <strong className="block text-teks">{k.judul}</strong>
                     <p className="mt-1 mb-0 text-padat leading-relaxed text-teks-redup">{k.isi}</p>
                     <p className="mt-1.5 mb-0 text-2xs text-teks-samar">
-                      {[k.tanggal, k.kategori, k.posyandu_nama, k.pengaju_nama && `Diajukan ${k.pengaju_nama}`]
+                      {[formatJadwal(k.tanggal), k.kategori, k.posyandu_nama, k.pengaju_nama && `Diajukan ${k.pengaju_nama}`]
                         .filter(Boolean)
                         .join(' · ') || 'Tanpa keterangan tambahan'}
                     </p>
@@ -425,50 +479,81 @@ export default function KelolaKonten({ sesi }) {
           subjudul={putuskanUntuk.judul}
           onTutup={() => setPutuskanUntuk(null)}
         >
-          <form onSubmit={simpanKeputusan} className="flex flex-col gap-4 p-4">
-            <RincianKonten konten={putuskanUntuk} />
+          <form onSubmit={simpanKeputusan} className="flex min-h-0 flex-1 flex-col">
+            <div className="flex flex-col gap-4 overflow-y-auto p-4">
+              <RincianKonten konten={putuskanUntuk} />
 
-            <fieldset className="m-0 flex flex-col gap-2 border-0 p-0">
-              <legend className="mb-1 text-padat font-semibold text-teks">Keputusan</legend>
-              <label className="flex cursor-pointer items-center gap-2 text-padat">
-                <input
-                  type="radio"
-                  name="keputusan"
-                  value="disetujui"
-                  checked={keputusan === 'disetujui'}
-                  onChange={() => setKeputusan('disetujui')}
-                />
-                <span>Setujui dan tayangkan di kanal publik</span>
-              </label>
-              <label className="flex cursor-pointer items-center gap-2 text-padat">
-                <input
-                  type="radio"
-                  name="keputusan"
-                  value="ditolak"
-                  checked={keputusan === 'ditolak'}
-                  onChange={() => setKeputusan('ditolak')}
-                />
-                <span>Tolak, kader perlu memperbaiki</span>
-              </label>
-            </fieldset>
+              <fieldset className="m-0 flex flex-col gap-2 border-0 p-0">
+                <legend className="mb-1 text-padat font-semibold text-teks">Keputusan</legend>
+                {[
+                  {
+                    nilai: 'disetujui',
+                    ikon: 'centang',
+                    judul: 'Setujui dan tayangkan',
+                    ket: 'Jadwal langsung muncul di kanal publik.',
+                  },
+                  {
+                    nilai: 'ditolak',
+                    ikon: 'tutup',
+                    judul: 'Tolak, kader perlu memperbaiki',
+                    ket: 'Jadwal dikembalikan ke kader dengan catatan Anda.',
+                  },
+                ].map((p) => {
+                  const aktif = keputusan === p.nilai
+                  return (
+                    <label
+                      key={p.nilai}
+                      className={`flex cursor-pointer items-start gap-3 rounded-kecil border p-3 transition-colors ${
+                        aktif
+                          ? 'border-biru-700 bg-biru-50'
+                          : 'border-garis bg-kartu hover:border-garis-kuat'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="keputusan"
+                        value={p.nilai}
+                        checked={aktif}
+                        onChange={() => setKeputusan(p.nilai)}
+                        className="mt-0.5"
+                      />
+                      <span className="flex min-w-0 flex-col gap-0.5">
+                        <span className={`flex items-center gap-1.5 text-isi font-semibold ${aktif ? 'text-biru-900' : 'text-teks'}`}>
+                          <Ikon nama={p.ikon} ukuran={15} />
+                          {p.judul}
+                        </span>
+                        <span className="text-padat leading-snug text-teks-redup">{p.ket}</span>
+                      </span>
+                    </label>
+                  )
+                })}
+              </fieldset>
 
-            <div className="bidang flex flex-col">
-              <label htmlFor="catatan-tinjau">
-                <span>Catatan untuk kader</span>
-                {keputusan === 'ditolak' && <span className="wajib" aria-hidden="true">*</span>}
-              </label>
-              <textarea
-                id="catatan-tinjau"
-                rows={3}
-                placeholder={
-                  keputusan === 'ditolak'
-                    ? 'cth. Bentrok dengan jadwal imunisasi Puskesmas; mohon ganti pekan.'
-                    : 'Catatan tambahan (opsional).'
-                }
-                value={catatanTinjau}
-                onChange={(e) => setCatatanTinjau(e.target.value)}
-                required={keputusan === 'ditolak'}
-              />
+              <div className="bidang flex flex-col">
+                <label htmlFor="catatan-tinjau">
+                  <span>Catatan untuk kader</span>
+                  {keputusan === 'ditolak' && <span className="wajib" aria-hidden="true">*</span>}
+                </label>
+                <textarea
+                  id="catatan-tinjau"
+                  rows={3}
+                  placeholder={
+                    keputusan === 'ditolak'
+                      ? 'cth. Bentrok dengan jadwal imunisasi Puskesmas; mohon ganti pekan.'
+                      : 'Catatan tambahan (opsional).'
+                  }
+                  value={catatanTinjau}
+                  onChange={(e) => setCatatanTinjau(e.target.value)}
+                  required={keputusan === 'ditolak'}
+                />
+              </div>
+
+              {galat && (
+                <p className="m-0 flex items-start gap-2 rounded-kecil border border-merah-100 bg-merah-100 px-3 py-2.5 text-padat font-semibold leading-snug text-merah-800" role="alert">
+                  <Ikon nama="peringatan" ukuran={17} />
+                  <span>{galat}</span>
+                </p>
+              )}
             </div>
 
             <div className="flex items-center justify-end gap-2 border-t border-garis bg-biru-50 p-4 max-dialog:flex-col-reverse max-dialog:gap-2 max-dialog:[&>button]:w-full">

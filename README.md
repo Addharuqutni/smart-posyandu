@@ -24,9 +24,15 @@ Fitur disesuaikan dengan peran pengguna:
 - **Laporan & Rekap Bulanan:** Rekapitulasi cakupan posyandu, sebaran status gizi balita, dan ekspor data ke CSV.
 - **Manajemen Akun:** Pengelolaan akun pengguna (kader, nakes, admin) dan penugasan ke posyandu masing-masing.
 - **Pencadangan & Pemulihan Basis Data:** Unduh cadangan berkala, pulihkan data, dan pantau status cadangan langsung dari antarmuka.
+- **Kelola Konten Kanal Publik:** Menulis jadwal, informasi layanan, pengumuman desa, dan materi edukasi yang tayang ke warga.
 
-### 4. Fitur Umum & Keamanan
-- **Audit Riwayat Masuk:** Melacak perangkat yang terhubung dan riwayat sesi login.
+### 4. Kanal Publik (tanpa login)
+- **Jadwal Posyandu:** Jadwal terdekat per dusun, hanya yang sudah disetujui petugas kesehatan.
+- **Pengumuman & Layanan:** Pemberitahuan resmi desa dan daftar layanan yang tersedia.
+- **Edukasi & Pencegahan:** Materi gizi dan kesehatan, termasuk artikel tarikan dari KodeNara.
+
+### 5. Fitur Umum & Keamanan
+- **Log Aktivitas:** Catatan audit masuk, keluar, percobaan gagal, dan perubahan data — hanya untuk admin desa.
 - **Privasi Data:** Enkripsi NIK serta proteksi sesi berbasis cookie `HttpOnly` (`SameSite=Strict`).
 
 ---
@@ -79,10 +85,12 @@ Fitur disesuaikan dengan peran pengguna:
 ## Perintah Bantuan
 
 ```bash
-npm run demo        # Isi 3.000 data balita demo untuk pengujian
-npm run demo:hapus  # Bersihkan data demo
-npm run uji         # Jalankan unit test (klien & server)
-npm run cadangan    # Buat file cadangan database
+npm run demo                    # Isi 3.000 balita + 16 konten kanal publik untuk pengujian
+npm run demo:hapus              # Bersihkan data demo (konten buatan sendiri tetap utuh)
+npm run uji                     # Jalankan unit test (klien & server)
+npm run cadangan                # Buat file cadangan database
+npm run konten:kodenara         # Tarik artikel tips KodeNara sekarang
+npm run konten:kodenara:bersih  # Buang artikel hasil tarikan
 ```
 
 ---

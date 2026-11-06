@@ -1,6 +1,16 @@
 // Skema bidang per jenis konten: satu sumber untuk form tambah, form sunting,
 // dan validasi. Bidang yang tidak berlaku bagi suatu jenis tidak ditampilkan
 // dan tidak dikirim, supaya tidak ada input kosong yang membingungkan.
+//
+// `tipe` menentukan kontrol yang dirender:
+//   (tidak diisi)  teks biasa
+//   'tanggal-jam'  input tanggal + input jam, digabung jadi satu nilai
+//   'rentang'      dua input tanggal (mulai s.d. akhir)
+//
+// Keduanya tetap disimpan pada SATU kolom `tanggal` bertipe TEXT yang sudah
+// ada. ponytail: satu kolom teks, bukan tiga kolom DATE/TIME. Cukup selama
+// belum ada kebutuhan menyaring "yang masih berlaku" di SQL; saat itu tiba,
+// pecah jadi kolom sendiri lewat migrasi.
 export const SKEMA = {
   jadwal: {
     label: 'Jadwal Posyandu',
@@ -9,7 +19,7 @@ export const SKEMA = {
     judul: 'cth. Posyandu Melati: Penimbangan Bulan November',
     isi: 'Tulis agenda: penimbangan, imunisasi, PMT, konsultasi gizi. Sebutkan siapa yang melayani.',
     bidang: [
-      { kunci: 'tanggal', label: 'Tanggal & jam', placeholder: 'cth. Sabtu, 14 November 2026 · 08.00–11.00 WIB', wajib: true },
+      { kunci: 'tanggal', label: 'Tanggal & jam', tipe: 'tanggal-jam', wajib: true },
       { kunci: 'kategori', label: 'Dusun / lokasi', placeholder: 'cth. Balai Dusun Melati', wajib: false },
     ],
   },
@@ -30,7 +40,7 @@ export const SKEMA = {
     judul: 'cth. Posyandu Bulan Ini Dimajukan',
     isi: 'Tulis isi pengumuman secara ringkas dan jelas: apa yang berubah dan apa yang harus dilakukan warga.',
     bidang: [
-      { kunci: 'tanggal', label: 'Berlaku sampai / tanggal', placeholder: 'cth. berlaku 1–15 November 2026', wajib: false },
+      { kunci: 'tanggal', label: 'Masa berlaku', tipe: 'rentang', wajib: false },
     ],
   },
   edukasi: {
@@ -43,6 +53,128 @@ export const SKEMA = {
       { kunci: 'kategori', label: 'Topik', placeholder: 'cth. Pencegahan Stunting', wajib: true },
     ],
   },
+}
+
+// --- Bentuk nilai bidang tanggal ------------------------------------------
+// jadwal      'YYYY-MM-DDTHH:mm'  (jam boleh kosong: 'YYYY-MM-DD')
+// pengumuman  'YYYY-MM-DD/YYYY-MM-DD'  (akhir boleh kosong)
+//
+// Nilai lama yang ditulis bebas (mis. "Sabtu, 14 November") tidak bisa dipecah;
+// helper di bawah mengembalikan bagian kosong dan menampilkan nilai aslinya
+// apa adanya, jadi data lama tidak hilang dari layar.
+
+const BULAN = [
+  'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+  'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember',
+]
+
+/** 'YYYY-MM-DD' -> '14 November 2026'. `null` bila bukan tanggal ISO. */
+export function formatTanggal(nilai) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(nilai ?? '')
+  if (!m) return null
+  const bulan = BULAN[Number(m[2]) - 1]
+  return bulan ? `${Number(m[3])} ${bulan} ${m[1]}` : null
+}
+
+export function pecahTanggalJam(nilai) {
+  const m = /^(\d{4}-\d{2}-\d{2})(?:T(\d{2}:\d{2}))?$/.exec(nilai ?? '')
+  return m ? { tanggal: m[1], jam: m[2] ?? '' } : { tanggal: '', jam: '' }
+}
+
+export function gabungTanggalJam(tanggal, jam) {
+  if (!tanggal) return ''
+  return jam ? `${tanggal}T${jam}` : tanggal
+}
+
+export function pecahRentang(nilai) {
+  const m = /^(\d{4}-\d{2}-\d{2})(?:\/(\d{4}-\d{2}-\d{2}))?$/.exec(nilai ?? '')
+  return m ? { mulai: m[1], akhir: m[2] ?? '' } : { mulai: '', akhir: '' }
+}
+
+export function gabungRentang(mulai, akhir) {
+  if (!mulai) return ''
+  return akhir && akhir !== mulai ? `${mulai}/${akhir}` : mulai
+}
+
+/** 'YYYY-MM-DD' -> { hari: '9', bulan: 'Nov' } untuk blok tanggal ringkas. */
+export function blokTanggal(nilai) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(nilai ?? '')
+  if (!m) return null
+  const bulan = BULAN[Number(m[2]) - 1]
+  if (!bulan) return null
+  return { hari: String(Number(m[3])), bulan: bulan.slice(0, 3) }
+}
+
+/** '2026-11-14T08:00' -> '14 November 2026 · 08.00'. */
+export function formatJadwal(nilai) {
+  if (!nilai) return null
+  const { tanggal, jam } = pecahTanggalJam(nilai)
+  const t = formatTanggal(tanggal)
+  if (!t) return nilai
+  return jam ? `${t} · ${jam.replace(':', '.')}` : t
+}
+
+/** '2026-11-01/2026-11-15' -> '1 November 2026 s.d. 15 November 2026'. */
+export function formatRentang(nilai) {
+  if (!nilai) return null
+  const { mulai, akhir } = pecahRentang(nilai)
+  const a = formatTanggal(mulai)
+  if (!a) return nilai
+  const b = formatTanggal(akhir)
+  return b ? `${a} s.d. ${b}` : a
+}
+
+/** Nilai bidang tanggal sesuai jenisnya, atau nilai aslinya bila tak dikenali. */
+export function formatTanggalKonten(jenis, nilai) {
+  if (!nilai) return null
+  return jenis === 'pengumuman' ? formatRentang(nilai) : formatJadwal(nilai)
+}
+
+/**
+ * Jadwal yang masih akan datang, urut dari yang paling dekat.
+ *
+ * Server mengirim urut kolom `urutan` (urutan tampil), bukan urut waktu, jadi
+ * pengurutan harus dilakukan di sini. Jadwal bertanggal lampau dibuang: warga
+ * yang datang berdasarkan kanal ini tidak boleh diarahkan ke kegiatan yang
+ * sudah selesai.
+ */
+export function jadwalMendatang(daftar, hariIni) {
+  return (daftar ?? [])
+    .filter((k) => k.jenis === 'jadwal' && (!k.tanggal || k.tanggal.slice(0, 10) >= hariIni))
+    .sort((a, b) => String(a.tanggal ?? '9999').localeCompare(String(b.tanggal ?? '9999')))
+}
+
+/** Jadwal mendatang terdekat per Posyandu; Map posyandu_id -> konten. */
+export function jadwalPerPosyandu(daftar, hariIni) {
+  const peta = new Map()
+  for (const k of jadwalMendatang(daftar, hariIni)) {
+    if (!k.posyandu_id || !k.tanggal || peta.has(k.posyandu_id)) continue
+    peta.set(k.posyandu_id, k)
+  }
+  return peta
+}
+
+/** Wilayah satu Posyandu: "Dusun Mawar · Desa Ketenger · Kec. Baturraden". */
+export function wilayahPosyandu(pos) {
+  return [
+    // `dusun` sering sudah berbunyi "Dusun Mawar"; prefiks hanya ditambahkan
+    // bila belum ada, supaya tidak menjadi "Dusun Dusun Mawar".
+    pos?.dusun && (/^dusun\b/i.test(pos.dusun) ? pos.dusun : `Dusun ${pos.dusun}`),
+    pos?.desa && `Desa ${pos.desa}`,
+    pos?.kecamatan && `Kec. ${pos.kecamatan}`,
+  ].filter(Boolean).join(' · ') || 'Wilayah desa'
+}
+
+/**
+ * Nilai satu bidang untuk ditampilkan (tabel, rincian, antrean).
+ * `null` bila kosong, supaya pemanggil bisa memilih sendiri penggantinya.
+ */
+export function nilaiTampil(bidang, konten) {
+  const v = konten?.[bidang.kunci]
+  if (!v) return null
+  if (bidang.tipe === 'tanggal-jam') return formatJadwal(v)
+  if (bidang.tipe === 'rentang') return formatRentang(v)
+  return v
 }
 
 export const URUT_JENIS = ['jadwal', 'layanan', 'pengumuman', 'edukasi']

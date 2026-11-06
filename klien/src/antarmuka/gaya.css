@@ -432,10 +432,12 @@
     color: var(--color-teks-samar);
   }
 
-  /* Checkbox: warna aksen mengikuti palet, bukan biru bawaan browser.
-     Ukuran dan tinggi minimum dikunci supaya tidak mewarisi min-height 48px
-     milik input teks. */
-  input[type='checkbox'] {
+  /* Checkbox dan radio: warna aksen mengikuti palet, bukan biru bawaan browser.
+     Ukuran, lebar, dan tinggi minimum dikunci supaya tidak mewarisi
+     `width: 100%` dan `min-height: 48px` milik input teks. Tanpa ini radio
+     membengkak selebar baris dan mendorong labelnya ke ujung kanan. */
+  input[type='checkbox'],
+  input[type='radio'] {
     width: 1.15rem;
     height: 1.15rem;
     min-height: 0;
@@ -444,6 +446,10 @@
     accent-color: var(--color-biru-800);
     box-shadow: none;
     cursor: pointer;
+  }
+
+  input[type='radio'] {
+    border-radius: 50%;
   }
 
   input[type='search'] {

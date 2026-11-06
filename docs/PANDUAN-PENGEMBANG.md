@@ -37,7 +37,9 @@ npm run uji                       # uji klien lalu server
 ```
 
 **Jangan** jalankan `npm run demo` di basis data produksi: ia mengisi 3.000 balita
-contoh. Hapus dengan `npm run demo:hapus`.
+contoh plus 16 konten kanal publik (jadwal, layanan, pengumuman, edukasi) dari
+berbagai status persetujuan. Hapus dengan `npm run demo:hapus` — konten yang
+Anda buat sendiri tidak ikut terhapus, hanya baris ber-id demo.
 
 ### Skrip yang tersedia
 
@@ -52,13 +54,20 @@ contoh. Hapus dengan `npm run demo:hapus`.
 | `npm run buat-admin -- <username> "<Nama>"` | Buat akun admin desa pertama; kata sandi ditanyakan, tidak disimpan di kode. |
 | `npm run cadangan` | Cadangkan sekarang (verifikasi & pangkas). |
 | `npm run pulih -- <berkas> [--ke <DATABASE_URL>]` | Uji pemulihan (drill). |
+| `npm run konten:kodenara` | Tarik artikel tips KodeNara sekarang (juga jalan otomatis 03.00 WIB). |
+| `npm run konten:kodenara:bersih` | Buang semua artikel hasil tarikan; konten buatan admin tetap. |
 
 ### Uji cepat satu berkas
 
 ```bash
 cd server && npx cross-env NODE_ENV=test node --test tests/halaman-sinkron.test.js
-cd klien  && npx vitest run src/logika/terakhir.test.js
+cd klien  && npx vitest run --root . src/logika/terakhir.test.js
 ```
+
+**Dari folder `klien`, selalu pakai `--root .`.** Tanpa itu Vitest memindai ke
+atas, menemukan `server/tests/*.js` yang memakai `node:test`, lalu melaporkan
+"No test suite found" untuk 17 berkas. `npm run uji` di root sudah benar karena
+memakai `--prefix`.
 
 ---
 
@@ -78,6 +87,7 @@ cd klien  && npx vitest run src/logika/terakhir.test.js
 | `TOLERANSI_JAM_KE_DEPAN` | server | 24. |
 | `FOLDER_CADANGAN` | server | Relatif ke **root proyek** → `posyandu/cadangan`. |
 | `CADANGAN_HARIAN` | server | `true`. |
+| `KODENARA_HARIAN` | server | `true`. Setel `false` bila VPS tidak boleh keluar internet. |
 | `ASAL_DIIZINKAN` | server | Daftar asal CORS (koma). Perlu bila klien & API beda asal. |
 | `VITE_API` | klien (bangun) | Kosong → path relatif (satu asal). Untuk dev: `http://127.0.0.1:3000`. |
 
@@ -222,28 +232,37 @@ dan memberi peringatan (`npm run periksa` untuk memeriksa ulang kapan saja).
 3. `PORT` dibaca dari `.env`.
 4. Ganti `KUNCI_RAHASIA`; simpan `KUNCI_CADANGAN` terpisah.
 5. **Tidak ada akun bawaan.** Buat admin pertama di VPS setelah migrasi:
-   `npm run buat-admin -- admin_desa "Nama Lengkap" --posyandu "Posyandu Melati"`.
+   `npm run buat-admin -- admin_desa "Nama Lengkap"`.
    Kata sandi ditanyakan saat itu (minimal 12 karakter) dan tidak pernah ada di kode.
+   Tambahkan `--posyandu "Nama Posyandu"` hanya bila ingin sekalian membuat
+   Posyandu pertama; tanpa itu tidak ada Posyandu yang dibuat, dan daftarnya
+   diisi lewat layar Kelola Posyandu. Tidak ada nama contoh yang dipakai diam-diam.
 
 ### Contoh Nginx (topologi sudah teruji)
 
-Sajikan `klien/dist`, teruskan path API ke `127.0.0.1:3000`:
+Sajikan `klien/dist`, teruskan path API ke `127.0.0.1:3000`.
+
+**Jangan salin blok proksi dari dokumen ini.** Daftar path API berubah setiap
+kali ada rute baru, dan salinan di dokumen pasti tertinggal — itulah yang
+membuat `/konten-publik` dan `/aktivitas` menjawab `index.html` di VPS.
+Cetak konfigurasi yang selalu mutakhir:
+
+```bash
+node alat.js konfig internal    # http, jaringan desa
+node alat.js konfig https       # https, daftar putih jaringan
+node alat.js konfig publik      # https, terbuka untuk umum
+```
+
+Daftar path-nya ada di `JALUR_API` dalam `alat.js`, dan `server/tests/proksi.test.js`
+menjaga agar daftar itu (serta proksi Vite dan daftar API service worker) tetap
+sama dengan rute yang benar-benar didaftarkan Express.
+
+Bentuknya sekilas seperti ini — perhatikan `location ~` yang meneruskan ke Node,
+lalu `location /` yang menyerahkan sisanya ke SPA:
 
 ```nginx
-server {
-  listen 443 ssl;
-  server_name posyandu.desa.example;
-
-  ssl_certificate     /etc/letsencrypt/live/posyandu.desa.example/fullchain.pem;
-  ssl_certificate_key /etc/letsencrypt/live/posyandu.desa.example/privkey.pem;
-
-  root /var/www/posyandu/klien/dist;
-  index index.html;
-
-  # Teruskan API ke server Node. |
-  location ~ ^/(masuk|keluar|saya|sinkron|balita|kunjungan|validasi|pengguna|sesi|rekap|ekspor\.csv|kualitas|cadangan|sehat|waktu)(\/|$|\?) {
+  location ~ ^/(masuk|keluar|saya|akun-saya|sinkron|balita|kunjungan|validasi|pengguna|sesi|rekap|ekspor\.csv|kualitas|cadangan|posyandu|konten-publik|aktivitas|sehat|waktu)(/|$|\?) {
     proxy_pass http://127.0.0.1:3000;
-    proxy_http_version 1.1;
     proxy_set_header Host $host;
     proxy_set_header X-Real-IP $remote_addr;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -253,7 +272,6 @@ server {
   location / {
     try_files $uri $uri/ /index.html;
   }
-}
 ```
 
 **Jangan** buka port 3000 ke publik; cukup diakses Nginx secara internal.

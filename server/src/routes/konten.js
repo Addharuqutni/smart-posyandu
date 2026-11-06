@@ -28,7 +28,8 @@ router.get('/konten-publik', async (minta, balas) => {
   }
 
   const baris = await banyak(
-    `SELECT id, jenis, judul, isi, kategori, tanggal, penting, urutan, dibuat_pada
+    `SELECT id, jenis, judul, isi, kategori, tanggal, penting, urutan, dibuat_pada,
+            posyandu_id, sumber_url
      FROM konten_publik
      WHERE ${syarat.join(' AND ')}
      ORDER BY urutan ASC, dibuat_pada DESC`,

@@ -29,6 +29,21 @@ const lapor = {
 // Penanda <IP-PUBLIK> dan <JARINGAN-DESA> diganti oleh `pasang-https`, atau
 // dengan sed sendiri bila menyalin manual.
 
+// Daftar path API. JANGAN menyalin daftar ini ke blok `location` di bawah:
+// rute baru lupa ditambahkan -> proksi Nginx menolaknya dan SPA menjawab
+// index.html. `server/tests/proksi.test.js` membandingkan daftar ini dengan
+// rute yang benar-benar didaftarkan Express.
+const JALUR_API = [
+  'masuk', 'keluar', 'saya', 'akun-saya', 'sinkron', 'balita', 'kunjungan',
+  'validasi', 'pengguna', 'sesi', 'rekap', 'ekspor\\.csv', 'kualitas',
+  'cadangan', 'posyandu', 'konten-publik', 'aktivitas', 'sehat', 'waktu',
+]
+
+// Pola PCRE untuk `location ~`. `\\?` di sumber tercetak sebagai `\?`;
+// tanpa itu Nginx menolak seluruh konfigurasi. `kecuali` dipakai NGX_PUBLIK
+// yang punya blok `location =` sendiri untuk /masuk dan /sinkron.
+const POLA_API = (kecuali = []) => `^/(${JALUR_API.filter((j) => !kecuali.includes(j.replace(/\\/g, ''))).join('|')})(/|$|\\?)`
+
 const NGX_INTERNAL = `// Konfigurasi situs Nginx untuk Smart Posyandu.
 //
 // Pakai di VPS yang diakses lewat IP di jaringan internal desa (tanpa domain,
@@ -84,7 +99,7 @@ server {
     }
 
     # --- API diteruskan ke Node -------------------------------------------
-    location ~ ^/(masuk|keluar|saya|akun-saya|sinkron|balita|kunjungan|validasi|pengguna|sesi|rekap|ekspor\.csv|kualitas|cadangan|posyandu|konten-publik|sehat|waktu)(/|$|\?) {
+    location ~ ${POLA_API()} {
         proxy_pass http://127.0.0.1:3000;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
@@ -248,7 +263,7 @@ server {
     }
 
     # --- API diteruskan ke Node -------------------------------------------
-    location ~ ^/(masuk|keluar|saya|akun-saya|sinkron|balita|kunjungan|validasi|pengguna|sesi|rekap|ekspor\.csv|kualitas|cadangan|posyandu|konten-publik|sehat|waktu)(/|$|\?) {
+    location ~ ${POLA_API()} {
         proxy_pass http://127.0.0.1:3000;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
@@ -435,7 +450,7 @@ server {
     }
 
     # --- API ----------------------------------------------------------------
-    location ~ ^/(keluar|saya|akun-saya|balita|kunjungan|validasi|pengguna|sesi|rekap|ekspor\.csv|kualitas|cadangan|posyandu|konten-publik|sehat|waktu)(/|$|\?) {
+    location ~ ${POLA_API(['masuk', 'sinkron'])} {
         limit_req zone=posyandu_api burst=30 nodelay;
         limit_req_status 429;
 

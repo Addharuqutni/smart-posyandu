@@ -153,44 +153,255 @@ async function sisipBanyak(klien, tabel, kolom, baris, ukuran = 500) {
   return baru
 }
 
+// --- konten publik ---------------------------------------------------------
+//
+// `konten_publik` tidak punya kolom id_perangkat (migrasi 005), jadi baris
+// demo tidak bisa ditandai seperti tabel lain. Yang dipakai: id deterministik
+// dari `buatId()` + daftar tetap di bawah. `hapusDemo()` menghapus tepat
+// id-id itu, bukan menyapu tabel — konten yang dibuat orang lain tetap utuh.
+//
+// Tanggal disimpan sebagai teks sesuai bentuk yang dipakai form:
+//   jadwal      'YYYY-MM-DDTHH:mm'
+//   pengumuman  'YYYY-MM-DD/YYYY-MM-DD'
+function kontenDemo(ac, { posyanduId, kaderId, nakesId, adminId, hariIni }) {
+  const geser = (hari) => {
+    const d = new Date(hariIni)
+    d.setUTCDate(d.getUTCDate() + hari)
+    return d.toISOString().slice(0, 10)
+  }
+
+  const baris = [
+    // --- Jadwal (kader ajukan, nakes setujui) ---
+    {
+      jenis: 'jadwal',
+      judul: 'Penimbangan Balita Dusun Melati',
+      isi: 'Penimbangan berat dan tinggi badan, pengukuran lingkar kepala, serta konsultasi gizi. Bawa Buku KIA.',
+      kategori: 'Balai Dusun Melati',
+      tanggal: `${geser(3)}T08:00`,
+      status: 'disetujui',
+      pengaju: kaderId,
+      posyandu: posyanduId,
+      putuskan: nakesId,
+    },
+    {
+      jenis: 'jadwal',
+      judul: 'Imunisasi Dasar Lengkap Bayi',
+      isi: 'Imunisasi BCG, Polio, dan DPT-HB-Hib untuk bayi 0-11 bulan bersama Bidan Desa.',
+      kategori: 'Balai Dusun Melati',
+      tanggal: `${geser(17)}T09:00`,
+      status: 'disetujui',
+      pengaju: kaderId,
+      posyandu: posyanduId,
+      putuskan: nakesId,
+    },
+    {
+      jenis: 'jadwal',
+      judul: 'Pemberian Vitamin A dan PMT',
+      isi: 'Pemberian kapsul Vitamin A dosis biru untuk bayi 6-11 bulan dan merah untuk balita 12-59 bulan, disertai makanan tambahan.',
+      kategori: 'Pendopo Desa Ketenger',
+      tanggal: `${geser(31)}T08:30`,
+      status: 'disetujui',
+      pengaju: adminId,
+      posyandu: posyanduId,
+      putuskan: adminId,
+    },
+    {
+      jenis: 'jadwal',
+      judul: 'Kelas Ibu Balita: MPASI Bergizi',
+      isi: 'Praktik memasak MPASI berbahan pangan lokal bersama kader dan ahli gizi Puskesmas.',
+      kategori: 'Balai Dusun Melati',
+      tanggal: `${geser(45)}T10:00`,
+      status: 'menunggu',
+      pengaju: kaderId,
+      posyandu: posyanduId,
+      putuskan: null,
+    },
+    {
+      jenis: 'jadwal',
+      judul: 'Posyandu Remaja (uji coba)',
+      isi: 'Pemeriksaan kesehatan remaja: anemia, kebersihan diri, dan konseling gizi.',
+      kategori: 'Balai Dusun Melati',
+      tanggal: `${geser(-10)}T08:00`,
+      status: 'ditolak',
+      pengaju: kaderId,
+      posyandu: posyanduId,
+      putuskan: nakesId,
+      catatan: 'Bukan program posyandu balita. Ajukan lewat Puskesmas, bukan kanal ini.',
+    },
+
+    // --- Informasi Layanan ---
+    {
+      jenis: 'layanan',
+      judul: 'Penimbangan dan Pengukuran Rutin',
+      isi: 'Berat badan, tinggi/panjang badan, dan lingkar kepala setiap bulan untuk deteksi dini risiko stunting. Gratis untuk semua balita.',
+      kategori: 'Semua balita 0-59 bulan',
+      status: 'disetujui',
+      pengaju: adminId,
+    },
+    {
+      jenis: 'layanan',
+      judul: 'Imunisasi Dasar Lengkap',
+      isi: 'Vaksinasi BCG, Polio, DPT-HB-Hib, dan Campak-Rubela sesuai jadwal usia anak, bekerja sama dengan Puskesmas Baturraden.',
+      kategori: 'Bayi 0-11 bulan',
+      status: 'disetujui',
+      pengaju: adminId,
+    },
+    {
+      jenis: 'layanan',
+      judul: 'Konsultasi Gizi dan Tumbuh Kembang',
+      isi: 'Konseling pengasuhan, MPASI, dan pemantauan grafik KMS bersama kader terlatih dan Bidan Desa.',
+      kategori: 'Orang tua balita',
+      status: 'disetujui',
+      pengaju: adminId,
+    },
+    {
+      jenis: 'layanan',
+      judul: 'Pemberian Makanan Tambahan (PMT)',
+      isi: 'PMT berbahan pangan lokal kaya protein hewani bagi balita dengan berat badan di bawah garis normal.',
+      kategori: 'Balita risiko stunting',
+      status: 'disetujui',
+      pengaju: adminId,
+    },
+
+    // --- Pengumuman Desa ---
+    {
+      jenis: 'pengumuman',
+      judul: 'Jadwal Posyandu Bulan Ini Dimajukan',
+      isi: 'Pelaksanaan Posyandu Dusun Melati dimajukan satu pekan karena bertepatan dengan hari besar. Mohon hadir sesuai tanggal baru.',
+      kategori: 'Wajib dibaca',
+      tanggal: `${geser(0)}/${geser(14)}`,
+      penting: true,
+      status: 'disetujui',
+      pengaju: adminId,
+    },
+    {
+      jenis: 'pengumuman',
+      judul: 'Membawa Buku KIA Saat Berkunjung',
+      isi: 'Mulai bulan ini setiap balita wajib membawa Buku KIA. Balita tanpa Buku KIA tetap dilayani, tetapi pencatatan dilakukan menyusul.',
+      kategori: 'Syarat kunjungan',
+      tanggal: `${geser(0)}/${geser(60)}`,
+      status: 'disetujui',
+      pengaju: adminId,
+    },
+    {
+      jenis: 'pengumuman',
+      judul: 'Posyandu Libur Hari Raya',
+      isi: 'Tidak ada pelayanan pada pekan hari raya. Jadwal pengganti akan diumumkan melalui kader dusun.',
+      kategori: 'Libur',
+      tanggal: `${geser(-20)}/${geser(-6)}`,
+      status: 'disetujui',
+      pengaju: adminId,
+    },
+
+    // --- Edukasi Gizi & Kesehatan ---
+    {
+      jenis: 'edukasi',
+      judul: 'Protein Hewani Wajib Ada di Setiap MPASI',
+      isi: 'Telur, ikan, ayam, dan daging merah mengandung asam amino esensial yang tidak bisa digantikan karbohidrat. Kenalkan sejak usia 6 bulan, satu butir telur sehari sudah cukup.',
+      kategori: 'Pencegahan Stunting',
+      status: 'disetujui',
+      pengaju: adminId,
+    },
+    {
+      jenis: 'edukasi',
+      judul: 'Dua Kali Tidak Naik Berat Badan adalah Alarm',
+      isi: 'Bila berat badan balita tidak naik dua kali penimbangan berturut-turut (2T), segera rujuk ke Bidan Desa. Jangan menunggu sampai turun.',
+      kategori: 'Pemantauan KMS',
+      status: 'disetujui',
+      pengaju: adminId,
+    },
+    {
+      jenis: 'edukasi',
+      judul: 'Air Bersih dan Cuci Tangan Cegah Diare Berulang',
+      isi: 'Diare berulang menghambat penyerapan gizi dan memicu stunting. Masak air hingga matang dan biasakan cuci tangan pakai sabun sebelum menyuapi anak.',
+      kategori: 'Sanitasi',
+      status: 'disetujui',
+      pengaju: adminId,
+    },
+    {
+      jenis: 'edukasi',
+      judul: 'ASI Eksklusif Sampai 6 Bulan',
+      isi: 'ASI saja tanpa tambahan air atau makanan sampai usia 6 bulan. Setelah itu lanjutkan ASI disertai MPASI sampai 2 tahun.',
+      kategori: 'Gizi Bayi',
+      status: 'disetujui',
+      pengaju: adminId,
+    },
+  ]
+
+  return baris.map((k, urut) => ({
+    id: buatId(ac, 9000 + urut),
+    jenis: k.jenis,
+    judul: k.judul,
+    isi: k.isi,
+    kategori: k.kategori ?? null,
+    tanggal: k.tanggal ?? null,
+    penting: Boolean(k.penting),
+    aktif: k.status === 'disetujui',
+    urutan: urut,
+    status: k.status,
+    pengaju: k.pengaju ?? null,
+    posyandu: k.posyandu ?? null,
+    putuskan: k.putuskan ?? null,
+    catatan: k.catatan ?? null,
+  }))
+}
+
 // --- program utama ---------------------------------------------------------
 
 async function hapusDemo() {
-  const { kueri } = require('../db/pool')
+  const { tanpaBatasWaktu } = require('../db/pool')
   const hasil = {}
 
-  // Kunjungan dan turunannya ikut terhapus lewat rantai balita_id.
-  // Penting: jangan hanya menyaring id_perangkat. Begitu kunjungan
-  // divalidasi petugas, id_perangkat-nya menjadi 'server' (bukan
-  // 'demo-seed'), jadi baris itu tidak pernah ikut terhapus dan
-  // mengunci balita lewat kunci asing.
-  const { rows: idBalita } = await kueri(
-    `SELECT id FROM balita WHERE id_perangkat = $1`,
-    [PENANDA],
-  )
-  const daftar = idBalita.map((b) => b.id)
+  // Menghapus 200 ribu kunjungan butuh lebih dari batas 10 detik milik pool.
+  // `tanpaBatasWaktu` memberi koneksi dengan statement_timeout = 0 khusus
+  // untuk pembersihan ini; koneksi lain tetap dibatasi.
+  return tanpaBatasWaktu(async (klien) => {
+    const kueri = (teks, nilai) => klien.query(teks, nilai)
 
-  const hapus = async (tabel, teks, nilai) => {
-    const { rowCount } = await kueri(teks, nilai)
-    hasil[tabel] = rowCount
-  }
+    // Kunjungan dan turunannya ikut terhapus lewat rantai balita_id.
+    // Penting: jangan hanya menyaring id_perangkat. Begitu kunjungan
+    // divalidasi petugas, id_perangkat-nya menjadi 'server' (bukan
+    // 'demo-seed'), jadi baris itu tidak pernah ikut terhapus dan
+    // mengunci balita lewat kunci asing.
+    const { rows: idBalita } = await kueri(
+      `SELECT id FROM balita WHERE id_perangkat = $1`,
+      [PENANDA],
+    )
+    const daftar = idBalita.map((b) => b.id)
 
-  if (daftar.length) {
-    await hapus('tindak_lanjut',
-      `DELETE FROM tindak_lanjut WHERE kunjungan_id IN
-         (SELECT id FROM kunjungan WHERE balita_id = ANY($1::uuid[]))`, [daftar])
-    await hapus('pengukuran',
-      `DELETE FROM pengukuran WHERE kunjungan_id IN
-         (SELECT id FROM kunjungan WHERE balita_id = ANY($1::uuid[]))`, [daftar])
-    await hapus('kunjungan', `DELETE FROM kunjungan WHERE balita_id = ANY($1::uuid[])`, [daftar])
-    await hapus('balita_orang_tua',
-      `DELETE FROM balita_orang_tua WHERE balita_id = ANY($1::uuid[])`, [daftar])
-  }
+    const hapus = async (tabel, teks, nilai) => {
+      const { rowCount } = await kueri(teks, nilai)
+      hasil[tabel] = rowCount
+    }
 
-  await hapus('orang_tua', `DELETE FROM orang_tua WHERE id_perangkat = $1`, [PENANDA])
-  await hapus('balita', `DELETE FROM balita WHERE id_perangkat = $1`, [PENANDA])
-  await hapus('kader', `DELETE FROM kader WHERE id_perangkat = $1`, [PENANDA])
-  return hasil
+    if (daftar.length) {
+      await hapus('tindak_lanjut',
+        `DELETE FROM tindak_lanjut WHERE kunjungan_id IN
+           (SELECT id FROM kunjungan WHERE balita_id = ANY($1::uuid[]))`, [daftar])
+      await hapus('pengukuran',
+        `DELETE FROM pengukuran WHERE kunjungan_id IN
+           (SELECT id FROM kunjungan WHERE balita_id = ANY($1::uuid[]))`, [daftar])
+      await hapus('kunjungan', `DELETE FROM kunjungan WHERE balita_id = ANY($1::uuid[])`, [daftar])
+      await hapus('balita_orang_tua',
+        `DELETE FROM balita_orang_tua WHERE balita_id = ANY($1::uuid[])`, [daftar])
+    }
+
+    await hapus('orang_tua', `DELETE FROM orang_tua WHERE id_perangkat = $1`, [PENANDA])
+    await hapus('balita', `DELETE FROM balita WHERE id_perangkat = $1`, [PENANDA])
+    await hapus('kader', `DELETE FROM kader WHERE id_perangkat = $1`, [PENANDA])
+
+    // konten_publik tidak punya id_perangkat; id demo dibuat deterministik
+    // dari benih yang sama (namespace +7), jadi bisa dihitung ulang di sini.
+    // Hanya id itu yang dihapus — konten buatan orang lain tidak tersentuh.
+    const acHapus = acak(argumen().benih + 7)
+    const idKonten = kontenDemo(acHapus, {
+      posyanduId: null, kaderId: null, nakesId: null, adminId: null, hariIni: '2026-01-01',
+    }).map((k) => k.id)
+    await hapus('konten_publik',
+      `DELETE FROM konten_publik WHERE id = ANY($1::uuid[])`, [idKonten])
+
+    return hasil
+  })
 }
 
 async function utama() {
@@ -557,6 +768,30 @@ async function utama() {
 
   console.log(`Menyiapkan ${opsi.balita} balita di ${daftarPos.length} Posyandu…`)
 
+  // Konten publik: butuh id pengguna untuk pengaju dan pemutus.
+  //
+  // Generator acak DIPISAH dari `ac` yang dipakai balita. Kalau memakai `ac`
+  // yang sama, jumlah balita (--balita) menggeser urutan angka dan id konten
+  // ikut berubah — `--hapus` lalu tidak menemukan barisnya lagi.
+  const acKonten = acak(opsi.benih + 7)
+  const [akunKader, akunNakes, akunAdmin] = await Promise.all([
+    satu(`SELECT id FROM pengguna WHERE peran = 'kader' AND dihapus_pada IS NULL ORDER BY dibuat_pada LIMIT 1`),
+    satu(`SELECT id FROM pengguna WHERE peran = 'nakes' AND dihapus_pada IS NULL ORDER BY dibuat_pada LIMIT 1`),
+    satu(`SELECT id FROM pengguna WHERE peran = 'admin_desa' AND dihapus_pada IS NULL ORDER BY dibuat_pada LIMIT 1`),
+  ])
+  const konten = kontenDemo(acKonten, {
+    posyanduId: daftarPos[0].id,
+    kaderId: akunKader?.id ?? null,
+    nakesId: akunNakes?.id ?? null,
+    adminId: akunAdmin?.id ?? null,
+    hariIni: new Date(hariIni).toISOString().slice(0, 10),
+  }).map((k) => [
+    k.id, k.jenis, k.judul, k.isi, k.kategori, k.tanggal, k.penting, k.aktif, k.urutan,
+    k.status, k.pengaju, k.posyandu, k.putuskan,
+    k.status === 'menunggu' ? null : new Date().toISOString(),
+    k.catatan, new Date().toISOString(), new Date().toISOString(),
+  ])
+
   const hasil = await transaksi(async (klien) => {
     const hitung = {}
     hitung.orang_tua = await sisipBanyak(klien, 'orang_tua',
@@ -582,6 +817,10 @@ async function utama() {
       ['id', 'kunjungan_id', 'petugas_id', 'jenis', 'isi', 'tanggal_tindak_lanjut',
         'selesai', 'terjadi_pada', 'dibuat_pada', 'diperbarui_pada', 'id_perangkat'],
       tindakLanjut)
+    hitung.konten_publik = await sisipBanyak(klien, 'konten_publik',
+      ['id', 'jenis', 'judul', 'isi', 'kategori', 'tanggal', 'penting', 'aktif', 'urutan',
+        'status_persetujuan', 'pengaju_id', 'posyandu_id', 'diputuskan_oleh', 'diputuskan_pada',
+        'catatan_peninjau', 'dibuat_pada', 'diperbarui_pada'], konten)
     return hitung
   })
 

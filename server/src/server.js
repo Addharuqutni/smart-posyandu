@@ -4,6 +4,7 @@ const { buatAplikasi } = require('./app')
 const { muat } = require('./env')
 const { sekali, cadanganTerakhirMs } = require('./jobs/pencadangan-harian')
 const { msKeBerikutnyaWib, perluCatchUp } = require('./jobs/jadwal')
+const kodenara = require('./jobs/kodenara')
 
 const env = muat()
 const aplikasi = buatAplikasi()
@@ -55,4 +56,33 @@ if (env.cadanganHarian) {
   }
 
   process.on('SIGTERM', () => clearTimeout(timer))
+}
+
+// Tarik artikel KodeNara sekali sehari pukul 03.00 WIB (satu jam setelah
+// pencadangan, supaya keduanya tidak berebut koneksi database).
+//
+// Kegagalan TIDAK menghentikan apa pun: konten yang sudah tersimpan tetap
+// tayang, dan putaran berikutnya mencoba lagi. Ini beda dengan pencadangan
+// yang kegagalannya perlu terlihat keras.
+if (env.kodenaraHarian !== false) {
+  let timerKonten = null
+
+  async function putaranKonten() {
+    try {
+      const hasil = await kodenara.sekali()
+      console.log(
+        `Konten KodeNara: ${hasil.disimpan} disimpan, ${hasil.dilewati} dilewati ` +
+          `dari ${hasil.diperiksa} artikel.`,
+      )
+    } catch (salah) {
+      console.error('Penarikan konten KodeNara gagal:', salah.message)
+    } finally {
+      timerKonten = setTimeout(putaranKonten, msKeBerikutnyaWib(3))
+      timerKonten.unref?.()
+    }
+  }
+
+  timerKonten = setTimeout(putaranKonten, msKeBerikutnyaWib(3))
+  timerKonten.unref?.()
+  process.on('SIGTERM', () => clearTimeout(timerKonten))
 }

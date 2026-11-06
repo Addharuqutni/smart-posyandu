@@ -13,7 +13,9 @@
     "siap": "npm run migrate",
     "cadangan": "node src/bin/cadangan.js",
     "pulih": "node src/bin/pulih.js",
-    "buat-admin": "node src/bin/buat-admin.js"
+    "buat-admin": "node src/bin/buat-admin.js",
+    "konten:kodenara": "node src/bin/konten-kodenara.js",
+    "konten:kodenara:bersih": "node src/bin/konten-kodenara.js --bersih"
   },
   "license": "ISC",
   "type": "commonjs",

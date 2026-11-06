@@ -10,7 +10,11 @@
 //   npm run buat-admin -- <username> "<Nama Lengkap>" [--posyandu "<Nama Posyandu>"]
 //
 // Contoh:
-//   npm run buat-admin -- admin_desa "Budi Santoso" --posyandu "Posyandu Melati"
+//   npm run buat-admin -- admin_desa "Budi Santoso"
+//   npm run buat-admin -- admin_desa "Budi Santoso" --posyandu "Posyandu Dusun Krajan" --desa "Sukamaju"
+//
+// Tanpa --posyandu, tidak ada Posyandu yang dibuat. Nama Posyandu adalah
+// identitas nyata desa; tidak ada nama contoh yang dipakai sebagai bawaan.
 
 const readline = require('node:readline')
 const { muat } = require('../env')
@@ -49,14 +53,18 @@ function bacaStdin() {
 }
 
 function uraiArgumen(daftar) {
-  const hasil = { pengguna: null, nama: null, posyandu: 'Posyandu Melati', desa: 'Ketenger' }
+  // Posyandu TIDAK punya nilai bawaan. Nama Posyandu adalah identitas nyata
+  // desa; nilai contoh seperti "Posyandu Melati" akan ikut terpasang di VPS
+  // dan tampil di kanal publik sebagai Posyandu yang tidak ada. Tanpa
+  // --posyandu, skrip hanya membuat akun admin dan tidak menyentuh Posyandu.
+  const hasil = { pengguna: null, nama: null, posyandu: null, desa: null }
   const sisa = []
   for (let i = 0; i < daftar.length; i += 1) {
     if (daftar[i] === '--posyandu') {
-      hasil.posyandu = daftar[i + 1] ?? hasil.posyandu
+      hasil.posyandu = daftar[i + 1] ?? null
       i += 1
     } else if (daftar[i] === '--desa') {
-      hasil.desa = daftar[i + 1] ?? hasil.desa
+      hasil.desa = daftar[i + 1] ?? null
       i += 1
     } else {
       sisa.push(daftar[i])
@@ -115,18 +123,24 @@ async function utama() {
     process.exit(1)
   }
 
-  // Posyandu dibuat bila belum ada; admin desa tidak terikat Posyandu.
-  let pos = await satu('SELECT id FROM posyandu WHERE nama = $1', [opsi.posyandu])
-  if (!pos) {
-    pos = await satu(
-      `INSERT INTO posyandu (id, nama, desa, aktif, dibuat_pada, diperbarui_pada)
-       VALUES (gen_random_uuid(), $1, $2, TRUE, now(), now())
-       RETURNING id`,
-      [opsi.posyandu, opsi.desa],
-    )
-    console.log(`Posyandu "${opsi.posyandu}" dibuat.`)
+  // Posyandu hanya dibuat bila namanya disebutkan lewat --posyandu.
+  // Admin desa sendiri tidak terikat Posyandu (posyandu_id NULL).
+  if (opsi.posyandu) {
+    const pos = await satu('SELECT id FROM posyandu WHERE nama = $1 AND dihapus_pada IS NULL', [opsi.posyandu])
+    if (pos) {
+      console.log(`Posyandu "${opsi.posyandu}" sudah ada.`)
+    } else {
+      await satu(
+        `INSERT INTO posyandu (id, nama, desa, aktif, dibuat_pada, diperbarui_pada, id_perangkat)
+         VALUES (gen_random_uuid(), $1, $2, TRUE, now(), now(), 'server')
+         RETURNING id`,
+        [opsi.posyandu, opsi.desa ?? null],
+      )
+      console.log(`Posyandu "${opsi.posyandu}" dibuat.`)
+    }
   } else {
-    console.log(`Posyandu "${opsi.posyandu}" sudah ada.`)
+    console.log('Tanpa --posyandu: tidak ada Posyandu yang dibuat.')
+    console.log('Tambahkan lewat layar Kelola Posyandu setelah masuk sebagai admin.')
   }
 
   const hash = await hashSandi(sandi)

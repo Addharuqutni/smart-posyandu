@@ -52,6 +52,9 @@ function muat() {
     menitSesiTablet: Number(process.env.MENIT_SESI_TABLET || 10080),
     menitSesiAdmin: Number(process.env.MENIT_SESI_ADMIN || 480),
     cadanganHarian: process.env.CADANGAN_HARIAN !== 'false',
+    // Tarik artikel tips KodeNara tiap hari. Matikan dengan KODENARA_HARIAN=false
+    // bila server tidak boleh menghubungi internet (mis. VPS tertutup).
+    kodenaraHarian: process.env.KODENARA_HARIAN !== 'false',
     // Batas waktu satu pernyataan SQL. Lihat db/pool.js.
     batasWaktuKueriMs: Number(process.env.BATAS_WAKTU_KUERI_MS || 10000),
   }

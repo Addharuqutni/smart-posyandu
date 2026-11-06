@@ -1,5 +1,15 @@
 import { useEffect, useState } from 'react'
 import { daftarKontenPublik, daftarPosyanduPublik } from '../jaringan/api.js'
+import {
+  blokTanggal,
+  formatJadwal,
+  formatRentang,
+  jadwalMendatang,
+  jadwalPerPosyandu,
+  pecahTanggalJam,
+  wilayahPosyandu,
+} from '../logika/konten-skema.js'
+import { tanggalHariIni } from '../logika/waktu.js'
 import Ikon from './Ikon.jsx'
 
 const LAYANAN_POSYANDU = [
@@ -27,19 +37,16 @@ const LAYANAN_POSYANDU = [
 
 const EDUKASI_KESEHATAN = [
   {
-    kategori: 'Pencegahan Stunting',
     judul: 'Kebutuhan Protein Hewani Esensial pada MPASI',
     ringkasan: 'Telur, ikan, ayam, dan daging merah mengandung asam amino kunci penunjang pacu tumbuh dan otak.',
     bacaan: 'Kenalkan sumber hewani sejak balita usia 6 bulan. Hindari hanya mengandalkan karbohidrat atau sayur.',
   },
   {
-    kategori: 'Pemantauan KMS',
     judul: 'Disiplin Pengukuran Bulanan Deteksi Garis 2T',
     ringkasan: 'Dua kali penimbangan berturut-turut tanpa kenaikan (2T) adalah alarm rujukan segera ke nakes.',
     bacaan: 'Bawa Buku KIA setiap posyandu. Kenaikan berat yang terpantau rutin adalah pelindung stunting terkuat.',
   },
   {
-    kategori: 'Sanitasi & Imunisasi',
     judul: 'Akses Air Bersih & Pencegahan Diare Berulang',
     ringkasan: 'Infeksi saluran cerna akibat air atau sanitasi kotor menghambat total penyerapan nutrisi anak.',
     bacaan: 'Masak air hingga matang sempurna dan biasakan cuci tangan pakai sabun sebelum menyuapi balita.',
@@ -94,15 +101,23 @@ export default function KanalPublik({ keLogin }) {
     : LAYANAN_POSYANDU
   const edukasi = adaKonten('edukasi')
     ? daftarKonten.filter((k) => k.jenis === 'edukasi').map((k) => ({
-        kategori: k.kategori || 'Kesehatan Balita',
         judul: k.judul,
-        ringkasan: k.isi,
-        bacaan: k.tanggal ? `Catatan: ${k.tanggal}` : 'Konsultasikan lebih lanjut dengan Bidan Desa atau kader posyandu.',
+        // Artikel tarikan bisa ribuan karakter; kartu hanya menampilkan
+        // cuplikan, sisanya lewat tautan ke sumber aslinya.
+        ringkasan: k.sumber_url ? `${k.isi.slice(0, 240).trimEnd()}…` : k.isi,
+        tautan: k.sumber_url || null,
+        bacaan: !k.sumber_url && k.tanggal
+          ? `Catatan: ${formatRentang(k.tanggal)}`
+          : k.sumber_url ? null : 'Konsultasikan lebih lanjut dengan Bidan Desa atau kader posyandu.',
       }))
     : EDUKASI_KESEHATAN
-  // Tiga jadwal terdekat yang sudah disetujui nakes; server sudah menyaring
-  // status dan masa aktif, jadi tinggal dibatasi jumlahnya.
-  const jadwalTerdekat = daftarKonten.filter((k) => k.jenis === 'jadwal').slice(0, 3)
+  // Tiga jadwal terdekat yang sudah disetujui nakes; jadwal lampau dibuang.
+  const hariIni = tanggalHariIni()
+  const jadwalTerdekat = jadwalMendatang(daftarKonten, hariIni).slice(0, 3)
+  // Jadwal terdekat per Posyandu, untuk kartu lokasi.
+  const jadwalPerPos = jadwalPerPosyandu(daftarKonten, hariIni)
+  // Judul bagian memakai desa yang benar-benar terdata, bukan nama karangan.
+  const namaDesa = daftarPos.find((p) => p.desa)?.desa ?? null
 
   return (
     <div className="editorial min-h-dvh bg-latar text-teks font-sans antialiased selection:bg-biru-100 selection:text-biru-950">
@@ -125,7 +140,7 @@ export default function KanalPublik({ keLogin }) {
                 Smart Posyandu
               </span>
               <span className="block truncate text-2xs font-medium text-biru-100/90">
-                Kanal Warga Desa Ketenger
+                {namaDesa ? `Kanal Warga Desa ${namaDesa}` : 'Kanal Warga'}
               </span>
             </div>
           </a>
@@ -159,8 +174,9 @@ export default function KanalPublik({ keLogin }) {
               </h1>
 
               <p className="masuk masuk-2 m-0 mt-5 max-w-[54ch] text-dasar leading-relaxed text-pretty text-teks-redup">
-                Akses resmi warga Desa Ketenger untuk jadwal penimbangan tiap dusun, imunisasi dasar,
-                vitamin, serta konsultasi gizi langsung dengan Bidan Desa dan kader.
+                {namaDesa
+                  ? `Akses resmi warga Desa ${namaDesa} untuk jadwal penimbangan tiap dusun, imunisasi dasar, vitamin, serta konsultasi gizi langsung dengan Bidan Desa dan kader.`
+                  : 'Akses resmi warga untuk jadwal penimbangan tiap dusun, imunisasi dasar, vitamin, serta konsultasi gizi langsung dengan Bidan Desa dan kader.'}
               </p>
 
               <div className="masuk masuk-3 mt-8 flex flex-wrap items-center gap-3">
@@ -212,40 +228,78 @@ export default function KanalPublik({ keLogin }) {
                 aria-labelledby="judul-jadwal-terdekat"
                 aria-busy={memuat}
               >
-                <div className="flex items-center justify-between gap-3 bg-biru-950 px-6 py-3.5 text-kartu">
+                <div className="flex items-center justify-between gap-3 bg-biru-950 px-5 py-3 text-kartu">
                   <div className="flex items-center gap-2">
                     <Ikon nama="waktu" ukuran={15} className="text-biru-300" />
-                    <h2 id="judul-jadwal-terdekat" className="m-0 text-2xs font-bold tracking-[0.1em] uppercase">
+                    {/* Warna ditulis eksplisit: aturan dasar `h2` di gaya.css
+                        mengunci color ke biru-950, dan `text-kartu` pada induk
+                        tidak menimpanya karena kalah spesifisitas. */}
+                    <h2
+                      id="judul-jadwal-terdekat"
+                      className="m-0 text-2xs font-bold tracking-[0.1em] text-kartu uppercase"
+                    >
                       Jadwal Terdekat
                     </h2>
                   </div>
-                  <span className="inline-flex items-center gap-1 rounded-mikro bg-hijau-100 px-2 py-0.5 text-2xs font-bold text-hijau-800">
-                    <Ikon nama="centang" ukuran={11} />
-                    Gratis
+                  <span className="text-2xs font-semibold text-biru-200">
+                    {jadwalTerdekat.length > 0 ? `${jadwalTerdekat.length} kegiatan` : ''}
                   </span>
                 </div>
 
                 {jadwalTerdekat.length > 0 ? (
                   <ol className="m-0 list-none divide-y divide-garis p-0">
-                    {jadwalTerdekat.map((j) => (
-                      <li key={j.id} className="flex items-start gap-4 px-6 py-4">
-                        <span
-                          className="grid size-11 shrink-0 place-items-center rounded-kecil bg-biru-100 text-dasar font-bold tabular-nums text-biru-900"
-                          aria-hidden="true"
+                    {jadwalTerdekat.map((j, i) => {
+                      const t = pecahTanggalJam(j.tanggal)
+                      const blok = blokTanggal(t.tanggal)
+                      return (
+                        <li
+                          key={j.id}
+                          className={`flex items-center gap-4 px-5 py-3.5 ${
+                            i === 0 ? 'bg-biru-50/60' : ''
+                          }`}
                         >
-                          <Ikon nama="waktu" ukuran={17} />
-                        </span>
-                        <div className="min-w-0">
-                          <p className="m-0 text-isi leading-snug font-bold text-biru-950">{j.judul}</p>
-                          <p className="m-0 mt-1 text-padat font-semibold tabular-nums text-biru-700">
-                            {j.tanggal ?? 'Waktu menyusul'}
-                          </p>
-                          {j.kategori && (
-                            <p className="m-0 mt-0.5 text-padat text-teks-samar">{j.kategori}</p>
+                          {/* Blok tanggal: angka besar + bulan. Membaca "9 Nov"
+                              jauh lebih cepat daripada "9 November 2026 · 08.00". */}
+                          <div
+                            className={`flex size-12 shrink-0 flex-col items-center justify-center rounded-kecil border tabular-nums ${
+                              i === 0
+                                ? 'border-biru-800 bg-biru-800 text-kartu'
+                                : 'border-garis bg-kartu text-biru-800'
+                            }`}
+                          >
+                            <span className="text-subjudul leading-none font-bold">
+                              {blok?.hari ?? '—'}
+                            </span>
+                            <span className="mt-0.5 text-2xs leading-none font-semibold uppercase opacity-80">
+                              {blok?.bulan ?? ''}
+                            </span>
+                          </div>
+
+                          <div className="min-w-0 flex-1">
+                            <p className="m-0 text-padat leading-snug font-bold text-biru-950">
+                              {j.judul}
+                            </p>
+                            <p className="m-0 mt-0.5 flex flex-wrap items-center gap-x-1.5 text-2xs text-teks-samar">
+                              <span className="font-semibold tabular-nums text-biru-700">
+                                {t.jam ? `${t.jam.replace(':', '.')} WIB` : 'Waktu menyusul'}
+                              </span>
+                              {j.kategori && (
+                                <>
+                                  <span aria-hidden="true">·</span>
+                                  <span className="truncate">{j.kategori}</span>
+                                </>
+                              )}
+                            </p>
+                          </div>
+
+                          {i === 0 && (
+                            <span className="shrink-0 rounded-mikro bg-hijau-100 px-1.5 py-0.5 text-2xs font-bold text-hijau-800">
+                              Terdekat
+                            </span>
                           )}
-                        </div>
-                      </li>
-                    ))}
+                        </li>
+                      )
+                    })}
                   </ol>
                 ) : (
                   <p className="m-0 px-6 py-6 text-isi leading-relaxed text-teks-redup">
@@ -320,7 +374,7 @@ export default function KanalPublik({ keLogin }) {
                       >
                         <div className="flex flex-wrap items-center gap-2 sempit:flex-col sempit:items-start sempit:gap-1.5">
                           <span className="text-2xs font-bold tracking-[0.06em] text-teks-samar uppercase">
-                            {p.tanggal ?? 'Informasi'}
+                            {formatRentang(p.tanggal) ?? 'Informasi'}
                           </span>
                           {p.penting && (
                             <span className="inline-flex items-center gap-1 rounded-mikro bg-kuning-100 px-2 py-0.5 text-2xs font-bold text-kuning-800 ring-1 ring-kuning-800/20">
@@ -358,7 +412,7 @@ export default function KanalPublik({ keLogin }) {
                   Lokasi Pelayanan
                 </p>
                 <h2 id="judul-jadwal" className="rubrik rubrik-terang">
-                  Posyandu Dusun Desa Ketenger
+                  {namaDesa ? `Posyandu Dusun Desa ${namaDesa}` : 'Posyandu Dusun'}
                 </h2>
               </div>
 
@@ -388,7 +442,9 @@ export default function KanalPublik({ keLogin }) {
                 </div>
               ) : (
                 <div className="grid gap-3 sempit:grid-cols-2">
-                  {daftarPos.map((pos) => (
+                  {daftarPos.map((pos) => {
+                    const jadwal = jadwalPerPos.get(pos.id)
+                    return (
                     <article
                       key={pos.id}
                       className="masuk-baris flex flex-col justify-between rounded-sedang border border-white/15 bg-white/5 p-4 transition-colors duration-200 ease-ui hover:border-white/30 hover:bg-white/10"
@@ -398,28 +454,34 @@ export default function KanalPublik({ keLogin }) {
                           <h3 className="m-0 text-dasar font-bold tracking-tight text-kartu">
                             {pos.nama}
                           </h3>
-                          <span className="inline-flex shrink-0 items-center gap-1 rounded-mikro bg-hijau-100 px-2 py-0.5 text-2xs font-bold text-hijau-800">
-                            <Ikon nama="centang" ukuran={11} />
-                            Aktif
-                          </span>
+                          {jadwal && (
+                            <span className="inline-flex shrink-0 items-center gap-1 rounded-mikro bg-hijau-100 px-2 py-0.5 text-2xs font-bold text-hijau-800">
+                              <Ikon nama="centang" ukuran={11} />
+                              Terjadwal
+                            </span>
+                          )}
                         </div>
-                        <p className="m-0 mt-1 text-padat text-biru-100">
-                          {[
-                            pos.dusun && `Dusun ${pos.dusun}`,
-                            pos.desa && `Desa ${pos.desa}`,
-                            pos.kecamatan && `Kec. ${pos.kecamatan}`,
-                          ]
-                            .filter(Boolean)
-                            .join(' · ') || 'Wilayah Desa Ketenger'}
-                        </p>
+                        <p className="m-0 mt-1 text-padat text-biru-100">{wilayahPosyandu(pos)}</p>
                       </div>
 
-                      <div className="mt-4 flex items-center gap-2 border-t border-white/10 pt-3 text-padat font-semibold text-biru-100">
-                        <Ikon nama="waktu" ukuran={15} className="shrink-0 text-biru-300" />
-                        <span className="tabular-nums">Minggu ke-2 (Tgl 10-15) · Pukul 08.30 - 11.30 WIB</span>
+                      <div className="mt-4 flex items-start gap-2 border-t border-white/10 pt-3">
+                        <Ikon nama="waktu" ukuran={15} className="mt-0.5 shrink-0 text-biru-300" />
+                        {jadwal ? (
+                          <div className="min-w-0">
+                            <p className="m-0 text-padat leading-snug font-semibold text-kartu">
+                              {jadwal.judul}
+                            </p>
+                            <p className="m-0 mt-0.5 text-padat tabular-nums text-biru-100">
+                              {formatJadwal(jadwal.tanggal)}
+                            </p>
+                          </div>
+                        ) : (
+                          <span className="text-padat font-semibold text-biru-100">Jadwal menyusul</span>
+                        )}
                       </div>
                     </article>
-                  ))}
+                    )
+                  })}
                 </div>
               )}
           </div>
@@ -456,13 +518,13 @@ export default function KanalPublik({ keLogin }) {
           </div>
         </section>
 
-        {/* Bagian D: Edukasi Gizi & Pencegahan Stunting (Latar Putih Bersih) */}
+        {/* Bagian D: Edukasi & Pencegahan (Latar Putih Bersih) */}
         <section id="edukasi" aria-labelledby="judul-edukasi" className="scroll-mt-24 border-b border-garis bg-kartu py-14 max-sempit:py-10">
           <div className="mx-auto max-w-lebar px-4 max-sempit:px-3">
             <div className="mb-5 flex flex-wrap items-end justify-between gap-3 border-b border-garis pb-3">
               <div>
                 <h2 id="judul-edukasi" className="rubrik">
-                  Edukasi Gizi & Pencegahan Stunting
+                  Edukasi & Pencegahan
                 </h2>
               </div>
               <span className="text-2xs font-semibold text-teks-samar">
@@ -483,24 +545,31 @@ export default function KanalPublik({ keLogin }) {
                       idx === 0 ? 'sempit:row-span-2 sempit:bg-biru-50' : ''
                     }`}
                   >
-                    <span className="inline-flex w-fit items-center rounded-mikro bg-biru-100 px-2 py-0.5 text-2xs font-bold tracking-[0.06em] text-biru-800 uppercase">
-                      {edu.kategori}
-                    </span>
                     <h3
-                      className={`m-0 mt-3 font-bold leading-snug tracking-tight text-biru-950 ${
-                        idx === 0 ? 'text-subjudul' : 'text-dasar'
+                      className={`m-0 font-bold leading-snug tracking-tight text-biru-950 ${
+                        idx === 0 ? 'text-subjudul' : 'mt-0 text-dasar'
                       }`}
                     >
                       {edu.judul}
                     </h3>
-                    <p className="m-0 mt-2 text-padat leading-relaxed text-teks-redup">
+                    <p className="m-0 mt-2 line-clamp-4 text-padat leading-relaxed text-teks-redup">
                       {edu.ringkasan}
                     </p>
-                    {edu.bacaan && (
-                      <p className="m-0 mt-auto border-t border-garis pt-3 text-padat leading-relaxed text-teks-samar">
+                    {edu.tautan ? (
+                      <a
+                        href={edu.tautan}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-auto inline-flex items-center gap-1 border-t border-garis pt-3 text-2xs font-semibold text-biru-700 hover:text-biru-900"
+                      >
+                        Baca selengkapnya di KodeNara
+                        <span aria-hidden="true">↗</span>
+                      </a>
+                    ) : edu.bacaan ? (
+                      <p className="m-0 mt-auto border-t border-garis pt-3 text-2xs leading-snug text-teks-samar">
                         {edu.bacaan}
                       </p>
-                    )}
+                    ) : null}
                   </article>
                 ))}
               </div>
@@ -543,7 +612,7 @@ export default function KanalPublik({ keLogin }) {
                     Layanan berikutnya
                   </span>
                   <span className="tabular-nums">
-                    {jadwalTerdekat[0]?.tanggal ?? 'Lihat papan pengumuman dusun'}
+                    {formatJadwal(jadwalTerdekat[0]?.tanggal) ?? 'Lihat papan pengumuman dusun'}
                   </span>
                   <span className="text-biru-100/90">
                     {jadwalTerdekat[0]?.kategori ?? 'Balai dusun masing-masing'}
@@ -574,7 +643,8 @@ export default function KanalPublik({ keLogin }) {
 
           <div className="flex flex-col gap-2 text-padat text-teks-samar sm:flex-row sm:items-center sm:justify-between">
             <p className="m-0">
-              Smart Posyandu · Desa Ketenger, Kec. Baturraden
+              Smart Posyandu{namaDesa ? ` · Desa ${namaDesa}` : ''}
+              {daftarPos.find((p) => p.kecamatan) ? `, Kec. ${daftarPos.find((p) => p.kecamatan).kecamatan}` : ''}
             </p>
             <p className="m-0">
               &copy; 2026 KodeNara

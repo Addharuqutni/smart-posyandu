@@ -62,7 +62,40 @@ sesi tetap tersimpan selama 7 hari (tablet kader) atau 8 jam (admin).
 
 1. **Balita**: Menambah, mengubah identitas, atau menonaktifkan data balita se-desa.
 2. **Rekap**: Melihat ringkasan kehadiran bulanan, status gizi per posyandu, dan tombol **Unduh CSV** untuk laporan.
-3. **Akun**: Membuat dan mengelola akun kader/nakes, mengatur kata sandi, serta memutus sesi perangkat jika hilang.
+3. **Akun**: Membuat dan mengelola akun kader/nakes, mengatur kata sandi, serta menonaktifkan akun yang tidak dipakai lagi.
+4. **Konten**: Menulis jadwal, informasi layanan, pengumuman, dan materi edukasi yang tayang di kanal publik (lihat bagian 3a).
+5. **Log Aktivitas**: Melihat catatan siapa masuk, kapan, dan perubahan data apa yang terjadi. Hanya admin desa yang bisa membuka layar ini.
+
+#### 3a. Kanal publik dan konten warga
+
+Kanal publik adalah halaman yang dibuka warga **tanpa perlu masuk**. Isinya
+hanya konten yang sudah disetujui, jadi tidak ada draf yang bocor ke warga.
+
+Cara kerjanya per jenis:
+
+| Jenis konten | Siapa yang membuat | Langsung tayang? |
+|---|---|---|
+| Jadwal Posyandu | Kader atau admin | Kader: **menunggu persetujuan nakes**. Admin: langsung. |
+| Informasi Layanan | Admin desa | Langsung. |
+| Pengumuman Desa | Admin desa | Langsung. |
+| Edukasi & Pencegahan | Admin desa | Langsung. |
+
+Petugas kesehatan (nakes) membuka layar **Validasi** untuk memeriksa jadwal yang
+diajukan kader: **Setujui dan tayangkan**, atau **Tolak** dengan catatan wajib
+supaya kader tahu apa yang perlu diperbaiki. Jadwal yang ditolak tidak pernah
+tampil ke warga.
+
+**Masa berlaku pengumuman.** Isi kolom "Masa berlaku" dengan rentang tanggal.
+Kosongkan tanggal akhir bila pengumuman berlaku sampai dicabut.
+
+**Tanggal & jam jadwal.** Diisi lewat pemilih tanggal dan jam, bukan teks bebas.
+Jam boleh dikosongkan bila belum pasti.
+
+**Artikel dari KodeNara.** Bagian Edukasi & Pencegahan juga menarik artikel dari
+situs KodeNara secara otomatis setiap hari. Artikel itu muncul sebagai cuplikan
+dengan tautan "Baca selengkapnya" ke situs aslinya. Admin tidak perlu mengurusnya;
+kalau ingin membersihkan seluruh artikel tarikan, jalankan
+`npm run konten:kodenara:bersih` di server.
 **Cara kerja sinkronisasi (penting dipahami):** data yang kamu catat disimpan dulu
 di tablet, lalu dikirim otomatis saat ada sinyal. Jika tidak ada sinyal, aplikasi
 tetap menyimpan; kiriman akan terkirim otomatis saat sinyal kembali. Jangan tutup
@@ -124,9 +157,11 @@ dan rata-rata persen median. Ada tombol **Unduh CSV** untuk diolah di Excel.
 - **Berkas cadangan dienkripsi**; kuncinya disimpan terpisah dari berkasnya.
 
 - **Jangan** membagikan kata sandi. Bila tablet hilang, hubungi admin untuk
-  mencabut sesinya (layar Akun → sesi tablet → Cabut).
+  menonaktifkan akunnya dan mengganti kata sandi (layar Akun).
 
-- **Setelah pemasangan**, ganti kata sandi bawaan (admin1, kader1, nakes1).
+- **Setelah pemasangan**, admin membuat akun admin desa pertama lewat
+  `npm run buat-admin`. Tidak ada akun bawaan dan tidak ada kata sandi contoh
+  yang tertulis di kode.
 
 ---
 
@@ -147,7 +182,11 @@ dan rata-rata persen median. Ada tombol **Unduh CSV** untuk diolah di Excel.
 
 - **Tambah akun**: layar **Akun** → Tambah. Pilih peran: kader / petugas kesehatan / admin desa.
 - **Nonaktifkan akun**: layar **Akun** → Nonaktifkan.
-- **Cabut sesi tablet**: layar **Akun** → bagian sesi tablet → **Cabut**. Ini menghentikan akses jika tablet hilang.
+- **Tablet hilang**: nonaktifkan akun kader di tablet itu, lalu buat akun pengganti.
+- **Isi Posyandu**: layar **Kelola Posyandu** → Tambah. Tidak ada Posyandu bawaan;
+  daftar ini kosong sampai admin mengisinya.
+- **Tulis konten warga**: layar **Konten** → pilih jenis → Terbitkan.
+- **Pantau aktivitas**: layar **Log Aktivitas** → menyaring menurut tanggal, aktor, atau tabel.
 
 ---
 

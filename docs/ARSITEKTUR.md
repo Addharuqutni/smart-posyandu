@@ -48,6 +48,7 @@ server/
     domain/         -- cookie sesi, sandi pemulihan, enkripsi
     middleware/     -- cookie sesi dan peran
     jobs/           -- pencadangan harian, jadwal 02.00 WIB, verifikasi, retensi
+    jobs/kodenara.js -- tarik artikel tips KodeNara 03.00 WIB (lihat 4.4)
   tests/            -- node --test
 klien/
   src/
@@ -242,6 +243,75 @@ Tanpa indeks itu PostgreSQL memindai tabel penuh lalu menyortir setiap halaman.
 Terukur pada 87.000 kunjungan: 173 ms per halaman menjadi 0,16 ms. Pada data
 pilot (puluhan balita) bedanya tidak terasa; pada data uji 3000 balita, tarikan
 awal turun dari sekitar 2 menit menjadi sekitar 20 detik.
+
+### 4.6 Konten dari luar (KodeNara)
+
+`jobs/kodenara.js` menarik artikel dari `kodenara.id/insight/public/category/tips`
+ke tabel `konten_publik` sebagai baris `jenis = 'edukasi'`. Penjadwalan berjalan
+di dalam proses server, tiap hari pukul 03.00 WIB (satu jam setelah pencadangan,
+supaya keduanya tidak berebut koneksi).
+
+**KodeNara tidak menyediakan API maupun feed.** Semua `/api`, `/feed`,
+`/rss.xml`, `/wp-json` menjawab 404 atau 403. Satu-satunya jalan adalah membaca
+HTML halaman kategori, jadi modul ini adalah **scraper**, bukan integrasi resmi.
+
+Prinsip yang dipegang:
+
+| Keadaan | Perilaku |
+|---------|----------|
+| Struktur HTML berubah | `parseDaftar` mengembalikan daftar kosong; konten lama tetap tayang |
+| Halaman 1 gagal diambil | Putaran dibatalkan, tidak ada yang ditulis |
+| Halaman lanjutan gagal | Berhenti di situ, yang sudah terkumpul tetap disimpan |
+| Artikel diperbarui di sumber | Baris yang sama diperbarui (`ON CONFLICT (id) DO UPDATE`) |
+
+Id baris diturunkan dari hash URL (`idDari`), sehingga tarikan ulang bersifat
+idempoten: menjalankan sepuluh kali tetap menghasilkan jumlah baris yang sama.
+Baris tarikan ditandai `kategori = 'kodenara-tips'`; `hapusSemua()` hanya
+menghapus baris dengan penanda itu, konten buatan admin tidak tersentuh.
+
+Kolom `sumber_url` (migrasi `008_sumber_url.sql`) menyimpan tautan aslinya.
+Kanal publik memakainya untuk menampilkan cuplikan 240 karakter + tautan
+"Baca selengkapnya", karena isi artikel bisa ribuan karakter dan akan merusak
+tata letak kartu bila ditampilkan utuh.
+
+Matikan dengan `KODENARA_HARIAN=false` bila server tidak boleh menghubungi
+internet. Tarik manual: `npm run konten:kodenara`. Bersihkan:
+`npm run konten:kodenara:bersih`.
+
+Parser diuji terhadap HTML sungguhan yang disimpan di `server/tests/fixtures/`.
+Kalau kodenara.id mengubah markup, tesnya merah sebelum sampai produksi —
+memperbarui fixture dengan `curl` seperti dicatat di kepala `kodenara.test.js`.
+
+**Batas yang disadari:** ini bergantung pada HTML pihak ketiga. Kalau situs
+sumbernya menambahkan feed, ganti `parseDaftar`/`parseArtikel` dengan
+`fetch` + `JSON.parse`; sisa modul tidak perlu berubah.
+
+### 4.7 Peta rute
+
+Semua rute didaftarkan di `app.js`. Yang bertanda **publik** tidak butuh sesi;
+sisanya wajib masuk, dan sebagian menambahkan syarat peran.
+
+| Rute | Akses | Berkas |
+|------|-------|--------|
+| `GET /sehat`, `GET /waktu` | publik | `app.js` |
+| `POST /masuk`, `GET /saya`, `POST /keluar` | publik / sesi | `routes/masuk.js` |
+| `GET /posyandu/publik` | publik | `routes/posyandu.js` |
+| `GET /konten-publik` | publik | `routes/konten.js` |
+| `GET/POST /sinkron` | sesi | `routes/sinkron.js` |
+| `GET /posyandu/semua`, `POST/PATCH/DELETE /posyandu/:id` | admin desa | `routes/posyandu.js` |
+| `GET/PATCH /akun-saya` | sesi (milik sendiri) | `routes/pengguna.js` |
+| `GET/POST/PATCH /pengguna` | admin desa | `routes/pengguna.js` |
+| `GET /konten-publik/semua`, `POST/PATCH/DELETE /konten-publik` | sesi (kader: hanya jadwal miliknya) | `routes/konten.js` |
+| `POST /konten-publik/:id/putuskan` | nakes, admin desa | `routes/konten.js` |
+| `GET /aktivitas` | admin desa | `routes/aktivitas.js` |
+| `GET /sesi`, `DELETE /sesi/:id` | admin desa | `routes/sesi.js` |
+| `GET /balita`, `/kunjungan`, `/validasi`, `/rekap`, `/kualitas`, `/ekspor.csv` | sesi, lingkup per peran | `routes/data.js`, `routes/laporan.js` |
+| `GET/POST /cadangan`, `POST /cadangan/:nama/pulihkan` | admin desa | `routes/cadangan.js` |
+
+Setiap rute baru **wajib** ditambahkan ke `JALUR_API` di `alat.js` (proksi Nginx)
+dan `klien/vite.config.js` (proksi pengembangan). `server/tests/proksi.test.js`
+menjaga ketiganya tetap sinkron dengan `routes/*.js`; rute yang lupa diproksikan
+tetap jalan di mesin pengembang tetapi mati di VPS.
 
 ## 5. Keamanan
 

@@ -1,5 +1,5 @@
 import Ikon from './Ikon.jsx'
-import { LENCANA_STATUS, SKEMA } from '../logika/konten-skema.js'
+import { LENCANA_STATUS, SKEMA, nilaiTampil } from '../logika/konten-skema.js'
 
 /** Lencana status persetujuan; satu tempat agar warna, ikon & teks konsisten. */
 export function LencanaStatus({ status, aktif }) {
@@ -25,7 +25,7 @@ export function LencanaStatus({ status, aktif }) {
 export function RincianKonten({ konten }) {
   const bidang = SKEMA[konten.jenis]?.bidang ?? []
   const baris = [
-    ...bidang.map((b) => [b.label, konten[b.kunci]]),
+    ...bidang.map((b) => [b.label, nilaiTampil(b, konten)]),
     ['Posyandu', konten.posyandu_nama],
     ['Diajukan oleh', konten.pengaju_nama],
   ].filter(([, v]) => v)
@@ -103,7 +103,7 @@ export function TabelKonten({ jenis, daftar, peran, aksi }) {
               </td>
               {skema.bidang.map((b) => (
                 <td key={b.kunci} data-label={b.label}>
-                  <span className="text-padat text-teks-redup">{k[b.kunci] || '-'}</span>
+                  <span className="text-padat text-teks-redup">{nilaiTampil(b, k) || '-'}</span>
                 </td>
               ))}
               {jenis === 'jadwal' && (
