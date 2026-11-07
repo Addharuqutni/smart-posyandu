@@ -195,6 +195,7 @@ export default function KelolaBalita({ sesi }) {
       await muat()
     } catch (salah) {
       setGalat(salah.rincian ?? 'Gagal menghapus.')
+      setKonfirm(null)
     }
   }
 
@@ -534,6 +535,27 @@ export default function KelolaBalita({ sesi }) {
         </Modal>
       )}
 
+      {/* Konfirmasi hapus. Sebelumnya disisipkan di dalam sel tabel sehingga
+          baris membengkak dan kolom aksi melebar. */}
+      {konfirm && (
+        <Modal judul="Hapus balita?" subjudul={konfirm.nama_lengkap} onTutup={() => setKonfirm(null)}>
+          <div className="flex flex-col gap-4 p-4">
+            <p className="m-0 text-isi leading-relaxed text-teks-redup">
+              <strong>{konfirm.nama_lengkap}</strong> tidak akan tampil lagi di daftar balita. Data
+              tetap tersimpan sebagai arsip di server.
+            </p>
+            <div className="flex items-center justify-end gap-2 border-t border-garis bg-biru-50 p-4 max-dialog:flex-col-reverse max-dialog:gap-2 max-dialog:[&>button]:w-full">
+              <button type="button" className="sekunder" onClick={() => setKonfirm(null)}>
+                Batal
+              </button>
+              <button type="button" className="bahaya" onClick={() => hapus(konfirm)}>
+                Ya, hapus
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
       <div className="kartu">
         <div className="kartu-judul">
           <h2>Balita terdaftar</h2>
@@ -634,41 +656,20 @@ export default function KelolaBalita({ sesi }) {
                         </span>
                       </td>
                       <td className="sel-aksi">
-                        {konfirm?.id === b.id ? (
-                          <span className="flex flex-wrap items-center gap-2">
-                            <button
-                              type="button"
-                              className="bahaya"
-                              onClick={() => hapus(b)}
-                            >
-                              Ya, hapus
-                            </button>
-                            <button
-                              type="button"
-                              className="tautan"
-                              onClick={() => setKonfirm(null)}
-                            >
-                              Batal
-                            </button>
-                          </span>
-                        ) : (
-                          <>
-                            <button
-                              type="button"
-                              className="sekunder"
-                              onClick={() => setSunting({ ...b })}
-                            >
-                              Sunting
-                            </button>
-                            <button
-                              type="button"
-                              className="bahaya ml-1.5"
-                              onClick={() => setKonfirm(b)}
-                            >
-                              Hapus
-                            </button>
-                          </>
-                        )}
+                        <button
+                          type="button"
+                          className="sekunder"
+                          onClick={() => setSunting({ ...b })}
+                        >
+                          Sunting
+                        </button>
+                        <button
+                          type="button"
+                          className="bahaya ml-1.5"
+                          onClick={() => setKonfirm(b)}
+                        >
+                          Hapus
+                        </button>
                       </td>
                     </tr>
                   )

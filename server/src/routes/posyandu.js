@@ -91,6 +91,7 @@ router.post('/posyandu', Admin, async (minta, balas) => {
         nilai.kabupaten ?? null, nilai.aktif ?? true],
     )
     klien.penggunaId = minta.pengguna.id
+    klien.ip = minta.ip ?? null
     await catatAudit(klien, 'posyandu', rows[0].id, 'buat', null, rows[0])
     return rows[0]
   })
@@ -118,6 +119,7 @@ router.patch('/posyandu/:id', Admin, async (minta, balas) => {
       [...kolom.map((k) => nilai[k]), minta.params.id],
     )
     klien.penggunaId = minta.pengguna.id
+    klien.ip = minta.ip ?? null
     await catatAudit(klien, 'posyandu', minta.params.id, 'ubah', lama, rows[0])
     return rows[0]
   })
@@ -163,6 +165,7 @@ router.delete('/posyandu/:id', Admin, async (minta, balas) => {
       [minta.params.id],
     )
     klien.penggunaId = minta.pengguna.id
+    klien.ip = minta.ip ?? null
     await catatAudit(klien, 'posyandu', minta.params.id, 'hapus', lama, rows[0])
     return true
   })

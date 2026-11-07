@@ -114,6 +114,17 @@ router.patch('/pengguna/:id', Admin, async (minta, balas) => {
     return balas.status(422).json({ detail: 'tidak_ada_yang_diubah' })
   }
 
+  // Cek SEBELUM menulis: versi lama menolak sesudah UPDATE, jadi akun admin
+  // tetap nonaktif walau responsnya 403. Bisa mengunci satu-satunya admin.
+  const target = await satu(
+    `SELECT id, peran FROM pengguna WHERE id = $1 AND dihapus_pada IS NULL`,
+    [minta.params.id],
+  )
+  if (!target) return balas.status(404).json({ detail: 'pengguna_tidak_ditemukan' })
+  if (aktif === false && target.peran === 'admin_desa') {
+    return balas.status(403).json({ detail: 'admin_tidak_bisa_dinonaktifkan' })
+  }
+
   const set = Object.keys(nilai).map((k, i) => `${k} = $${i + 1}`).join(', ')
   const hasil = await satu(
     `UPDATE pengguna SET ${set}, diperbarui_pada = now()
@@ -132,11 +143,18 @@ router.patch('/pengguna/:id', Admin, async (minta, balas) => {
     )
   }
 
-  // Admin desa tidak boleh dinonaktifkan dari layar ini (cegah terkunci).
-  if (aktif === false && hasil.peran === 'admin_desa') {
-    return balas.status(403).json({ detail: 'admin_tidak_bisa_dinonaktifkan' })
-  }
-
+  await kueri(
+    `INSERT INTO log_audit
+       (id, pengguna_id, id_perangkat, nama_tabel, id_baris, aksi,
+        nilai_lama, nilai_baru, alamat_ip, terjadi_pada, diterima_pada)
+     VALUES (gen_random_uuid(), $1, 'server', 'pengguna', $2, 'ubah',
+             NULL, $3, $4, now(), now())`,
+    [minta.pengguna.id, minta.params.id,
+      JSON.stringify({ ...(aktif !== undefined ? { aktif } : {}),
+        ...(posyandu_id !== undefined ? { posyandu_id } : {}),
+        ...(kata_sandi_baru ? { kata_sandi_diubah: true } : {}) }),
+      minta.ip ?? null],
+  )
   balas.json(hasil)
 })
 

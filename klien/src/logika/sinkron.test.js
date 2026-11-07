@@ -319,6 +319,34 @@ describe('putaran sinkron', () => {
     expect(panggilan).toHaveLength(1)
   })
 
+  // Regresi: setelah basis data server dikosongkan, tablet masih menampilkan
+  // balita lama selamanya. salinanBasi() lama cuma memeriksa `punya < harus`,
+  // jadi 42 < 0 tidak pernah terdeteksi.
+  it('server dikosongkan: salinan lokal dibuang, bukan dibiarkan', async () => {
+    await db.balita.put({ ...BALITA, id: 'b2' })
+    await db.kunjungan.put({ id: 'k1', balita_id: 'b1', tanggal_kunjungan: '2026-11-01' })
+    await db.pengukuran.put({ id: 'u1', kunjungan_id: 'k1', berat_kg: 9.4 })
+    // Antrean gagal boleh ada: jangan sampai ikut terhapus.
+    await db.antrean_sinkron.put({ id: 'a1', nama_tabel: 'balita', id_baris: 'b3', status: 'gagal', muatan: {} })
+
+    const panggilan = []
+    vi.stubGlobal('fetch', async (jalur, opsi) => {
+      if (opsi?.method === 'POST') return jawab({ diterima: [], ditolak: [], waktu_server: '2026-11-20T03:00:00Z' })
+      panggilan.push(jalur)
+      return jawab({ perubahan: [], waktu_server: '2026-11-20T03:00:03Z', berikutnya: null, jumlah: { balita: 0 } })
+    })
+
+    await jalankanSinkron('tablet-uji')
+
+    expect(panggilan).toHaveLength(2)
+    expect(panggilan[1]).not.toContain('sejak=')
+    expect(await db.balita.count()).toBe(0)
+    expect(await db.kunjungan.count()).toBe(0)
+    expect(await db.pengukuran.count()).toBe(0)
+    // Data yang belum terkirim tetap ada.
+    expect(await db.antrean_sinkron.count()).toBe(1)
+  })
+
 })
 
 describe('penerapan perubahan dari server', () => {

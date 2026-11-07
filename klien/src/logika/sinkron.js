@@ -85,12 +85,13 @@ export async function jalankanSinkron(idPerangkat, pemilikId = null) {
     hasil.ditarik += balasan.perubahan.length
     await simpanPenanda(KUNCI_WAKTU, balasan.waktu_server)
     if (!balasan.berikutnya) {
-      // Tarikan selesai. Salinan lokal bisa saja sudah basi dari sebelum
-      // kursor ini: barisnya dihapus di server, atau kursor melompati
-      // baris ber-cap waktu lama. Sinkron berikutnya tidak akan pernah
-      // menarik baris itu lagi, jadi bandingkan jumlahnya sekarang.
-      const basi = await salinanBasi(balasan.jumlah)
-      if (basi && halaman === 0) {
+      // Tarikan selesai. Bandingkan jumlah balita dengan server: salinan lokal
+      // bisa ketinggalan baris lama, atau kelebihan baris karena server
+      // di-reset. Sinkron tambahan tidak akan pernah memperbaiki dua-duanya.
+      // Hanya di halaman pertama supaya tidak berputar tanpa henti.
+      const keadaan = await keadaanSalinan(balasan.jumlah)
+      if (keadaan && halaman === 0) {
+        if (keadaan === 'lebih') await buangSalinan()
         await simpanPenanda(KUNCI_KURSOR, null)
         sejak = null
         halaman += 1
@@ -103,23 +104,6 @@ export async function jalankanSinkron(idPerangkat, pemilikId = null) {
     await simpanPenanda(KUNCI_KURSOR, sejak)
   }
   return hasil
-}
-
-/**
- * Benar bila salinan lokal ketinggalan baris yang tidak akan pernah datang
- * lagi lewat sinkron tambahan. Hanya `balita` yang diperiksa: bila daftar
- * balita tidak lengkap, kader tidak bisa menemukan anak yang seharusnya
- * muncul — itu kegagalan yang paling merugikan dan paling mudah dihitung.
- * Dihitung semua baris, bukan hanya yang aktif: `jumlah` server ikut
- * menghitung baris terhapus, karena baris itu memang dikirim ke tablet.
- * ponytail: tabel lain tidak diperiksa; baris kunjungan/pengukuran yang
- * hilang tidak terdeteksi. Perluas ke per-tabel jika laporan rekap meleset.
- */
-async function salinanBasi(jumlahServer) {
-  const harus = Number(jumlahServer?.balita)
-  if (!Number.isFinite(harus)) return false
-  const punya = await db.balita.count()
-  return punya < harus
 }
 
 async function selesaikanAntrean(antrean, balasan) {
@@ -257,4 +241,44 @@ async function simpanPenanda(kunci, nilai) {
 export async function kosongkan() {
   await db.delete()
   await db.open()
+}
+
+/**
+ * Hapus HANYA salinan 6 tabel data, biarkan antrean dan penanda utuh.
+ *
+ * Dipakai bila server punya lebih sedikit balita daripada tablet — artinya
+ * basis data server di-reset atau dicadangkan ke titik lebih awal, dan salinan
+ * lama tidak akan pernah dihapus lewat sinkron tambahan (sinkron hanya menarik
+ * perubahan SEJAK kursor, tidak pernah berkata "baris ini tidak ada lagi").
+ * `kosongkan()` tidak dipakai di sini karena ia ikut membuang antrean gagal dan
+ * penyiapan, yang bisa berisi catatan warga yang belum sempat terkirim.
+ */
+async function buangSalinan() {
+  await db.transaction('rw', [
+    db.balita, db.orang_tua, db.balita_orang_tua,
+    db.kunjungan, db.pengukuran, db.tindak_lanjut,
+  ], async () => {
+    await Promise.all([
+      db.balita.clear(), db.orang_tua.clear(), db.balita_orang_tua.clear(),
+      db.kunjungan.clear(), db.pengukuran.clear(), db.tindak_lanjut.clear(),
+    ])
+  })
+}
+
+/**
+ * Bandingkan jumlah balita di tablet dengan server.
+ *   'kurang' -> tablet ketinggalan baris lama; tarik ulang dari awal.
+ *   'lebih'  -> server di-reset; buang salinan lalu tarik ulang dari awal.
+ *   null     -> sudah cocok.
+ * Hanya `balita` yang diperiksa: bila daftar balita tidak cocok, kader tidak
+ * bisa menemukan anak yang seharusnya muncul — itu kegagalan yang paling
+ * merugikan dan paling mudah dihitung, dan 6 tabel lainnya mengikuti balita.
+ */
+async function keadaanSalinan(jumlahServer) {
+  const harus = Number(jumlahServer?.balita)
+  if (!Number.isFinite(harus)) return null
+  const punya = await db.balita.count()
+  if (punya > harus) return 'lebih'
+  if (punya < harus) return 'kurang'
+  return null
 }

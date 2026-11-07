@@ -374,6 +374,32 @@ export default function KelolaPosyandu() {
         </Modal>
       )}
 
+      {/* Konfirmasi hapus. Sebelumnya disisipkan di dalam sel tabel, sehingga
+          baris membengkak dan kolom aksi melebar; modal ini menyamakan pola
+          dengan layar Kelola Konten, Kelola Balita, dan Pengguna. */}
+      {konfirm && (
+        <Modal judul="Hapus Posyandu?" subjudul={konfirm.nama} onTutup={() => setKonfirm(null)}>
+          <div className="flex flex-col gap-4 p-4">
+            <p className="m-0 text-isi leading-relaxed text-teks-redup">
+              <strong>{konfirm.nama}</strong> tidak akan tampil lagi di kanal publik maupun daftar
+              Posyandu. Data tetap tersimpan sebagai arsip di server.
+            </p>
+            <p className="m-0 text-padat leading-relaxed text-teks-samar">
+              Posyandu yang masih memiliki balita, kunjungan, kader, atau akun tidak bisa dihapus.
+              Bila sudah tidak dipakai, gunakan status nonaktif.
+            </p>
+            <div className="flex items-center justify-end gap-2 border-t border-garis bg-biru-50 p-4 max-dialog:flex-col-reverse max-dialog:gap-2 max-dialog:[&>button]:w-full">
+              <button type="button" className="sekunder" onClick={() => setKonfirm(null)}>
+                Batal
+              </button>
+              <button type="button" className="bahaya" onClick={() => hapus(konfirm)}>
+                Ya, hapus
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
       <div className="kartu">
         <div className="kartu-judul">
           <h2>Daftar Posyandu</h2>
@@ -405,24 +431,13 @@ export default function KelolaPosyandu() {
                     <button type="button" className="sekunder" onClick={() => mulaiSunting(p)}>
                       Sunting
                     </button>
-                    {konfirm === p.id ? (
-                      <span className="ml-1.5 flex flex-wrap items-center gap-2">
-                        <button type="button" className="bahaya" onClick={() => hapus(p)}>
-                          Ya, hapus
-                        </button>
-                        <button type="button" className="tautan" onClick={() => setKonfirm(null)}>
-                          Batal
-                        </button>
-                      </span>
-                    ) : (
-                      <button
-                        type="button"
-                        className="bahaya ml-1.5"
-                        onClick={() => setKonfirm(p.id)}
-                      >
-                        Hapus
-                      </button>
-                    )}
+                    <button
+                      type="button"
+                      className="bahaya ml-1.5"
+                      onClick={() => setKonfirm(p)}
+                    >
+                      Hapus
+                    </button>
                   </td>
                 </tr>
               ))}

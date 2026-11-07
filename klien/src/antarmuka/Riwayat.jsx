@@ -339,7 +339,7 @@ export default function Riwayat({ sesi, balita, kembali, setelahUbah }) {
                         ) : b.divalidasi_oleh ? (
                           <span className="lencana-gizi valid">Tervalidasi</span>
                         ) : (
-                          <span className="lencana-gizi menunggu">Menunggu server</span>
+                          <span className="lencana-gizi menunggu">Menunggu Persetujuan Nakes</span>
                         )}
                       </td>
                       <td className="sel-aksi">

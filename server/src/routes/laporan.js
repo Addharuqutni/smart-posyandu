@@ -136,10 +136,10 @@ router.get('/ekspor.csv', Admin, async (minta, balas) => {
   await kueri(
     `INSERT INTO log_audit
        (id, pengguna_id, id_perangkat, nama_tabel, id_baris, aksi,
-        nilai_lama, nilai_baru, terjadi_pada, diterima_pada)
+        nilai_lama, nilai_baru, alamat_ip, terjadi_pada, diterima_pada)
      VALUES (gen_random_uuid(), $1, 'server', 'ekspor', gen_random_uuid(), 'buat',
-             NULL, $2, now(), now())`,
-    [minta.pengguna.id, JSON.stringify({ bulan, baris: baris.length })],
+             NULL, $2, $3, now(), now())`,
+    [minta.pengguna.id, JSON.stringify({ bulan, baris: baris.length }), minta.ip ?? null],
   )
 
   const namaBerkas = `posyandu-${bulan}-${cap.toISOString().slice(0, 10)}.csv`

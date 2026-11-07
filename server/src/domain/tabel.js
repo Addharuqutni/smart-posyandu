@@ -15,6 +15,9 @@ const TABEL_SINKRON = [
 
 // Kolom yang boleh diisi dari muatan sinkron, per tabel.
 // Kolom audit (dibuat_pada, versi, dihapus_pada) diurus server, bukan klien.
+// Kolom keputusan klinis (divalidasi_*, status_gizi, persen_median,
+// sumber_status) sengaja TIDAK ada di sini: nilainya hanya boleh ditulis
+// server lewat `tulisTerotorisasi()` setelah nakes memvalidasi.
 const KOLOM = {
   balita: [
     'id', 'posyandu_id', 'nama_lengkap', 'nik', 'jenis_kelamin',
@@ -29,13 +32,12 @@ const KOLOM = {
   ],
   kunjungan: [
     'id', 'balita_id', 'posyandu_id', 'kader_id', 'tanggal_kunjungan',
-    'usia_bulan', 'status_kehadiran', 'catatan', 'divalidasi_oleh',
-    'divalidasi_pada', 'terjadi_pada',
+    'usia_bulan', 'status_kehadiran', 'catatan', 'terjadi_pada',
   ],
   pengukuran: [
     'id', 'kunjungan_id', 'berat_kg', 'tinggi_cm', 'lingkar_kepala_cm',
     'cara_ukur_tinggi', 'z_berat_umur', 'z_tinggi_umur', 'z_berat_tinggi',
-    'status_gizi', 'sumber_z', 'sumber_status', 'persen_median', 'terjadi_pada',
+    'sumber_z', 'terjadi_pada',
   ],
   tindak_lanjut: [
     'id', 'kunjungan_id', 'petugas_id', 'jenis', 'isi',
@@ -51,6 +53,15 @@ const KOLOM_SERVER = new Set([
   'dibuat_pada', 'diperbarui_pada', 'dihapus_pada', 'versi', 'id_perangkat',
 ])
 
+// Kolom yang hanya boleh ditulis server setelah otorisasi. Tidak ada di KOLOM
+// karena KOLOM adalah whitelist muatan /sinkron yang datang dari tablet.
+// Tetap masuk audit (tidak termasuk KOLOM_SERVER) supaya keputusan nakes
+// dan hasil hitung status gizi tercatat di nilai_baru.
+const KOLOM_TEROTORISASI = {
+  kunjungan: ['divalidasi_oleh', 'divalidasi_pada', 'terjadi_pada'],
+  pengukuran: ['status_gizi', 'sumber_status', 'persen_median'],
+}
+
 /** Batasi ke kolom yang dikenal tabel ini. Kunci asing dibuang diam-diam. */
 function siapkan(namaTabel, nilai) {
   const boleh = KOLOM[namaTabel]
@@ -59,6 +70,16 @@ function siapkan(namaTabel, nilai) {
     salah.kode = 'tabel_tidak_dikenal'
     throw salah
   }
+  const keluar = {}
+  for (const k of boleh) {
+    if (nilai[k] !== undefined) keluar[k] = nilai[k]
+  }
+  return keluar
+}
+
+/** Kolom yang boleh ditulis lewat jalur server yang sudah diotorisasi. */
+function siapkanTerotorisasi(namaTabel, nilai) {
+  const boleh = KOLOM_TEROTORISASI[namaTabel] ?? []
   const keluar = {}
   for (const k of boleh) {
     if (nilai[k] !== undefined) keluar[k] = nilai[k]
@@ -76,4 +97,6 @@ function bersihkan(nilai) {
   return keluar
 }
 
-module.exports = { TABEL_SINKRON, KOLOM, RAHASIA, siapkan, bersihkan }
+module.exports = {
+  TABEL_SINKRON, KOLOM, RAHASIA, siapkan, siapkanTerotorisasi, bersihkan,
+}

@@ -2,12 +2,13 @@ import { useEffect, useState } from 'react'
 import {
   buatKontenPublik,
   daftarSemuaKontenPublik,
+  daftarSemuaPosyandu,
   hapusKontenPublik,
   putuskanKontenPublik,
   ubahKontenPublik,
 } from '../jaringan/api.js'
 import Ikon from './Ikon.jsx'
-import { Modal, Layar } from './Bersama.jsx'
+import { Modal, Layar, bukaPemilih } from './Bersama.jsx'
 import { RincianKonten, LencanaStatus, TabelKonten } from './KontenTabel.jsx'
 import {
   SKEMA,
@@ -23,7 +24,7 @@ import {
 } from '../logika/konten-skema.js'
 
 /** Bidang tambahan khusus jenis konten yang dipilih. */
-function BidangJenis({ nilai, ubah, idAwal }) {
+function BidangJenis({ nilai, ubah, idAwal, daftarPosyandu = [], kader = false }) {
   const bidang = SKEMA[nilai.jenis]?.bidang ?? []
   if (!bidang.length) return null
   return bidang.map((b) => {
@@ -31,6 +32,33 @@ function BidangJenis({ nilai, ubah, idAwal }) {
     const wajib = b.wajib ? <span className="wajib" aria-hidden="true">*</span> : (
       <span className="text-padat text-teks-samar">(opsional)</span>
     )
+
+    if (b.tipe === 'posyandu') {
+      // Kader sudah terikat satu Posyandu; tidak boleh memilih yang lain.
+      if (kader) return null
+      return (
+        <div key={b.kunci} className="bidang flex flex-col">
+          <label htmlFor={id}>
+            <span>{b.label}</span>
+            {wajib}
+          </label>
+          <select
+            id={id}
+            value={nilai[b.kunci] ?? ''}
+            onChange={(e) => ubah(b.kunci, e.target.value)}
+            required={b.wajib}
+          >
+            <option value="">Pilih Posyandu…</option>
+            {daftarPosyandu.map((p) => (
+              <option key={p.id} value={p.id}>{p.nama}</option>
+            ))}
+          </select>
+          <span className="mt-1 text-2xs text-teks-samar">
+            Jadwal ini akan tampil pada kartu lokasi Posyandu di kanal publik.
+          </span>
+        </div>
+      )
+    }
 
     if (b.tipe === 'tanggal-jam' || b.tipe === 'rentang') {
       const jam = b.tipe === 'tanggal-jam'
@@ -51,6 +79,7 @@ function BidangJenis({ nilai, ubah, idAwal }) {
               required={b.wajib}
               max={jam ? undefined : bb || undefined}
               value={a}
+              onClick={bukaPemilih}
               onChange={(e) => ubah(b.kunci, gabung(e.target.value, bb))}
               aria-label={jam ? 'Tanggal' : 'Tanggal mulai'}
             />
@@ -59,6 +88,7 @@ function BidangJenis({ nilai, ubah, idAwal }) {
               type={jam ? 'time' : 'date'}
               min={jam ? undefined : a || undefined}
               value={bb}
+              onClick={bukaPemilih}
               onChange={(e) => ubah(b.kunci, gabung(a, e.target.value))}
               aria-label={jam ? 'Jam mulai' : 'Tanggal akhir'}
             />
@@ -117,8 +147,10 @@ export default function KelolaKonten({ sesi }) {
   const peran = sesi?.pengguna?.peran ?? 'kader'
   const kader = peran === 'kader'
   const nakes = peran === 'nakes'
+  const admin = peran === 'admin_desa'
 
   const [daftar, setDaftar] = useState([])
+  const [daftarPos, setDaftarPos] = useState([])
   const [memuat, setMemuat] = useState(true)
   const [galat, setGalat] = useState(null)
   const [pesan, setPesan] = useState(null)
@@ -134,8 +166,16 @@ export default function KelolaKonten({ sesi }) {
     setMemuat(true)
     setGalat(null)
     try {
-      const res = await daftarSemuaKontenPublik()
+      const [res, resPos] = await Promise.all([
+        daftarSemuaKontenPublik(),
+        // Pilihan Posyandu hanya dipakai form admin. Kader sudah terikat
+        // akunnya, nakes tidak membuat konten; keduanya tidak boleh memanggil
+        // /posyandu/semua yang khusus admin. Memanggilnya membuat Promise.all
+        // gagal 403 dan seluruh layar menampilkan galat "tidak_diizinkan".
+        admin ? daftarSemuaPosyandu() : Promise.resolve({ posyandu: [] }),
+      ])
       setDaftar(res.konten ?? [])
+      setDaftarPos(resPos.posyandu ?? [])
     } catch (salah) {
       setGalat(salah.rincian ?? 'Gagal memuat daftar konten. Periksa koneksi ke server.')
     } finally {
@@ -153,19 +193,22 @@ export default function KelolaKonten({ sesi }) {
   const jenisTampil = kader || nakes ? ['jadwal'] : URUT_JENIS
   const antrean = perJenis.jadwal.filter((k) => k.status_persetujuan === 'menunggu')
   const skemaForm = SKEMA[isi.jenis]
+  // Kader tidak memilih Posyandu: server mengisinya dari akun. Field itu
+  // tidak dirender, jangan divalidasi dan jangan dikirim sebagai null.
+  const abaikan = kader ? ['posyandu_id'] : []
 
   async function tambah(e) {
     e.preventDefault()
     setGalat(null)
     setPesan(null)
-    const kurang = bidangKurang(isi)
+    const kurang = bidangKurang(isi, { abaikan })
     if (kurang.length) {
       setGalat(`Lengkapi dulu: ${kurang.join(', ')}.`)
       return
     }
     setMenyimpan(true)
     try {
-      const hasil = await buatKontenPublik(muatanDari(isi))
+      const hasil = await buatKontenPublik(muatanDari(isi, { abaikan }))
       setIsi(kosong(kader ? 'jadwal' : isi.jenis))
       setPesan(
         hasil.status_persetujuan === 'menunggu'
@@ -185,14 +228,14 @@ export default function KelolaKonten({ sesi }) {
     if (!sunting) return
     setGalat(null)
     setPesan(null)
-    const kurang = bidangKurang(sunting)
+    const kurang = bidangKurang(sunting, { abaikan })
     if (kurang.length) {
       setGalat(`Lengkapi dulu: ${kurang.join(', ')}.`)
       return
     }
     setMenyimpan(true)
     try {
-      const hasil = await ubahKontenPublik(sunting.id, muatanDari(sunting))
+      const hasil = await ubahKontenPublik(sunting.id, muatanDari(sunting, { abaikan }))
       setPesan(
         hasil.status_persetujuan === 'menunggu'
           ? `Perubahan "${hasil.judul}" diajukan ulang untuk persetujuan nakes.`
@@ -347,7 +390,13 @@ export default function KelolaKonten({ sesi }) {
               />
             </div>
 
-            <BidangJenis nilai={isi} ubah={(k, v) => setIsi({ ...isi, [k]: v })} idAwal="k" />
+            <BidangJenis
+              nilai={isi}
+              ubah={(k, v) => setIsi({ ...isi, [k]: v })}
+              idAwal="k"
+              daftarPosyandu={daftarPos}
+              kader={kader}
+            />
 
             <div className="col-span-2 flex flex-wrap items-center gap-6 pt-1">
               <label className="flex cursor-pointer items-center gap-2 text-padat font-medium text-teks">
@@ -618,6 +667,8 @@ export default function KelolaKonten({ sesi }) {
                 nilai={sunting}
                 ubah={(k, v) => setSunting({ ...sunting, [k]: v })}
                 idAwal="s"
+                daftarPosyandu={daftarPos}
+                kader={kader}
               />
 
               <div className="col-span-2 flex flex-wrap items-center gap-6 pt-1">

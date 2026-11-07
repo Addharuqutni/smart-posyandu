@@ -1,10 +1,10 @@
 // Balita, kunjungan, validasi, tindak lanjut, dan CRUD balita admin.
 
 const express = require('express')
-const { satu, banyak, kueri } = require('../db/pool')
+const { satu, banyak, kueri, transaksi } = require('../db/pool')
 const { butuhLogin, butuhPeran } = require('../middleware/auth')
 const { siapkan } = require('../domain/tabel')
-const { ubah, hapus, sisip } = require('../domain/repositori')
+const { ubah, hapus, sisip, tulisTerotorisasi } = require('../domain/repositori')
 const { hitung } = require('../domain/status_gizi')
 const { lahirDiterima } = require('../domain/usia')
 
@@ -189,25 +189,73 @@ router.post('/balita', Admin, async (minta, balas) => {
     ...nilai,
     id: require('crypto').randomUUID(),
     nik: nik ? require('../domain/rahasia').enkripsi(nik) : null,
-  }, { penggunaId: minta.pengguna.id, idPerangkat: 'server' })
+  }, { penggunaId: minta.pengguna.id, idPerangkat: 'server', ip: minta.ip })
   balas.status(201).json({ ...baris, nik: null })
 })
 
+/**
+ * Validasi per bidang untuk PATCH balita.
+ *
+ * Versi lama meneruskan badan permintaan apa adanya: `nik: "123"` tersimpan,
+ * `jenis_kelamin: "robot"` dan angka bukan-angka memicu 500 karena melanggar
+ * CHECK/NUMERIC di PostgreSQL. POST sudah ketat; PATCH harus sama ketat.
+ * @returns {{nilai:object}|{salah:string}}
+ */
+function nilaiBalitaSah(b) {
+  const nilai = {}
+  if (b.posyandu_id !== undefined) {
+    if (typeof b.posyandu_id !== 'string' || !POLA_UUID.test(b.posyandu_id)) return { salah: 'muatan_tidak_sah' }
+    nilai.posyandu_id = b.posyandu_id
+  }
+  if (b.nama_lengkap !== undefined) {
+    const nama = teksNama(b.nama_lengkap)
+    if (!nama) return { salah: 'muatan_tidak_sah' }
+    nilai.nama_lengkap = nama
+  }
+  if (b.jenis_kelamin !== undefined) {
+    if (!['laki-laki', 'perempuan'].includes(b.jenis_kelamin)) return { salah: 'muatan_tidak_sah' }
+    nilai.jenis_kelamin = b.jenis_kelamin
+  }
+  if (b.tanggal_lahir !== undefined) {
+    if (typeof b.tanggal_lahir !== 'string' || !POLA_TANGGAL.test(b.tanggal_lahir)) {
+      return { salah: 'muatan_tidak_sah' }
+    }
+    if (!lahirDiterima(b.tanggal_lahir)) return { salah: 'usia_di_luar_rentang' }
+    nilai.tanggal_lahir = b.tanggal_lahir
+  }
+  if (b.nama_ibu_kandung !== undefined) nilai.nama_ibu_kandung = teksNama(b.nama_ibu_kandung) ?? null
+  if (b.nik !== undefined) {
+    if (b.nik === null || b.nik === '') nilai.nik = null
+    else if (typeof b.nik === 'string' && POLA_NIK.test(b.nik)) nilai.nik = b.nik
+    else return { salah: 'muatan_tidak_sah' }
+  }
+  // Angka: kosong -> null; selain angka wajar -> tolak (bukan 500).
+  for (const k of ['berat_lahir_kg', 'panjang_lahir_cm']) {
+    if (b[k] === undefined) continue
+    if (b[k] === null || b[k] === '') { nilai[k] = null; continue }
+    const angka = Number(b[k])
+    if (!Number.isFinite(angka) || angka <= 0 || angka > 40) return { salah: 'muatan_tidak_sah' }
+    nilai[k] = angka
+  }
+  if (b.aktif !== undefined) {
+    if (typeof b.aktif !== 'boolean') return { salah: 'muatan_tidak_sah' }
+    nilai.aktif = b.aktif
+  }
+  return { nilai: siapkan('balita', nilai) }
+}
+
 router.patch('/balita/:id', Admin, async (minta, balas) => {
-  const nilai = siapkan('balita', minta.body)
+  const { nilai, salah } = nilaiBalitaSah(minta.body || {})
+  if (salah) return balas.status(422).json({ detail: salah })
   if (Object.keys(nilai).length === 0) {
     return balas.status(422).json({ detail: 'tidak_ada_yang_diubah' })
-  }
-  if (nilai.tanggal_lahir !== undefined) {
-    if (typeof nilai.tanggal_lahir !== 'string' || !lahirDiterima(nilai.tanggal_lahir)) {
-      return balas.status(422).json({ detail: 'usia_di_luar_rentang' })
-    }
   }
   if (nilai.nik) nilai.nik = require('../domain/rahasia').enkripsi(nilai.nik)
   const baris = await ubah('balita', minta.params.id, nilai, {
     penggunaId: minta.pengguna.id,
     idPerangkat: 'server',
     terjadiPada: new Date().toISOString(),
+    ip: minta.ip,
   })
   if (!baris) return balas.status(404).json({ detail: 'balita_tidak_ditemukan' })
   balas.json({ ...baris, nik: null })
@@ -217,7 +265,7 @@ router.delete('/balita/:id', Admin, async (minta, balas) => {
   const berhasil = await hapus('balita', minta.params.id, {
     penggunaId: minta.pengguna.id,
     idPerangkat: 'server',
-    terjadiPada: new Date().toISOString(),
+    ip: minta.ip,
   })
   if (!berhasil) return balas.status(404).json({ detail: 'balita_tidak_ditemukan' })
   balas.status(204).send()
@@ -305,105 +353,161 @@ router.get('/validasi', butuhPeran('nakes', 'admin_desa'), async (minta, balas) 
   })
 })
 
-router.post('/kunjungan/:id/validasi', Nakes, async (minta, balas) => {
-  const kunjungan = await satu(
-    `SELECT * FROM kunjungan WHERE id = $1 AND dihapus_pada IS NULL`,
-    [minta.params.id],
-  )
-  if (!kunjungan) return balas.status(404).json({ detail: 'kunjungan_tidak_ditemukan' })
-
-  await ubah('kunjungan', minta.params.id, {
-    divalidasi_oleh: minta.pengguna.id,
-    divalidasi_pada: new Date().toISOString(),
-    terjadi_pada: new Date().toISOString(),
-  }, { penggunaId: minta.pengguna.id, idPerangkat: 'server' })
-
-  // Bila acuan datang belakangan, status gizi bisa dihitung sekarang.
-  const ukur = await satu(
-    `SELECT * FROM pengukuran WHERE kunjungan_id = $1 AND dihapus_pada IS NULL`,
-    [minta.params.id],
-  )
-  if (ukur && !ukur.status_gizi) {
-    const balita = await satu(`SELECT jenis_kelamin FROM balita WHERE id = $1`, [
-      kunjungan.balita_id,
-    ])
-    const acuan = await satu(
-      `SELECT median_berat_kg, sumber FROM acuan_berat_umur
-       WHERE usia_bulan = $1 AND jenis_kelamin = $2 AND dihapus_pada IS NULL
-       ORDER BY dibuat_pada DESC LIMIT 1`,
-      [kunjungan.usia_bulan, balita?.jenis_kelamin],
-    )
-    if (acuan) {
-      const nilai = hitung(ukur.berat_kg, acuan.median_berat_kg, acuan.sumber)
-      if (nilai) {
-        await ubah('pengukuran', ukur.id, nilai, {
-          penggunaId: minta.pengguna.id,
-          idPerangkat: 'server',
-        })
-      }
-    }
+router.post('/kunjungan/:id/validasi', Nakes, async (minta, balas, lanjut) => {
+  const metadata = {
+    penggunaId: minta.pengguna.id,
+    idPerangkat: 'server',
+    ip: minta.ip,
   }
+  const sekarang = new Date().toISOString()
+  try {
+    // Satu transaksi: bila hitung status gizi gagal, tanda validasi ikut
+    // dibatalkan. Tanpa ini kunjungan bisa "Tervalidasi" dengan status NULL.
+    const hasil = await transaksi(async (klien) => {
+      const meta = { ...metadata, klien }
+      const satuDi = async (sql, nilai) => (await klien.query(sql, nilai)).rows[0] ?? null
+      const kunjungan = await satuDi(
+        `SELECT * FROM kunjungan WHERE id = $1 AND dihapus_pada IS NULL`,
+        [minta.params.id],
+      )
+      if (!kunjungan) return null
 
-  const hasil = await satu(`SELECT * FROM kunjungan WHERE id = $1`, [minta.params.id])
-  balas.json(hasil)
+      await tulisTerotorisasi('kunjungan', minta.params.id, {
+        divalidasi_oleh: minta.pengguna.id,
+        divalidasi_pada: sekarang,
+        terjadi_pada: sekarang,
+      }, meta)
+
+      const ukur = await satuDi(
+        `SELECT * FROM pengukuran WHERE kunjungan_id = $1 AND dihapus_pada IS NULL`,
+        [minta.params.id],
+      )
+      if (ukur && !ukur.status_gizi) {
+        const balita = await satuDi(`SELECT jenis_kelamin FROM balita WHERE id = $1`, [
+          kunjungan.balita_id,
+        ])
+        const acuan = await satuDi(
+          `SELECT median_berat_kg, sumber FROM acuan_berat_umur
+           WHERE usia_bulan = $1 AND jenis_kelamin = $2 AND dihapus_pada IS NULL
+           ORDER BY dibuat_pada DESC LIMIT 1`,
+          [kunjungan.usia_bulan, balita?.jenis_kelamin],
+        )
+        if (acuan) {
+          const nilai = hitung(ukur.berat_kg, acuan.median_berat_kg, acuan.sumber)
+          if (nilai) await tulisTerotorisasi('pengukuran', ukur.id, nilai, meta)
+        }
+      }
+      return satuDi(`SELECT * FROM kunjungan WHERE id = $1`, [minta.params.id])
+    })
+    if (!hasil) return balas.status(404).json({ detail: 'kunjungan_tidak_ditemukan' })
+    balas.json(hasil)
+  } catch (salah) {
+    lanjut(salah)
+  }
 })
 
-router.post('/validasi/semua', butuhPeran('nakes', 'admin_desa'), async (minta, balas) => {
-  const pengguna = minta.pengguna
-  const q = String(minta.body?.q ?? '').trim()
-  const nilai = [pengguna.id]
-  const where = [
-    'dihapus_pada IS NULL',
-    'divalidasi_oleh IS NULL',
-    'EXISTS (SELECT 1 FROM pengukuran p WHERE p.kunjungan_id = kunjungan.id AND p.dihapus_pada IS NULL)',
-  ]
-  if (q) {
-    nilai.push(`%${q}%`)
-    where.push(`EXISTS (SELECT 1 FROM balita b WHERE b.id = kunjungan.balita_id AND b.nama_lengkap ILIKE $${nilai.length + 1})`)
+/**
+ * Validasi massal: kunjungan, status gizi, dan audit dalam SATU transaksi.
+ *
+ * Versi lama hanya menandai kunjungan, sehingga baris bisa tampil
+ * "Tervalidasi" padahal status_gizi masih NULL. Nomor parameter `$3` juga
+ * bentrok dengan filter `q`. Semua nomor kini dibuat oleh `tandai()`.
+ */
+router.post('/validasi/semua', butuhPeran('nakes', 'admin_desa'), async (minta, balas, lanjut) => {
+  const param = []
+  const tandai = (v) => {
+    param.push(v)
+    return `$${param.length}`
   }
-  const syarat = where.join(' AND ')
 
-  const now = new Date().toISOString()
+  const pengguna = tandai(minta.pengguna.id)
+  const sekarang = tandai(new Date().toISOString())
+  const ip = tandai(minta.ip ?? null)
+  let cari = ''
+  const q = String(minta.body?.q ?? '').trim()
+  if (q) cari = `AND b.nama_lengkap ILIKE ${tandai(`%${q}%`)}`
 
-  // Validasi massal kunjungan + catat audit dalam satu pernyataan, supaya
-  // 97.000 baris tidak berubah menjadi 97.000 permintaan HTTP.
-  // (AGENTS 2.2: pengenal tetap dibuat di klien? Ini perubahan server-side,
-  // log_audit.timbang terjadi_pada = now() server — per AGENTS 2.4 pengecualian
-  // suntingan server sebagaimana PATCH /data.)
-  const hasilKunjungan = await kueri(
-    `WITH selesai AS (
-       UPDATE kunjungan
-       SET divalidasi_oleh = $1,
-           divalidasi_pada = $2::timestamptz,
-           terjadi_pada     = COALESCE(terjadi_pada, $2::timestamptz),
-           diperbarui_pada = $2::timestamptz,
-           id_perangkat     = 'server'
-       WHERE ${syarat}
-       RETURNING id, balita_id, usia_bulan
-     ),
-     audit AS (
-       INSERT INTO log_audit
-         (id, pengguna_id, id_perangkat, nama_tabel, id_baris, aksi,
-          nilai_lama, nilai_baru, terjadi_pada, diterima_pada)
-       SELECT gen_random_uuid(), $1, 'server', 'kunjungan', s.id, 'ubah',
-              '{"divalidasi_oleh":null,"divalidasi_pada":null}'::jsonb,
-              jsonb_build_object('divalidasi_oleh', $1::text, 'divalidasi_pada', $2::text),
-              $2::timestamptz, now()
-       FROM selesai s
-       RETURNING id_baris
-     )
-     SELECT COUNT(*)::int AS n FROM selesai`,
-    [pengguna.id, now, ...nilai.slice(1)],
-  )
-  // Rebinding: WHERE params came AFTER pengguna/sekarang. Re-exec planned path:
-  // placeholder positions mismatch now; rebuild below. Instead, one clean call above
-  // was enough for WHERE count; for parameters order mismatch guard.
-  const divalidasi = hasilKunjungan?.rows?.[0]?.n ?? 0
-
-  balas.json({
-    divalidasi,
-    waktu_server: now,
-  })
+  try {
+    const hasil = await kueri(
+      `WITH kandidat AS (
+         SELECT k.id, k.balita_id, k.usia_bulan, b.jenis_kelamin,
+                p.id AS ukur_id, p.berat_kg
+         FROM kunjungan k
+         JOIN balita b ON b.id = k.balita_id
+         JOIN pengukuran p ON p.kunjungan_id = k.id AND p.dihapus_pada IS NULL
+         WHERE k.dihapus_pada IS NULL AND k.divalidasi_oleh IS NULL ${cari}
+       ),
+       nilai_gizi AS (
+         SELECT kandidat.*, a.median_berat_kg, a.sumber
+         FROM kandidat
+         LEFT JOIN LATERAL (
+           SELECT median_berat_kg, sumber FROM acuan_berat_umur
+           WHERE usia_bulan = kandidat.usia_bulan
+             AND jenis_kelamin = kandidat.jenis_kelamin
+             AND dihapus_pada IS NULL
+           ORDER BY dibuat_pada DESC LIMIT 1
+         ) a ON TRUE
+       ),
+       selesai AS (
+         UPDATE kunjungan k
+         SET divalidasi_oleh = ${pengguna}::uuid,
+             divalidasi_pada = ${sekarang}::timestamptz,
+             terjadi_pada = ${sekarang}::timestamptz,
+             diperbarui_pada = ${sekarang}::timestamptz,
+             id_perangkat = 'server'
+         FROM nilai_gizi n
+         WHERE k.id = n.id
+         RETURNING k.id
+       ),
+       ukur_baru AS (
+         UPDATE pengukuran p
+         SET persen_median = ROUND((n.berat_kg::numeric / n.median_berat_kg) * 100, 2),
+             status_gizi = CASE
+               WHEN (n.berat_kg::numeric / n.median_berat_kg) * 100 >= 80 THEN 'gizi_baik'
+               WHEN (n.berat_kg::numeric / n.median_berat_kg) * 100 >= 70 THEN 'gizi_kurang'
+               WHEN (n.berat_kg::numeric / n.median_berat_kg) * 100 >= 60 THEN 'gizi_buruk'
+               ELSE 'gizi_buruk_berat'
+             END,
+             sumber_status = n.sumber,
+             diperbarui_pada = ${sekarang}::timestamptz,
+             id_perangkat = 'server'
+         FROM nilai_gizi n
+         WHERE p.id = n.ukur_id AND p.status_gizi IS NULL
+           AND n.median_berat_kg IS NOT NULL AND n.median_berat_kg > 0
+           AND n.id IN (SELECT id FROM selesai)
+         RETURNING p.id
+       ),
+       audit_kunjungan AS (
+         INSERT INTO log_audit
+           (id, pengguna_id, id_perangkat, nama_tabel, id_baris, aksi,
+            nilai_lama, nilai_baru, alamat_ip, terjadi_pada, diterima_pada)
+         SELECT gen_random_uuid(), ${pengguna}::uuid, 'server', 'kunjungan', id, 'ubah',
+                '{"divalidasi_oleh":null}'::jsonb,
+                jsonb_build_object('divalidasi_oleh', ${pengguna}::text,
+                                   'divalidasi_pada', ${sekarang}::text),
+                ${ip}::text, ${sekarang}::timestamptz, now()
+         FROM selesai
+       ),
+       audit_pengukuran AS (
+         INSERT INTO log_audit
+           (id, pengguna_id, id_perangkat, nama_tabel, id_baris, aksi,
+            nilai_lama, nilai_baru, alamat_ip, terjadi_pada, diterima_pada)
+         SELECT gen_random_uuid(), ${pengguna}::uuid, 'server', 'pengukuran', id, 'ubah',
+                '{"status_gizi":null}'::jsonb,
+                jsonb_build_object('status_gizi', 'dihitung_server'),
+                ${ip}::text, ${sekarang}::timestamptz, now()
+         FROM ukur_baru
+       )
+       SELECT COUNT(*)::int AS n FROM selesai`,
+      param,
+    )
+    balas.json({
+      divalidasi: hasil?.rows?.[0]?.n ?? 0,
+      waktu_server: param[1],
+    })
+  } catch (salah) {
+    lanjut(salah)
+  }
 })
 
 
@@ -419,7 +523,7 @@ router.post('/kunjungan/:id/tindak_lanjut', Nakes, async (minta, balas) => {
     tanggal_tindak_lanjut: tanggal_tindak_lanjut ?? null,
     selesai: false,
     terjadi_pada: new Date().toISOString(),
-  }, { penggunaId: minta.pengguna.id, idPerangkat: 'server' })
+  }, { penggunaId: minta.pengguna.id, idPerangkat: 'server', ip: minta.ip })
   balas.status(201).json(baris)
 })
 

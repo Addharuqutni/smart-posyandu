@@ -6,11 +6,11 @@
 //   (tidak diisi)  teks biasa
 //   'tanggal-jam'  input tanggal + input jam, digabung jadi satu nilai
 //   'rentang'      dua input tanggal (mulai s.d. akhir)
+//   'posyandu'     pilihan Posyandu; memakai `pilihan` yang disuntik layar
 //
-// Keduanya tetap disimpan pada SATU kolom `tanggal` bertipe TEXT yang sudah
-// ada. ponytail: satu kolom teks, bukan tiga kolom DATE/TIME. Cukup selama
-// belum ada kebutuhan menyaring "yang masih berlaku" di SQL; saat itu tiba,
-// pecah jadi kolom sendiri lewat migrasi.
+// Format tanggal tetap disimpan pada SATU kolom `tanggal` bertipe TEXT yang
+// sudah ada. `posyandu_id` ikut dikirim supaya jadwal yang dibuat admin bisa
+// dipetakan ke kartu lokasi di kanal publik.
 export const SKEMA = {
   jadwal: {
     label: 'Jadwal Posyandu',
@@ -19,6 +19,7 @@ export const SKEMA = {
     judul: 'cth. Posyandu Melati: Penimbangan Bulan November',
     isi: 'Tulis agenda: penimbangan, imunisasi, PMT, konsultasi gizi. Sebutkan siapa yang melayani.',
     bidang: [
+      { kunci: 'posyandu_id', label: 'Posyandu', tipe: 'posyandu', wajib: true, hanyaForm: true },
       { kunci: 'tanggal', label: 'Tanggal & jam', tipe: 'tanggal-jam', wajib: true },
       { kunci: 'kategori', label: 'Dusun / lokasi', placeholder: 'cth. Balai Dusun Melati', wajib: false },
     ],
@@ -187,7 +188,7 @@ export function kosong(jenis = 'jadwal') {
 }
 
 /** Bidang berisi untuk dikirim; bidang yang tidak ada di skema dibuang. */
-export function muatanDari(nilai) {
+export function muatanDari(nilai, { abaikan = [] } = {}) {
   const keluar = {
     jenis: nilai.jenis,
     judul: nilai.judul.trim(),
@@ -197,18 +198,24 @@ export function muatanDari(nilai) {
     urutan: Number(nilai.urutan) || 0,
   }
   for (const b of SKEMA[nilai.jenis]?.bidang ?? []) {
+    if (abaikan.includes(b.kunci)) continue
     const v = typeof nilai[b.kunci] === 'string' ? nilai[b.kunci].trim() : ''
     keluar[b.kunci] = v || null
   }
   return keluar
 }
 
-/** Bidang wajib yang masih kosong; nama labelnya dikembalikan. */
-export function bidangKurang(nilai) {
+/**
+ * Bidang wajib yang masih kosong; nama labelnya dikembalikan.
+ * `abaikan` dipakai untuk field yang tidak dirender pada peran tertentu —
+ * misalnya pilihan Posyandu bagi kader, yang sudah diisi server dari akunnya.
+ */
+export function bidangKurang(nilai, { abaikan = [] } = {}) {
   const kurang = []
   if (!nilai.judul?.trim()) kurang.push('Judul')
   if (!nilai.isi?.trim()) kurang.push('Isi')
   for (const b of SKEMA[nilai.jenis]?.bidang ?? []) {
+    if (abaikan.includes(b.kunci)) continue
     if (b.wajib && !String(nilai[b.kunci] ?? '').trim()) kurang.push(b.label)
   }
   return kurang

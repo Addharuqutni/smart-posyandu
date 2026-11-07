@@ -33,7 +33,7 @@ describe('skema konten publik', () => {
   })
 
   it('bidang tambahan berbeda per jenis', () => {
-    expect(SKEMA.jadwal.bidang.map((b) => b.kunci)).toEqual(['tanggal', 'kategori'])
+    expect(SKEMA.jadwal.bidang.map((b) => b.kunci)).toEqual(['posyandu_id', 'tanggal', 'kategori'])
     expect(SKEMA.layanan.bidang.map((b) => b.kunci)).toEqual(['kategori'])
     expect(SKEMA.pengumuman.bidang.map((b) => b.kunci)).toEqual(['tanggal'])
     expect(SKEMA.edukasi.bidang.map((b) => b.kunci)).toEqual(['kategori'])
@@ -41,8 +41,34 @@ describe('skema konten publik', () => {
 
   it('kosong() hanya memuat bidang milik jenisnya', () => {
     expect(Object.keys(kosong('layanan'))).not.toContain('tanggal')
+    expect(Object.keys(kosong('layanan'))).not.toContain('posyandu_id')
     expect(Object.keys(kosong('jadwal'))).toContain('tanggal')
+    expect(Object.keys(kosong('jadwal'))).toContain('posyandu_id')
     expect(kosong('edukasi').penting).toBe(false)
+  })
+
+  it('posyandu_id ikut dikirim untuk jadwal, tidak untuk jenis lain', () => {
+    const jadwal = muatanDari({ ...kosong('jadwal'), judul: 'J', isi: 'I', posyandu_id: 'abc-123' })
+    expect(jadwal.posyandu_id).toBe('abc-123')
+    const layanan = muatanDari({ ...kosong('layanan'), judul: 'L', isi: 'I', posyandu_id: 'abc-123' })
+    expect(layanan).not.toHaveProperty('posyandu_id')
+  })
+
+  it('bidangKurang() menyebut Posyandu bila jadwal belum memilih', () => {
+    expect(bidangKurang({ ...kosong('jadwal'), judul: 'J', isi: 'I' })).toContain('Posyandu')
+  })
+
+  it('posyandu_id tetap wajib di form walau disembunyikan dari tabel', () => {
+    const b = SKEMA.jadwal.bidang.find((x) => x.kunci === 'posyandu_id')
+    expect(b.wajib).toBe(true)
+    expect(b.hanyaForm).toBe(true)
+  })
+
+  it('abaikan melewatkan validasi dan muatan untuk peran yang tidak merender field itu', () => {
+    const nilai = { ...kosong('jadwal'), judul: 'J', isi: 'I', tanggal: '2026-12-01T08:00' }
+    expect(bidangKurang(nilai)).toContain('Posyandu')
+    expect(bidangKurang(nilai, { abaikan: ['posyandu_id'] })).toEqual([])
+    expect(muatanDari(nilai, { abaikan: ['posyandu_id'] })).not.toHaveProperty('posyandu_id')
   })
 
   it('muatanDari() membuang bidang yang tidak berlaku untuk jenis itu', () => {
@@ -106,7 +132,7 @@ describe('nilai bidang tanggal', () => {
   })
 
   it('nilaiTampil() memilih format sesuai tipe bidang', () => {
-    const jadwal = SKEMA.jadwal.bidang[0]
+    const jadwal = SKEMA.jadwal.bidang.find((b) => b.tipe === 'tanggal-jam')
     const pengumuman = SKEMA.pengumuman.bidang[0]
     expect(nilaiTampil(jadwal, { tanggal: '2026-11-14T08:00' })).toBe('14 November 2026 · 08.00')
     expect(nilaiTampil(pengumuman, { tanggal: '2026-11-01/2026-11-15' })).toBe(

@@ -178,17 +178,17 @@ router.post('/sinkron', butuhLogin, async (minta, balas) => {
           if (tersimpan) {
             await hapus(namaTabel, idBaris, {
               klien, penggunaId: pengguna.id, idPerangkat,
-              terjadiPada: muatan.terjadi_pada,
+              terjadiPada: muatan.terjadi_pada, ip: minta.ip,
             })
           }
         } else if (tersimpan) {
           await ubah(namaTabel, idBaris, siapkan(namaTabel, muatan), {
             klien, penggunaId: pengguna.id, idPerangkat,
-            terjadiPada: muatan.terjadi_pada,
+            terjadiPada: muatan.terjadi_pada, ip: minta.ip,
           })
         } else {
           await sisip(namaTabel, muatan, {
-            klien, penggunaId: pengguna.id, idPerangkat,
+            klien, penggunaId: pengguna.id, idPerangkat, ip: minta.ip,
           })
         }
       })

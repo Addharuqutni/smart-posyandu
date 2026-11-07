@@ -23,7 +23,7 @@ export function LencanaStatus({ status, aktif }) {
  * dan nakes tidak perlu mencari ulang.
  */
 export function RincianKonten({ konten }) {
-  const bidang = SKEMA[konten.jenis]?.bidang ?? []
+  const bidang = (SKEMA[konten.jenis]?.bidang ?? []).filter((b) => !b.hanyaForm)
   const baris = [
     ...bidang.map((b) => [b.label, nilaiTampil(b, konten)]),
     ['Posyandu', konten.posyandu_nama],
@@ -77,7 +77,7 @@ export function TabelKonten({ jenis, daftar, peran, aksi }) {
         <thead>
           <tr>
             <th>Judul & rincian</th>
-            {skema.bidang.map((b) => (
+            {skema.bidang.filter((b) => !b.hanyaForm).map((b) => (
               <th key={b.kunci}>{b.label}</th>
             ))}
             {jenis === 'jadwal' && <th>Asal</th>}
@@ -101,7 +101,7 @@ export function TabelKonten({ jenis, daftar, peran, aksi }) {
                   <p className="m-0 line-clamp-2 text-padat text-teks-redup">{k.isi}</p>
                 </div>
               </td>
-              {skema.bidang.map((b) => (
+              {skema.bidang.filter((b) => !b.hanyaForm).map((b) => (
                 <td key={b.kunci} data-label={b.label}>
                   <span className="text-padat text-teks-redup">{nilaiTampil(b, k) || '-'}</span>
                 </td>

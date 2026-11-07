@@ -123,6 +123,7 @@ export default function Pengguna({ sesi }) {
       await muat()
     } catch (salah) {
       setGalat(salah.rincian ?? 'Gagal mencabut sesi.')
+      setCabutUntuk(null)
     }
   }
 
@@ -446,41 +447,13 @@ export default function Pengguna({ sesi }) {
                       Setel sandi
                     </button>
                     {p.aktif && p.peran !== 'admin_desa' && (
-                      <>
-                        {nonaktifUntuk === p.id ? (
-                          <span className="ml-1.5 flex flex-wrap items-center gap-2">
-                            <button
-                              type="button"
-                              className="bahaya"
-                              onClick={async () => {
-                                await ubah(
-                                  p.id,
-                                  { aktif: false },
-                                  `Akun ${p.nama_pengguna} dinonaktifkan.`,
-                                )
-                                setNonaktifUntuk(null)
-                              }}
-                            >
-                              Ya, nonaktifkan
-                            </button>
-                            <button
-                              type="button"
-                              className="tautan"
-                              onClick={() => setNonaktifUntuk(null)}
-                            >
-                              Batal
-                            </button>
-                          </span>
-                        ) : (
-                          <button
-                            type="button"
-                            className="bahaya ml-1.5"
-                            onClick={() => setNonaktifUntuk(p.id)}
-                          >
-                            Nonaktifkan
-                          </button>
-                        )}
-                      </>
+                      <button
+                        type="button"
+                        className="bahaya ml-1.5"
+                        onClick={() => setNonaktifUntuk(p)}
+                      >
+                        Nonaktifkan
+                      </button>
                     )}
                     {!p.aktif && (
                       <button
@@ -572,6 +545,73 @@ export default function Pengguna({ sesi }) {
         </Modal>
       )}
 
+      {/* Konfirmasi nonaktifkan akun. Sama seperti cabut sesi: tidak boleh
+          disisipkan di dalam sel tabel karena membuat baris membengkak. */}
+      {nonaktifUntuk && (
+        <Modal
+          judul="Nonaktifkan akun?"
+          subjudul={`${nonaktifUntuk.nama_lengkap} · ${nonaktifUntuk.nama_pengguna}`}
+          onTutup={() => setNonaktifUntuk(null)}
+        >
+          <div className="flex flex-col gap-4 p-4">
+            <p className="m-0 text-isi leading-relaxed text-teks-redup">
+              <strong>{nonaktifUntuk.nama_lengkap}</strong> tidak bisa masuk lagi ke aplikasi.
+              Data dan riwayatnya tetap tersimpan; akun bisa diaktifkan kembali kapan saja.
+            </p>
+            <div className="flex items-center justify-end gap-2 border-t border-garis bg-biru-50 p-4 max-dialog:flex-col-reverse max-dialog:gap-2 max-dialog:[&>button]:w-full">
+              <button type="button" className="sekunder" onClick={() => setNonaktifUntuk(null)}>
+                Batal
+              </button>
+              <button
+                type="button"
+                className="bahaya"
+                onClick={async () => {
+                  await ubah(
+                    nonaktifUntuk.id,
+                    { aktif: false },
+                    `Akun ${nonaktifUntuk.nama_pengguna} dinonaktifkan.`,
+                  )
+                  setNonaktifUntuk(null)
+                }}
+              >
+                Ya, nonaktifkan
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Konfirmasi cabut sesi. Sebelumnya disisipkan di dalam sel tabel,
+          sehingga baris membengkak dan kolom aksi melebar. Pola ini menyamakan
+          konfirmasi dengan layar Kelola Posyandu dan Kelola Konten. */}
+      {cabutUntuk && (
+        <Modal
+          judul="Cabut sesi tablet?"
+          subjudul={`${cabutUntuk.nama_pengguna} · ${cabutUntuk.id_perangkat}`}
+          onTutup={() => setCabutUntuk(null)}
+        >
+          <div className="flex flex-col gap-4 p-4">
+            <p className="m-0 text-isi leading-relaxed text-teks-redup">
+              Sesi <strong>{cabutUntuk.nama_lengkap}</strong> pada perangkat{' '}
+              <strong>{cabutUntuk.id_perangkat}</strong> akan dihentikan. Orang di tablet itu harus
+              memasukkan username dan kata sandi lagi untuk masuk.
+            </p>
+            <div className="flex items-center justify-end gap-2 border-t border-garis bg-biru-50 p-4 max-dialog:flex-col-reverse max-dialog:gap-2 max-dialog:[&>button]:w-full">
+              <button type="button" className="sekunder" onClick={() => setCabutUntuk(null)}>
+                Batal
+              </button>
+              <button
+                type="button"
+                className="bahaya"
+                onClick={() => cabut(cabutUntuk.id, `${cabutUntuk.nama_pengguna} di ${cabutUntuk.id_perangkat}`)}
+              >
+                Ya, cabut
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
       <div className="kartu">
         <div className="kartu-judul">
           <h2>Sesi tablet aktif</h2>
@@ -601,32 +641,13 @@ export default function Pengguna({ sesi }) {
                   <td className="text-padat text-teks-samar" data-label="Masuk">{waktuPendek(s.dibuat_pada)}</td>
                   <td className="text-padat text-teks-samar" data-label="Kedaluwarsa">{waktuPendek(s.kadaluarsa_pada)}</td>
                   <td className="sel-aksi">
-                    {cabutUntuk === s.id ? (
-                      <span className="flex flex-wrap items-center gap-2">
-                        <button
-                          type="button"
-                          className="bahaya"
-                          onClick={() => cabut(s.id, `${s.nama_pengguna} di ${s.id_perangkat}`)}
-                        >
-                          Ya, cabut
-                        </button>
-                        <button
-                          type="button"
-                          className="tautan"
-                          onClick={() => setCabutUntuk(null)}
-                        >
-                          Batal
-                        </button>
-                      </span>
-                    ) : (
-                      <button
-                        type="button"
-                        className="bahaya"
-                        onClick={() => setCabutUntuk(s.id)}
-                      >
-                        Cabut
-                      </button>
-                    )}
+                    <button
+                      type="button"
+                      className="bahaya"
+                      onClick={() => setCabutUntuk(s)}
+                    >
+                      Cabut
+                    </button>
                   </td>
                 </tr>
               ))}

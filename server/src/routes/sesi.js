@@ -38,6 +38,15 @@ router.delete('/sesi/:id', Admin, async (minta, balas) => {
     const ada = await satu(`SELECT id FROM sesi_login WHERE id = $1`, [minta.params.id])
     if (!ada) return balas.status(404).json({ detail: 'sesi_tidak_ditemukan' })
   }
+  await kueri(
+    `INSERT INTO log_audit
+       (id, pengguna_id, id_perangkat, nama_tabel, id_baris, aksi,
+        nilai_lama, nilai_baru, alamat_ip, terjadi_pada, diterima_pada)
+     VALUES (gen_random_uuid(), $1, 'server', 'sesi', $2, 'hapus',
+             NULL, $3, $4, now(), now())`,
+    [minta.pengguna.id, minta.params.id,
+      JSON.stringify({ dicabut_pada: 'now()' }), minta.ip ?? null],
+  )
   balas.status(204).send()
 })
 

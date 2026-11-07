@@ -51,10 +51,10 @@ router.get('/cadangan/:nama', Admin, async (minta, balas) => {
   await kueri(
     `INSERT INTO log_audit
        (id, pengguna_id, id_perangkat, nama_tabel, id_baris, aksi,
-        nilai_lama, nilai_baru, terjadi_pada, diterima_pada)
+        nilai_lama, nilai_baru, alamat_ip, terjadi_pada, diterima_pada)
      VALUES (gen_random_uuid(), $1, 'server', 'cadangan', gen_random_uuid(), 'buat',
-             NULL, $2, now(), now())`,
-    [minta.pengguna.id, JSON.stringify({ berkas: nama })],
+             NULL, $2, $3, now(), now())`,
+    [minta.pengguna.id, JSON.stringify({ berkas: nama }), minta.ip ?? null],
   )
 
   const ukuran = fs.statSync(berkas).size

@@ -494,9 +494,6 @@ export default function KanalPublik({ keLogin }) {
               <h2 id="judul-layanan" className="rubrik">
                 Layanan Rutin di Posyandu
               </h2>
-              <p className="m-0 mt-1 text-padat text-teks-samar">
-                Seluruh layanan promotif dan preventif balita di bawah pengawasan Bidan Desa dan Puskesmas.
-              </p>
             </div>
 
             <ol className="m-0 grid list-none gap-3 p-0 mini:grid-cols-2">

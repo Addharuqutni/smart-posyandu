@@ -47,6 +47,9 @@ legacy/
 .omp/
 .uizze/
 
+# Log runtime server (dihasilkan saat menjalankan API, bukan sumber)
+*.log
+
 # Panduan agen AI (dokumen internal, tidak ikut ke produksi)
 AGENTS.md
 **/AGENTS.md

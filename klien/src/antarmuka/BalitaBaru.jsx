@@ -3,7 +3,7 @@ import { simpanBalita } from '../penyimpanan/balita.js'
 import { batasTanggalLahir, tanggalHariIni } from '../logika/waktu.js'
 import { daftarPosyandu } from '../jaringan/api.js'
 import Ikon from './Ikon.jsx'
-import { Layar } from './Bersama.jsx'
+import { Layar, bukaPemilih } from './Bersama.jsx'
 
 const AWAL = {
   nama_lengkap: '',
@@ -189,6 +189,7 @@ export default function BalitaBaru({ sesi, setelahSimpan, kembali }) {
                   min={batasTanggalLahir()}
                   value={isi.tanggal_lahir}
                   onChange={(e) => ubah('tanggal_lahir', e.target.value)}
+                  onClick={bukaPemilih}
                   required
                 />
                 <p className="petunjuk mt-1">Maksimal 7 tahun (84 bulan).</p>

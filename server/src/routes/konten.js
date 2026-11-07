@@ -4,6 +4,18 @@ const { banyak, satu, kueri } = require('../db/pool')
 const { butuhLogin, butuhPeran } = require('../middleware/auth')
 
 const router = express.Router()
+
+/** Satu baris log_audit untuk setiap perubahan konten publik. */
+async function catatKonten(minta, aksi, idBaris, nilaiBaru) {
+  await kueri(
+    `INSERT INTO log_audit
+       (id, pengguna_id, id_perangkat, nama_tabel, id_baris, aksi,
+        nilai_lama, nilai_baru, alamat_ip, terjadi_pada, diterima_pada)
+     VALUES (gen_random_uuid(), $1, 'server', 'konten_publik', $2, $3,
+             NULL, $4, $5, now(), now())`,
+    [minta.pengguna.id, idBaris, aksi, JSON.stringify(nilaiBaru), minta.ip ?? null],
+  )
+}
 const Admin = butuhPeran('admin_desa')
 const NakesAtaudmin = butuhPeran('nakes', 'admin_desa')
 const POLA_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -92,7 +104,7 @@ router.get('/konten-publik/semua', butuhLogin, async (minta, balas) => {
 //    Kader (jenis lain): ditolak, karena konten non-jadwal dikelola admin.
 router.post('/konten-publik', butuhLogin, async (minta, balas) => {
   const peran = minta.pengguna.peran
-  const { jenis, judul, isi, kategori = null, tanggal = null, penting = false, aktif = true, urutan = 0 } = minta.body || {}
+  const { jenis, judul, isi, kategori = null, tanggal = null, penting = false, aktif = true, urutan = 0, posyandu_id = null } = minta.body || {}
 
   if (!jenis || !JENIS_SAH.includes(jenis)) {
     return balas.status(422).json({ detail: 'jenis_tidak_sah', rincian: 'Jenis harus jadwal, layanan, pengumuman, atau edukasi.' })
@@ -108,17 +120,35 @@ router.post('/konten-publik', butuhLogin, async (minta, balas) => {
   }
 
   const perluSetuju = butuhPersetujuan(jenis, peran)
+
+  // Jadwal butuh Posyandu supaya bisa dipetakan ke kartu lokasi di kanal
+  // publik. Kader memakai Posyandu yang melekat di akunnya (tidak boleh
+  // memilih yang lain); admin memilih lewat form dan wajib mengirim id yang
+  // benar-benar ada. Jenis selain jadwal tidak memakai posyandu_id.
+  let posyanduId = null
+  if (jenis === 'jadwal') {
+    const kandidat = peran === 'kader' ? minta.pengguna.posyandu_id : String(posyandu_id ?? '').trim()
+    if (!kandidat || !POLA_UUID.test(kandidat)) {
+      return balas.status(422).json({
+        detail: 'posyandu_wajib_diisi',
+        rincian: 'Pilih Posyandu tempat jadwal ini berlangsung.',
+      })
+    }
+    const pos = await satu(
+      `SELECT id FROM posyandu WHERE id = $1 AND dihapus_pada IS NULL`,
+      [kandidat],
+    )
+    if (!pos) {
+      return balas.status(422).json({ detail: 'posyandu_tidak_ditemukan' })
+    }
+    posyanduId = pos.id
+  }
+
   if (peran === 'kader') {
     if (jenis !== 'jadwal') {
       return balas.status(403).json({
         detail: 'kader_hanya_jadwal',
         rincian: 'Kader hanya boleh mengajukan jadwal Posyandu. Jenis lain dibuat admin desa.',
-      })
-    }
-    if (!minta.pengguna.posyandu_id) {
-      return balas.status(422).json({
-        detail: 'posyandu_wajib_diisi',
-        rincian: 'Akun kader wajib terikat pada satu Posyandu.',
       })
     }
   }
@@ -143,10 +173,11 @@ router.post('/konten-publik', butuhLogin, async (minta, balas) => {
       Number(urutan) || 0,
       perluSetuju ? 'menunggu' : 'disetujui',
       minta.pengguna.id,
-      peran === 'kader' ? minta.pengguna.posyandu_id : null,
+      posyanduId,
     ],
   )
 
+  await catatKonten(minta, 'buat', id, { judul: baru.judul, jenis: baru.jenis })
   balas.status(201).json(baru)
 })
 
@@ -182,6 +213,9 @@ router.post('/konten-publik/:id/putuskan', NakesAtaudmin, async (minta, balas) =
     return balas.status(404).json({ detail: 'jadwal_tidak_ditemukan', rincian: 'Hanya jadwal Posyandu yang butuh persetujuan.' })
   }
 
+  await catatKonten(minta, 'ubah', id, {
+    keputusan, status_persetujuan: hasil.status_persetujuan, judul: hasil.judul,
+  })
   balas.json(hasil)
 })
 
@@ -209,7 +243,7 @@ router.patch('/konten-publik/:id', butuhLogin, async (minta, balas) => {
     return balas.status(403).json({ detail: 'tidak_diizinkan' })
   }
 
-  const { jenis, judul, isi, kategori, tanggal, penting, aktif, urutan } = minta.body || {}
+  const { jenis, judul, isi, kategori, tanggal, penting, aktif, urutan, posyandu_id } = minta.body || {}
   const nilai = {}
 
   if (jenis !== undefined) {
@@ -228,6 +262,21 @@ router.patch('/konten-publik/:id', butuhLogin, async (minta, balas) => {
     nilai.isi = isi.trim()
   }
   if (kategori !== undefined) nilai.kategori = kategori ? String(kategori).trim() : null
+  if (posyandu_id !== undefined) {
+    // Kader tidak boleh memindahkan jadwalnya ke Posyandu lain.
+    if (peran === 'kader') return balas.status(403).json({ detail: 'tidak_diizinkan' })
+    if (posyandu_id) {
+      if (!POLA_UUID.test(String(posyandu_id))) return balas.status(422).json({ detail: 'posyandu_tidak_sah' })
+      const pos = await satu(
+        `SELECT id FROM posyandu WHERE id = $1 AND dihapus_pada IS NULL`,
+        [posyandu_id],
+      )
+      if (!pos) return balas.status(422).json({ detail: 'posyandu_tidak_ditemukan' })
+      nilai.posyandu_id = pos.id
+    } else {
+      return balas.status(422).json({ detail: 'posyandu_wajib_diisi' })
+    }
+  }
   if (tanggal !== undefined) nilai.tanggal = tanggal ? String(tanggal).trim() : null
   if (penting !== undefined) nilai.penting = Boolean(penting)
   if (urutan !== undefined) nilai.urutan = Number(urutan) || 0
@@ -255,7 +304,11 @@ router.patch('/konten-publik/:id', butuhLogin, async (minta, balas) => {
      RETURNING *`,
     [...Object.values(nilai), id],
   )
+  if (!hasil) return balas.status(404).json({ detail: 'konten_tidak_ditemukan' })
 
+  await catatKonten(minta, 'ubah', id, {
+    judul: hasil.judul, jenis: hasil.jenis, status_persetujuan: hasil.status_persetujuan,
+  })
   balas.json(hasil)
 })
 
@@ -286,6 +339,7 @@ router.delete('/konten-publik/:id', butuhLogin, async (minta, balas) => {
     return balas.status(404).json({ detail: 'konten_tidak_ditemukan' })
   }
 
+  await catatKonten(minta, 'hapus', id, { judul: null })
   balas.status(204).end()
 })
 

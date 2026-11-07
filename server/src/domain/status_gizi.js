@@ -1,7 +1,9 @@
 // Status gizi dari persen median BB/U (PRD Bagian 7.1, Opsi A).
 //
 // Dihitung **hanya di server** (AGENTS 2.6): rumus dan acuan bisa berubah
-// tanpa pembaruan tablet, dan klien tidak menghitung ulang.
+// tanpa pembaruan tablet, dan klien tidak menghitung ulang. Validasi massal
+// memakai CASE dengan ambang yang sama persis seperti `klasifikasi()` di bawah;
+// bila ambang ini berubah, perbarui juga blok SQL di routes/data.js.
 //
 // Batas klasifikasi mengikuti KMS kertas yang sudah dikenal kader
 // (ARSITEKTUR 4.4).

@@ -10,6 +10,21 @@ import Bantuan from './Bantuan.jsx'
  */
 
 /**
+ * Buka pemilih tanggal/jam dari daerah input mana pun, bukan cuma ikon di
+ * ujung kanan. Bawaan browser hanya membuka kalender saat ikon itu diklik,
+ * yang menyulitkan kader di tablet: bidangnya lebar tapi cuma 20px kanan yang
+ * bisa dipencet.
+ *
+ * `showPicker` belum ada di semua WebView dan bisa melempar bila pemilihnya
+ * tidak tersedia; klik biasa tetap berfungsi sebagai cadangan.
+ */
+export function bukaPemilih(e) {
+  const el = e.currentTarget
+  if (typeof el.showPicker !== 'function') return
+  try { el.showPicker() } catch { /* pemilih tidak tersedia */ }
+}
+
+/**
  * Kerangka satu layar kerja: kontainer, padding, dan `<main>`.
  *
  * Sebelumnya tiga belas layar menyalin string kontainer 200 karakter yang
