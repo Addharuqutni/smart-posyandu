@@ -1,0 +1,11 @@
+# Smart Posyandu — Desa Ketenger
+# Halaman publik: kanal informasi desa di "/".
+# Area petugas ("/app/") butuh login dan tidak untuk diindeks.
+
+User-agent: *
+Allow: /
+
+Disallow: /app/
+Disallow: /sw.js
+
+Sitemap: https://posyandudesaketenger.my.id/sitemap.xml
