@@ -137,7 +137,7 @@ export default function BalitaBaru({ sesi, setelahSimpan, kembali }) {
               <span id="judul-identitas-balita">Identitas Balita</span>
             </div>
 
-            <div className="grid grid-cols-2 items-start gap-x-4 gap-y-4 max-sempit:grid-cols-1">
+            <div className="grid grid-cols-2 items-start gap-x-4 gap-y-4 form-satu-kolom">
               {!posyanduKader && (
                 <div className="bidang col-span-2 max-sempit:col-span-1">
                   <label htmlFor="posyandu">
@@ -240,7 +240,7 @@ export default function BalitaBaru({ sesi, setelahSimpan, kembali }) {
               <span id="judul-wali">Data Orang Tua / Wali</span>
             </div>
 
-            <div className="grid grid-cols-2 items-start gap-x-4 gap-y-4 max-sempit:grid-cols-1">
+            <div className="grid grid-cols-2 items-start gap-x-4 gap-y-4 form-satu-kolom">
               <div className="bidang flex flex-col">
                 <label htmlFor="wali">
                   <span>Nama wali</span>

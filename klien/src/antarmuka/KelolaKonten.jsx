@@ -72,7 +72,7 @@ function BidangJenis({ nilai, ubah, idAwal, daftarPosyandu = [], kader = false }
             {b.label}
             {wajib}
           </legend>
-          <div className="grid grid-cols-2 gap-2 max-sempit:grid-cols-1">
+          <div className="grid grid-cols-2 gap-2 form-satu-kolom">
             <input
               id={`${id}-a`}
               type="date"
@@ -351,7 +351,7 @@ export default function KelolaKonten({ sesi }) {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 items-start gap-x-4 gap-y-4 max-sempit:grid-cols-1">
+          <div className="grid grid-cols-2 items-start gap-x-4 gap-y-4 form-satu-kolom">
             <PilihJenis
               id="k-jenis"
               nilai={isi.jenis}
@@ -626,7 +626,7 @@ export default function KelolaKonten({ sesi }) {
           onTutup={() => setSunting(null)}
         >
           <form onSubmit={simpanSunting} className="flex flex-col gap-4 p-4">
-            <div className="grid grid-cols-2 items-start gap-x-4 gap-y-4 max-sempit:grid-cols-1">
+            <div className="grid grid-cols-2 items-start gap-x-4 gap-y-4 form-satu-kolom">
               <PilihJenis
                 id="s-jenis"
                 nilai={sunting.jenis}

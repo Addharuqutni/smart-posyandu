@@ -293,7 +293,7 @@ function kontenDemo(ac, { posyanduId, kaderId, nakesId, adminId, hariIni }) {
       pengaju: adminId,
     },
 
-    // --- Edukasi Gizi & Kesehatan ---
+    // --- Edukasi & Pencegahan ---
     {
       jenis: 'edukasi',
       judul: 'Protein Hewani Wajib Ada di Setiap MPASI',

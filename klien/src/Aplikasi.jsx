@@ -222,9 +222,9 @@ export default function Aplikasi() {
     const padaUbahRute = () => {
       const bawaan = layarAwal(sesi?.pengguna.peran)
       const lokasi = window.location.pathname + window.location.hash
-      const tujuan = layarDari(lokasi, sesi?.pengguna.peran, bawaan)
       const muatan = window.history.state?.layar
-      setLayar(tujuan.nama === muatan?.nama && muatan.balita ? { ...tujuan, balita: muatan.balita } : tujuan)
+      const tujuan = layarDari(lokasi, sesi?.pengguna.peran, bawaan, muatan)
+      setLayar(tujuan)
       // Rapikan URL bila path tidak sah atau masih membawa tanda # warisan:
       const jalurSah = jalurDari(tujuan)
       if (window.location.pathname !== jalurSah || window.location.hash) {

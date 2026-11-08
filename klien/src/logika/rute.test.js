@@ -46,6 +46,17 @@ describe('layarDari', () => {
     expect(layarDari('#/riwayat', 'kader', BAWAAN_KADER)).toBe(BAWAAN_KADER)
   })
 
+  it('riwayat dibuka bila muatan balita ikut di history.state', () => {
+    const balita = { id: 'b-1', nama_lengkap: 'Balita Uji' }
+    expect(layarDari('/app/riwayat', 'kader', BAWAAN_KADER, { balita })).toEqual({
+      nama: 'riwayat',
+      balita,
+    })
+    // Tanpa muatan tetap ditolak, dan peran lain tak boleh memakainya.
+    expect(layarDari('/app/riwayat', 'kader', BAWAAN_KADER)).toBe(BAWAAN_KADER)
+    expect(layarDari('/app/riwayat', 'nakes', BAWAAN_NAKES, { balita })).toBe(BAWAAN_NAKES)
+  })
+
   it('setiap nama layar sah dibuka minimal satu peran', () => {
     for (const nama of LAYAR_SAH) {
       const pemilik = [undefined, 'kader', 'nakes', 'admin_desa'].filter((p) => bolehDibuka(nama, p))

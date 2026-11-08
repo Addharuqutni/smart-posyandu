@@ -3,15 +3,35 @@ import { idBaru, sekarangIso, usiaBulan, batasKunjungan } from '../logika/waktu.
 import { LABEL, periksaRentang } from '../logika/rentang.js'
 
 /**
+ * Kunjungan hidup milik balita ini pada tanggal yang sama, atau null.
+ *
+ * Server sudah punya indeks unik (balita_id, tanggal_kunjungan), tetapi tanpa
+ * pemeriksaan di tablet kader baru tahu setelah sinkron gagal — dan baris yang
+ * ditolak tertahan di antrean. Mengetahui lebih awal memungkinkan peringatan
+ * sebelum data masuk.
+ */
+export async function kunjunganPadaTanggal(balitaId, tanggal) {
+  const daftar = await db.kunjungan
+    .where('balita_id')
+    .equals(balitaId)
+    .filter((k) => !k.dihapus_pada && String(k.tanggal_kunjungan).slice(0, 10) === tanggal)
+    .toArray()
+  return daftar[0] ?? null
+}
+
+/**
  * Simpan satu kunjungan lengkap ke IndexedDB DAN antrean sinkron dalam satu
  * transaksi. Tanpa jaringan pun ini berhasil — itu inti aplikasi (AGENTS 2.1).
  *
  * Melempar Error dengan pesan yang bisa ditampilkan bila nilai di luar rentang.
+ * `izinkanGanda` hanya dipakai setelah kader menyetujui peringatan bahwa
+ * balita ini sudah punya kunjungan pada tanggal yang sama.
  */
 export async function simpanKunjungan({
   balita,
   idPerangkat,
   tanggal,
+  izinkanGanda = false,
   berat_kg,
   tinggi_cm,
   lingkar_kepala_cm,
@@ -41,6 +61,18 @@ export async function simpanKunjungan({
   const batas = batasKunjungan(balita.tanggal_lahir)
   if (!batas || tanggal > batas) {
     throw new Error('Usia balita sudah melewati 7 tahun (84 bulan).')
+  }
+
+  if (!izinkanGanda) {
+    const sudah = await kunjunganPadaTanggal(balita.id, tanggal)
+    if (sudah) {
+      // Kode galat, bukan kalimat: layar Catat menampilkan dialog konfirmasi
+      // dan bisa mengirim ulang dengan `izinkanGanda: true`.
+      const salah = new Error('kunjungan_ganda')
+      salah.kode = 'kunjungan_ganda'
+      salah.kunjungan = sudah
+      throw salah
+    }
   }
 
   const kunjungan = {

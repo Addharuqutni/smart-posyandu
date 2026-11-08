@@ -236,7 +236,7 @@ export default function KelolaBalita({ sesi }) {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 items-start gap-x-4 gap-y-4 max-sempit:grid-cols-1">
+        <div className="grid grid-cols-2 items-start gap-x-4 gap-y-4 form-satu-kolom">
           <div className="bidang flex flex-col">
             <label htmlFor="b-posyandu">
               <span>Posyandu</span>

@@ -147,9 +147,21 @@ router.delete('/posyandu/:id', Admin, async (minta, balas) => {
   const rujukan = await jumlahRujukan(minta.params.id)
   const terpakai = Object.values(rujukan ?? {}).some((n) => n > 0)
   if (terpakai) {
+    // Sebut yang benar-benar menghalangi, bukan daftar kemungkinan: pesan
+    // "masih dipakai data balita, kunjungan, kader, atau akun" membuat admin
+    // mencari keempatnya padahal hanya satu yang menahan.
+    const LABEL = {
+      balita: 'balita', kunjungan: 'kunjungan',
+      pengguna: 'akun pengguna', kader: 'data kader',
+    }
+    const rincian = Object.entries(rujukan)
+      .filter(([, n]) => n > 0)
+      .map(([k, n]) => `${n} ${LABEL[k]}`)
+      .join(' dan ')
     return balas.status(409).json({
       detail: 'posyandu_masih_terpakai',
       rujukan,
+      pesan: `Posyandu masih dipakai ${rincian}. Hapus atau pindahkan data itu dulu, atau nonaktifkan Posyandu.`,
     })
   }
 

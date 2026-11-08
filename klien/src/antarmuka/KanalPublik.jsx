@@ -427,7 +427,7 @@ export default function KanalPublik({ keLogin }) {
                   <p className="m-0 mt-1 text-padat text-biru-100">
                     {galat
                       ? 'Daftar Posyandu belum bisa dimuat. Periksa koneksi internet lalu coba lagi.'
-                      : 'Data Posyandu dusun akan tampil di sini setelah didaftarkan admin desa.'}
+                      : 'Data Posyandu dusun akan tampil di sini setelah didaftarkan pusat.'}
                   </p>
                   {galat && (
                     <button
@@ -559,7 +559,7 @@ export default function KanalPublik({ keLogin }) {
                         rel="noopener noreferrer"
                         className="mt-auto inline-flex items-center gap-1 border-t border-garis pt-3 text-2xs font-semibold text-biru-700 hover:text-biru-900"
                       >
-                        Baca selengkapnya di KodeNara
+                        Baca selengkapnya
                         <span aria-hidden="true">↗</span>
                       </a>
                     ) : edu.bacaan ? (
@@ -622,9 +622,12 @@ export default function KanalPublik({ keLogin }) {
       </main>
       {/* 4. Footer */}
       <footer className="border-t border-garis bg-kartu">
-        <div className="mx-auto max-w-lebar px-4 py-8 max-sempit:px-3 max-sempit:py-6">
+        {/* Footer selebar halaman, bukan dibatasi 1040px seperti isi:
+            pada layar lebar, kontainer sempit membuat teks tengah tampak
+            melenceng karena sisa ruang jatuh seluruhnya di kanan. */}
+        <div className="mx-auto w-full px-4 py-3 max-sempit:px-3">
           {/* Khusus tampilan HP: Tombol Masuk Petugas ditempatkan di bawah agar lega & nyaman disentuh */}
-          <div className="mb-6 flex flex-col gap-2 rounded-sedang border border-garis bg-latar p-4 text-center sempit:hidden">
+          <div className="mb-3 flex flex-col gap-2 rounded-sedang border border-garis bg-latar p-4 text-center sempit:hidden">
             <p className="m-0 text-2xs font-semibold text-teks-samar">
               Akses khusus kader posyandu, bidan desa, dan pengurus:
             </p>
@@ -638,15 +641,12 @@ export default function KanalPublik({ keLogin }) {
             </button>
           </div>
 
-          <div className="flex flex-col gap-2 text-padat text-teks-samar sm:flex-row sm:items-center sm:justify-between">
-            <p className="m-0">
-              Smart Posyandu{namaDesa ? ` · Desa ${namaDesa}` : ''}
-              {daftarPos.find((p) => p.kecamatan) ? `, Kec. ${daftarPos.find((p) => p.kecamatan).kecamatan}` : ''}
-            </p>
-            <p className="m-0">
-              &copy; 2026 KodeNara
-            </p>
-          </div>
+          {/* max-w-none wajib: aturan global `p { max-width: 70ch }` di
+              gaya.css membatasi lebar kotak paragraf, sehingga teks yang
+              rata tengah tetap menempel kiri pada layar lebar. */}
+          <p className="m-0 max-w-none text-center text-2xs tracking-[0.01em] text-teks-samar">
+            &copy; 2026 KodeNara. All rights reserved.
+          </p>
         </div>
       </footer>
     </div>

@@ -230,11 +230,14 @@ function nilaiBalitaSah(b) {
     else return { salah: 'muatan_tidak_sah' }
   }
   // Angka: kosong -> null; selain angka wajar -> tolak (bukan 500).
-  for (const k of ['berat_lahir_kg', 'panjang_lahir_cm']) {
+  // Batasnya beda per satuan: berat lahir (kg) maks 40, panjang lahir (cm)
+  // maks 70. Bayi lahir normalnya 45-55 cm; memakai 40 untuk keduanya membuat
+  // balita yang baru didaftarkan mustahil disunting lewat PATCH.
+  for (const [k, maks] of [['berat_lahir_kg', 40], ['panjang_lahir_cm', 70]]) {
     if (b[k] === undefined) continue
     if (b[k] === null || b[k] === '') { nilai[k] = null; continue }
     const angka = Number(b[k])
-    if (!Number.isFinite(angka) || angka <= 0 || angka > 40) return { salah: 'muatan_tidak_sah' }
+    if (!Number.isFinite(angka) || angka <= 0 || angka > maks) return { salah: 'muatan_tidak_sah' }
     nilai[k] = angka
   }
   if (b.aktif !== undefined) {
@@ -261,11 +264,46 @@ router.patch('/balita/:id', Admin, async (minta, balas) => {
   balas.json({ ...baris, nik: null })
 })
 
+/**
+ * Hapus balita BESERTA turunannya dalam satu transaksi.
+ *
+ * Versi lama hanya menandai `balita.dihapus_pada`. Kunjungan, pengukuran,
+ * relasi wali, dan tindak lanjutnya tetap hidup, sehingga balita "sudah
+ * dihapus" tetapi Posyandunya tetap dianggap terpakai dan tidak bisa dihapus.
+ * Semua memakai soft delete yang sama (AGENTS 2.3), bukan DELETE fisik.
+ */
 router.delete('/balita/:id', Admin, async (minta, balas) => {
-  const berhasil = await hapus('balita', minta.params.id, {
-    penggunaId: minta.pengguna.id,
-    idPerangkat: 'server',
-    ip: minta.ip,
+  const { id } = minta.params
+  const metadata = { penggunaId: minta.pengguna.id, idPerangkat: 'server', ip: minta.ip }
+  const berhasil = await transaksi(async (klien) => {
+    const meta = { ...metadata, klien }
+    const lama = (await klien.query(
+      `SELECT * FROM balita WHERE id = $1 AND dihapus_pada IS NULL`, [id],
+    )).rows[0]
+    if (!lama) return false
+
+    const kunjungan = (await klien.query(
+      `SELECT id FROM kunjungan WHERE balita_id = $1 AND dihapus_pada IS NULL`, [id],
+    )).rows.map((r) => r.id)
+    if (kunjungan.length) {
+      const pengukuran = (await klien.query(
+        `SELECT id FROM pengukuran WHERE kunjungan_id = ANY($1::uuid[]) AND dihapus_pada IS NULL`,
+        [kunjungan],
+      )).rows.map((r) => r.id)
+      const tindak = (await klien.query(
+        `SELECT id FROM tindak_lanjut WHERE kunjungan_id = ANY($1::uuid[]) AND dihapus_pada IS NULL`,
+        [kunjungan],
+      )).rows.map((r) => r.id)
+      for (const u of pengukuran) await hapus('pengukuran', u, meta)
+      for (const t of tindak) await hapus('tindak_lanjut', t, meta)
+      for (const k of kunjungan) await hapus('kunjungan', k, meta)
+    }
+    const relasi = (await klien.query(
+      `SELECT id FROM balita_orang_tua WHERE balita_id = $1 AND dihapus_pada IS NULL`, [id],
+    )).rows.map((r) => r.id)
+    for (const r of relasi) await hapus('balita_orang_tua', r, meta)
+
+    return hapus('balita', id, meta)
   })
   if (!berhasil) return balas.status(404).json({ detail: 'balita_tidak_ditemukan' })
   balas.status(204).send()

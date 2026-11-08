@@ -19,14 +19,19 @@ const KOSONG = {
 
 const PESAN_GALAT = {
   posyandu_masih_terpakai:
-    'Posyandu masih dipakai data balita, kunjungan, kader, atau akun. Nonaktifkan saja bila sudah tidak dipakai.',
+    'Posyandu masih dipakai data lain. Hapus atau pindahkan data itu dulu, atau nonaktifkan Posyandu.',
   nama_pengguna_sudah_dipakai: 'Username sudah dipakai akun lain.',
   muatan_tidak_sah: 'Data yang diisi belum lengkap atau tidak sah.',
   posyandu_tidak_ditemukan: 'Posyandu tidak ditemukan.',
 }
 
 function pesanGalat(salah) {
-  return PESAN_GALAT[salah.rincian] ?? salah.rincian ?? 'Gagal menyimpan. Coba lagi.'
+  // Server kini mengirim kalimat spesifik ("... 1 kunjungan dan 2 akun
+  // pengguna"); pakai itu apa adanya. Peta lokal hanya cadangan untuk
+  // kode galat lama tanpa kalimat.
+  const teks = String(salah.rincian ?? '')
+  if (teks && !PESAN_GALAT[teks] && / /.test(teks)) return teks
+  return PESAN_GALAT[teks] ?? teks ?? 'Gagal menyimpan. Coba lagi.'
 }
 
 /** Kelola Posyandu: tambah, sunting, hapus (khusus admin desa). */

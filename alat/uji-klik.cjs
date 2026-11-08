@@ -443,6 +443,54 @@ async function main() {
       const sukses = await sesi.eval('window.__uji.ada("tersimpan") || window.__uji.ada("berhasil") || window.__uji.ada("menunggu")')
       catat('catat kunjungan lewat klik', Boolean(sukses), 'tersimpan di tablet (lokal)')
 
+      // === Peringatan kunjungan ganda di hari yang sama ===
+      // Catat ulang balita yang sama pada tanggal yang sama.
+      await buka('/app/catat')
+      await sesi.tunggu(() => sesi.eval('Boolean(document.querySelector("#berat"))'), 'layar catat')
+      await sesi.eval(`window.__uji.isi("#balita", ${JSON.stringify(balitaDb?.id ?? '')})`)
+      await new Promise((r) => setTimeout(r, 700))
+      const peringatanAwal = await sesi.eval('window.__uji.ada("kunjungan ganda")')
+      catat('peringatan dini muncul saat pilih balita', peringatanAwal)
+
+      await sesi.eval('window.__uji.isi("#berat", "9.6")')
+      await sesi.eval('window.__uji.isi("#tinggi", "75")')
+      await klik('Simpan kunjungan', 'button')
+      await new Promise((r) => setTimeout(r, 800))
+      const adaDialog = await sesi.eval('window.__uji.ada("Kunjungan ganda di hari yang sama?")')
+      catat('dialog konfirmasi kunjungan ganda muncul', adaDialog)
+
+      const sebelumTolak = (await db.query(
+        'SELECT count(*)::int n FROM kunjungan WHERE balita_id = $1 AND dihapus_pada IS NULL',
+        [balitaDb?.id],
+      )).rows[0].n
+      // "Periksa lagi" = batal, tidak boleh menulis apa pun.
+      await sesi.eval(`(() => {
+        const d = document.querySelector('[role="dialog"]');
+        const b = d && [...d.querySelectorAll('button')].find(e => /periksa lagi/i.test(e.innerText));
+        if (b) b.click(); return Boolean(b);
+      })()`)
+      await new Promise((r) => setTimeout(r, 600))
+      const sesudahTolak = (await db.query(
+        `SELECT count(*)::int n FROM pengukuran p
+         JOIN kunjungan k ON k.id = p.kunjungan_id
+         WHERE k.balita_id = $1 AND p.dihapus_pada IS NULL`,
+        [balitaDb?.id],
+      )).rows[0].n
+      const antreanGanda = await sesi.eval(`(async () => {
+        const req = indexedDB.open('posyandu');
+        const dbh = await new Promise((r) => { req.onsuccess = () => r(req.result); req.onerror = () => r(null) });
+        const baca = (nama) => new Promise((r) => {
+          const s = dbh.transaction(nama).objectStore(nama).getAll();
+          s.onsuccess = () => r(s.result);
+        });
+        const a = await baca('antrean_sinkron');
+        dbh.close();
+        return a.filter(x => x.status === 'menunggu').length;
+      })()`)
+      catat('"Periksa lagi" tidak menyimpan kunjungan ganda',
+        sebelumTolak === 1 && sesudahTolak === 1 && antreanGanda === 0,
+        `kunjungan=${sebelumTolak}/${sesudahTolak} antrean=${antreanGanda}`)
+
       // Buktikan kunjungan benar-benar sampai ke server, bukan cuma lokal.
       // Ini yang sebelumnya hanya diasumsikan.
       await buka('/app/beranda')

@@ -289,6 +289,15 @@
     overflow-wrap: break-word;
   }
 
+  /* Paragraf yang rata tengah atau rata kanan (footer, catatan kecil) tidak
+     boleh dibatasi 70ch: kotaknya menyusut dan menempel kiri, sehingga
+     `text-center` hanya menengahkan di dalam kotak sempit itu dan teksnya
+     tampak melenceng dari halaman. */
+  p.text-center,
+  p.text-right {
+    max-width: none;
+  }
+
   /* Label formulir: peran label, bukan isi yang diperkecil. */
   label {
     line-height: 1.4;
@@ -1325,6 +1334,34 @@
   button.tautan,
   .segmen button {
     min-height: 48px;
+  }
+
+  /* Formulir dua kolom jadi satu kolom di ponsel, termasuk anak `col-span-2`.
+     Tanpa runtuhan span itu, grid tetap membuat kolom implisit kedua
+     (`0px 1fr`): kolom pertama kosong dan isinya menyempit.
+     ponytail: satu kelas untuk semua formulir; saat ada span khusus,
+     pindahkan ke varian per-komponen. */
+  .form-satu-kolom {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .form-satu-kolom > .col-span-2 {
+    grid-column: span 1 / span 1;
+  }
+
+  /* Label formulir di HP. `label` berdisplay inline-flex dengan `gap`, jadi di
+     grid `.bidang` ia flex item yang boleh menyusut sampai nol: teks label
+     terpotong walau melipat dua baris. Di ponsel label cukup jadi blok; tanda
+     wajib `*` dan `(opsional)` menempel via margin, menggantikan `gap`. */
+  .bidang > label,
+  .bidang > .label-bidang {
+    display: block;
+    min-width: 0;
+  }
+
+  .bidang > label > span + span,
+  .bidang > .label-bidang > span + span {
+    margin-left: 0.3rem;
   }
 }
 

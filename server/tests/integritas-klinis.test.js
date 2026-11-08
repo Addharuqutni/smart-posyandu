@@ -143,6 +143,28 @@ test('PATCH balita memakai validasi per bidang seperti POST', () => {
   assert.ok(!/siapkan\('balita', minta\.body\)/.test(rute), 'PATCH masih meneruskan body mentah')
 })
 
+// Regresi: hapus balita hanya menandai balita, kunjungan dan pengukurannya
+// tertinggal yatim sehingga Posyandu tetap dianggap terpakai.
+test('hapus balita ikut menandai kunjungan, pengukuran, dan relasi wali', () => {
+  const blok = data.slice(
+    data.indexOf("router.delete('/balita/:id'"),
+    data.indexOf('// --- Kunjungan & validasi'),
+  )
+  assert.match(blok, /transaksi\(async \(klien\)/)
+  for (const t of ['pengukuran', 'tindak_lanjut', 'kunjungan', 'balita_orang_tua', 'balita']) {
+    assert.match(blok, new RegExp(`hapus\\('${t}'`), t)
+  }
+  // Soft delete, bukan DELETE fisik.
+  assert.ok(!/DELETE FROM/i.test(blok), 'hapus balita tidak boleh DELETE fisik')
+})
+
+test('pesan posyandu terpakai menyebut rujukan yang sebenarnya', () => {
+  const posyandu = baca('routes/posyandu.js')
+  assert.match(posyandu, /const rincian = Object\.entries\(rujukan\)/)
+  assert.match(posyandu, /filter\(\(\[, n\]\) => n > 0\)/)
+  assert.match(posyandu, /pesan: `Posyandu masih dipakai \$\{rincian\}/)
+})
+
 test('validasi massal mencatat audit untuk kunjungan dan pengukuran', () => {
   const blok = data.slice(
     data.indexOf("router.post('/validasi/semua'"),

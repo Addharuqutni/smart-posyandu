@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react'
 import { db } from '../penyimpanan/db.js'
-import { simpanKunjungan, hapusKunjungan } from '../penyimpanan/kunjungan.js'
+import { simpanKunjungan, hapusKunjungan, kunjunganPadaTanggal } from '../penyimpanan/kunjungan.js'
 import { usiaBulan, tanggalHariIni } from '../logika/waktu.js'
 import { LABEL, RENTANG, periksaRentang } from '../logika/rentang.js'
 import { rapikanDesimal } from '../logika/angka.js'
 import Ikon from './Ikon.jsx'
-import { Layar } from './Bersama.jsx'
+import { Layar, Modal } from './Bersama.jsx'
 import Bantuan from './Bantuan.jsx'
 
 const AWAL = {
@@ -63,6 +63,22 @@ export default function Catat({ sesi, balitaAwal, setelahSimpan, kembali }) {
   const [sukses, setSukses] = useState(false)
   const [kunjunganTerakhir, setKunjunganTerakhir] = useState(null)
   const [mengirim, setMengirim] = useState(false)
+  // Kunjungan balita ini pada tanggal yang sedang diisi (bila sudah ada).
+  // Peringatan muncul saat pasien/tanggal dipilih, sebelum kader mengetik.
+  const [duplikat, setDuplikat] = useState(null)
+  const [tanyaGanda, setTanyaGanda] = useState(false)
+
+  useEffect(() => {
+    let batal = false
+    if (!balita?.id || !isi.tanggal) {
+      setDuplikat(null)
+      return undefined
+    }
+    kunjunganPadaTanggal(balita.id, isi.tanggal)
+      .then((k) => { if (!batal) setDuplikat(k) })
+      .catch(() => { if (!batal) setDuplikat(null) })
+    return () => { batal = true }
+  }, [balita?.id, isi.tanggal])
 
   useEffect(() => {
     if (balitaAwal) return
@@ -140,11 +156,21 @@ export default function Catat({ sesi, balitaAwal, setelahSimpan, kembali }) {
 
     setMengirim(true)
     try {
+      await tulisKunjungan(false)
+    } finally {
+      setMengirim(false)
+    }
+  }
+
+  /** Simpan kunjungan. `izinkanGanda` = kader sudah menyetujui peringatan. */
+  async function tulisKunjungan(izinkanGanda) {
+    try {
       const hasil = await simpanKunjungan({
         balita,
         idPerangkat: sesi.id_perangkat,
         pemilik_id: sesi.pengguna.id,
         tanggal: isi.tanggal,
+        izinkanGanda,
         berat_kg: isi.berat_kg,
         tinggi_cm: isi.tinggi_cm,
         lingkar_kepala_cm: isi.lingkar_kepala_cm,
@@ -155,15 +181,26 @@ export default function Catat({ sesi, balitaAwal, setelahSimpan, kembali }) {
       setKunjunganTerakhir(hasil.kunjungan_id)
       setSukses(true)
       setAdaDraf(false)
+      setDuplikat(null)
       if (balita) localStorage.removeItem(KUNCI_DRAF + balita.id)
       setIsi({ ...AWAL, tanggal: isi.tanggal })
       setBidangSalah([])
       setelahSimpan?.()
+      return true
     } catch (salahSimpan) {
+      if (salahSimpan.kode === 'kunjungan_ganda') {
+        setTanyaGanda(true)
+        return false
+      }
       setGalat(salahSimpan.message)
-    } finally {
-      setMengirim(false)
+      return false
     }
+  }
+
+  async function tetapSimpanGanda() {
+    setTanyaGanda(false)
+    setMengirim(true)
+    try { await tulisKunjungan(true) } finally { setMengirim(false) }
   }
 
   async function batalkanTerakhir() {
@@ -232,6 +269,50 @@ export default function Catat({ sesi, balitaAwal, setelahSimpan, kembali }) {
           <Ikon nama="simpan" ukuran={18} />
           <span>Draf pengukuran sebelumnya dipulihkan dari tablet ini.</span>
         </div>
+      )}
+      {/* Peringatan dini: muncul begitu pasien dan tanggal dipilih, sebelum
+          kader mengetik angka. Server akan menolak duplikat ini saat sinkron,
+          jadi lebih baik diketahui sekarang. Kader tetap boleh melanjutkan. */}
+      {duplikat && !sukses && (
+        <div className="mb-3 flex items-start gap-2 rounded-kecil border px-3 py-3 text-isi font-semibold leading-snug border-kuning-100 bg-kuning-100 text-kuning-800" role="status">
+          <Ikon nama="peringatan" ukuran={19} />
+          <span>
+            {balita?.nama_lengkap} sudah tercatat berkunjung pada{' '}
+            {new Date(`${isi.tanggal}T00:00:00`).toLocaleDateString('id-ID', {
+              day: 'numeric', month: 'long', year: 'numeric',
+            })}
+            . Periksa dulu, bisa jadi ini kunjungan ganda.
+          </span>
+        </div>
+      )}
+
+      {tanyaGanda && (
+        <Modal
+          judul="Kunjungan ganda di hari yang sama?"
+          subjudul={balita?.nama_lengkap}
+          onTutup={() => setTanyaGanda(false)}
+        >
+          <div className="flex flex-col gap-4 p-4">
+            <p className="m-0 text-isi leading-relaxed text-teks-redup">
+              <strong>{balita?.nama_lengkap}</strong> sudah punya catatan kunjungan pada tanggal
+              ini. Server hanya menerima satu kunjungan per balita per hari, jadi catatan kedua
+              akan ditolak saat sinkron dan tertahan di perangkat.
+            </p>
+            <p className="m-0 text-padat leading-relaxed text-teks-samar">
+              Periksa riwayat balita dulu. Simpan hanya bila ini memang pencatatan ulang yang
+              disengaja.
+            </p>
+          </div>
+          <div className="flex items-center justify-end gap-2 border-t border-garis bg-biru-50 p-4 max-dialog:flex-col-reverse max-dialog:gap-2 max-dialog:[&>button]:w-full">
+            <button type="button" className="sekunder" onClick={() => setTanyaGanda(false)}>
+              Periksa lagi
+            </button>
+            <button type="button" className="bahaya" onClick={tetapSimpanGanda} disabled={mengirim}>
+              <Ikon nama="simpan" ukuran={18} />
+              {mengirim ? 'Menyimpan…' : 'Tetap simpan'}
+            </button>
+          </div>
+        </Modal>
       )}
 
       <form onSubmit={simpan} noValidate>

@@ -63,10 +63,12 @@ async function minta(jalur, { metode = 'GET', isi, kepala: tambahan } = {}) {
       // Server mengirim `detail` berupa teks, atau objek {detail, rincian}
       // untuk kasus yang perlu kalimat penjelas. Jangan biarkan bentuk objek
       // masuk ke React.
+      // `pesan` dipakai server untuk kalimat utuh yang sudah spesifik
+      // (mis. "Posyandu masih dipakai 1 kunjungan dan 2 akun pengguna").
       rincian =
         typeof detail === 'string'
-          ? (isi.rincian ?? detail)
-          : detail?.rincian ?? isi.rincian ?? 'kesalahan_server'
+          ? (isi.pesan ?? isi.rincian ?? detail)
+          : detail?.rincian ?? isi.pesan ?? isi.rincian ?? 'kesalahan_server'
     } catch {
       // balasan bukan JSON; biarkan rincian null
     }

@@ -49,7 +49,7 @@ export const hashDari = jalurDari
  * `bawaan` dipakai bila path kosong, tidak dikenal, milik peran lain,
  * atau butuh muatan (riwayat) — URL dirapikan kembali ke layar yang sah.
  */
-export function layarDari(lokasi, peran, bawaan) {
+export function layarDari(lokasi, peran, bawaan, muatan) {
   const teks = String(lokasi || '').trim()
   let nama = ''
 
@@ -68,7 +68,9 @@ export function layarDari(lokasi, peran, bawaan) {
 
   if (!nama || !LAYAR_SAH.includes(nama)) return bawaan
   if (!bolehDibuka(nama, peran)) return bawaan
-  if (BUTUH_MUATAN.includes(nama)) return bawaan
+  // 'riwayat' hanya sah bila objek balita ikut tersimpan di history.state;
+  // tautan polos tanpa muatan tetap diarahkan ke layar bawaan.
+  if (BUTUH_MUATAN.includes(nama)) return muatan?.balita ? { nama, balita: muatan.balita } : bawaan
   return { nama }
 }
 

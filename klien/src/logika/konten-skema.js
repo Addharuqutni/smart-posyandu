@@ -45,14 +45,14 @@ export const SKEMA = {
     ],
   },
   edukasi: {
-    label: 'Edukasi Gizi & Kesehatan',
+    label: 'Edukasi & Pencegahan',
     ikon: 'anak',
     ket: 'Materi ringkas untuk orang tua: gizi, pola asuh, sanitasi, tumbuh kembang.',
     judul: 'cth. Pentingnya Protein Hewani pada MPASI',
     isi: 'Tulis penjelasan singkat yang bisa dipahami orang tua tanpa istilah medis rumit.',
-    bidang: [
-      { kunci: 'kategori', label: 'Topik', placeholder: 'cth. Pencegahan Stunting', wajib: true },
-    ],
+    // Edukasi tidak punya bidang tambahan. Kolom `kategori` tetap ada di
+    // database untuk jenis lain; isinya pada edukasi lama tidak dihapus.
+    bidang: [],
   },
 }
 

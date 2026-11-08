@@ -1,7 +1,7 @@
 import 'fake-indexeddb/auto'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { db } from './db.js'
-import { hapusKunjungan, simpanKunjungan, ubahPengukuran } from './kunjungan.js'
+import { hapusKunjungan, kunjunganPadaTanggal, simpanKunjungan, ubahPengukuran } from './kunjungan.js'
 import { simpanBalita } from './balita.js'
 import { dekripsiNik } from '../logika/nik.js'
 
@@ -184,5 +184,42 @@ describe('batas usia balita', () => {
       }),
     ).rejects.toThrow('Usia balita harus antara 0 hari dan 7 tahun')
     expect(await db.balita.count()).toBe(1) // hanya BALITA milik beforeEach
+  })
+})
+
+describe('kunjungan ganda di hari yang sama', () => {
+  const dasar = { balita: BALITA, idPerangkat: 'tablet-uji', tanggal: '2026-11-20', berat_kg: 9.4 }
+
+  it('menolak kunjungan kedua dengan kode kunjungan_ganda', async () => {
+    await simpanKunjungan(dasar)
+    await expect(simpanKunjungan(dasar)).rejects.toMatchObject({ kode: 'kunjungan_ganda' })
+    // Penolakan tidak boleh menulis apa pun.
+    expect(await db.kunjungan.count()).toBe(1)
+    expect(await db.antrean_sinkron.count()).toBe(2)
+  })
+
+  it('tanggal berbeda tetap boleh', async () => {
+    await simpanKunjungan(dasar)
+    await expect(simpanKunjungan({ ...dasar, tanggal: '2026-11-21' })).resolves.toBeTruthy()
+    expect(await db.kunjungan.count()).toBe(2)
+  })
+
+  it('`sudah dihapus` tidak menghalangi pencatatan baru', async () => {
+    const lama = await simpanKunjungan(dasar)
+    await hapusKunjungan(lama.kunjungan_id, 'tablet-uji')
+    await expect(simpanKunjungan(dasar)).resolves.toBeTruthy()
+  })
+
+  it('izinkanGanda: true hanya dipakai setelah kader menyetujui peringatan', async () => {
+    await simpanKunjungan(dasar)
+    await expect(simpanKunjungan({ ...dasar, izinkanGanda: true })).resolves.toBeTruthy()
+    expect(await db.kunjungan.count()).toBe(2)
+  })
+
+  it('kunjunganPadaTanggal() mengabaikan baris yang sudah dihapus', async () => {
+    const { kunjungan_id } = await simpanKunjungan(dasar)
+    expect((await kunjunganPadaTanggal(BALITA.id, '2026-11-20'))?.id).toBe(kunjungan_id)
+    await hapusKunjungan(kunjungan_id, 'tablet-uji')
+    expect(await kunjunganPadaTanggal(BALITA.id, '2026-11-20')).toBeNull()
   })
 })

@@ -36,7 +36,7 @@ describe('skema konten publik', () => {
     expect(SKEMA.jadwal.bidang.map((b) => b.kunci)).toEqual(['posyandu_id', 'tanggal', 'kategori'])
     expect(SKEMA.layanan.bidang.map((b) => b.kunci)).toEqual(['kategori'])
     expect(SKEMA.pengumuman.bidang.map((b) => b.kunci)).toEqual(['tanggal'])
-    expect(SKEMA.edukasi.bidang.map((b) => b.kunci)).toEqual(['kategori'])
+    expect(SKEMA.edukasi.bidang).toEqual([])
   })
 
   it('kosong() hanya memuat bidang milik jenisnya', () => {
@@ -88,7 +88,9 @@ describe('skema konten publik', () => {
     expect(bidangKurang({ ...kosong('jadwal'), judul: '', isi: '' })).toEqual(
       expect.arrayContaining(['Judul', 'Isi', 'Tanggal & jam']),
     )
-    expect(bidangKurang({ ...kosong('edukasi'), judul: 'A', isi: 'B' })).toEqual(['Topik'])
+    // Edukasi hanya wajib judul + isi; bidang "Topik" sudah dihapus.
+    expect(bidangKurang({ ...kosong('edukasi'), judul: 'A', isi: 'B' })).toEqual([])
+    expect(bidangKurang({ ...kosong('edukasi'), isi: 'B' })).toEqual(['Judul'])
     expect(bidangKurang({ ...kosong('layanan'), judul: 'A', isi: 'B' })).toEqual([])
   })
 })
