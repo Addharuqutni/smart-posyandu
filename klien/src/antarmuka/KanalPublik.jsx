@@ -170,7 +170,9 @@ export default function KanalPublik({ keLogin }) {
               </div>
 
               <h1 className="masuk masuk-1 m-0 mt-5 text-panggung font-semibold tracking-[-0.02em] text-balance text-biru-950">
-                Data tumbuh kembang rapi, balita sehat bebas stunting.
+                {namaDesa
+                  ? `Posyandu Desa ${namaDesa}: jadwal, layanan balita, dan edukasi gizi.`
+                  : 'Data tumbuh kembang rapi, balita sehat bebas stunting.'}
               </h1>
 
               <p className="masuk masuk-2 m-0 mt-5 max-w-[54ch] text-dasar leading-relaxed text-pretty text-teks-redup">
