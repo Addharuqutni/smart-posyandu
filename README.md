@@ -4,6 +4,28 @@ Aplikasi web PWA (*Progressive Web App*) untuk pencatatan posyandu dan pemantaua
 
 ---
 
+## Tangkapan Layar
+
+Data pada gambar berikut adalah **data contoh**, bukan data warga.
+
+![Kanal publik: jadwal posyandu, layanan, dan pengumuman desa](docs/screenshot/kanal-publik.png)
+
+**Kanal publik** — jadwal, layanan, dan pengumuman yang bisa dibuka warga tanpa login.
+
+![Halaman masuk petugas dengan form username dan kata sandi](docs/screenshot/masuk.png)
+
+**Masuk petugas** — akses kader, nakes, dan admin desa.
+
+![Daftar balita kader dengan ringkasan dan status gizi](docs/screenshot/beranda-kader.png)
+
+**Beranda kader** — daftar balita, indikator yang sudah diukur, dan status gizi terakhir.
+
+![Rekap bulanan admin dengan sebaran status gizi](docs/screenshot/rekap-admin.png)
+
+**Rekap admin** — ringkasan kunjungan bulanan, sebaran status gizi, dan ekspor CSV.
+
+---
+
 ## Fitur Aplikasi
 
 Fitur disesuaikan dengan peran pengguna:
