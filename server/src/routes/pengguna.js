@@ -1,7 +1,7 @@
-// Kelola akun (F-17): daftar, buat, nonaktifkan, setel ulang sandi.
+// Kelola akun (F-17): daftar, buat, sunting, nonaktifkan, setel ulang sandi, hapus.
 
 const express = require('express')
-const { satu, banyak, kueri } = require('../db/pool')
+const { satu, banyak, kueri, transaksi } = require('../db/pool')
 const { butuhLogin, butuhPeran } = require('../middleware/auth')
 const { hashSandi } = require('../domain/keamanan')
 
@@ -156,6 +156,53 @@ router.patch('/pengguna/:id', Admin, async (minta, balas) => {
       minta.ip ?? null],
   )
   balas.json(hasil)
+})
+
+// Hapus akun permanen. Referensi riwayat dilepas, bukan ikut dihapus, dan
+// sesi lama dibuang supaya cookie yang masih tersimpan tidak lagi berlaku.
+// ponytail: bila butuh pemulihan akun, ganti jadi soft delete + alur pulihkan.
+router.delete('/pengguna/:id', Admin, async (minta, balas) => {
+  const id = minta.params.id
+  if (!/^[0-9a-f-]{36}$/i.test(id)) {
+    return balas.status(422).json({ detail: 'id_tidak_sah' })
+  }
+  const target = await satu(
+    `SELECT id, peran, aktif, (SELECT COUNT(*)::int FROM pengguna
+       WHERE peran = 'admin_desa' AND aktif = TRUE AND dihapus_pada IS NULL) AS admin_aktif
+     FROM pengguna WHERE id = $1 AND dihapus_pada IS NULL`,
+    [id],
+  )
+  if (!target) return balas.status(404).json({ detail: 'pengguna_tidak_ditemukan' })
+  if (String(id) === String(minta.pengguna.id)) {
+    return balas.status(403).json({ detail: 'tidak_bisa_hapus_diri' })
+  }
+  if (target.peran === 'admin_desa' && target.aktif && target.admin_aktif <= 1) {
+    return balas.status(403).json({ detail: 'admin_terakhir' })
+  }
+
+  await transaksi(async (klien) => {
+    await klien.query('DELETE FROM sesi_login WHERE pengguna_id = $1', [id])
+    for (const [tabel, kolom] of [
+      ['kader', 'pengguna_id'],
+      ['konten_publik', 'pengaju_id'],
+      ['konten_publik', 'diputuskan_oleh'],
+      ['kunjungan', 'divalidasi_oleh'],
+      ['log_audit', 'pengguna_id'],
+      ['tindak_lanjut', 'petugas_id'],
+    ]) {
+      await klien.query(`UPDATE ${tabel} SET ${kolom} = NULL WHERE ${kolom} = $1`, [id])
+    }
+    await klien.query('DELETE FROM pengguna WHERE id = $1', [id])
+    await klien.query(
+      `INSERT INTO log_audit
+         (id, pengguna_id, id_perangkat, nama_tabel, id_baris, aksi,
+          nilai_lama, nilai_baru, alamat_ip, terjadi_pada, diterima_pada)
+       VALUES (gen_random_uuid(), $1, 'server', 'pengguna', $2, 'hapus',
+               NULL, $3, $4, now(), now())`,
+      [minta.pengguna.id, id, JSON.stringify({ akun_dihapus: true }), minta.ip ?? null],
+    )
+  })
+  balas.status(204).send()
 })
 
 

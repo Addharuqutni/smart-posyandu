@@ -1,6 +1,8 @@
-// Ikon garis sederhana, satu sumber. Tidak ada pustaka ikon: aplikasi harus
-// tetap ringan dan berfungsi luring (AGENTS 2.1).
-const JALUR = {
+// Ikon garis sederhana, satu sumber untuk seluruh aplikasi. Tidak ada pustaka
+// ikon: aplikasi harus tetap ringan dan berfungsi luring (AGENTS 2.1).
+// Ikon CSS native (date/select) memakai path dari objek yang sama lewat
+// `ikonDataUri`, supaya stroke, sudut, dan viewBox-nya tidak menyimpang.
+export const JALUR = {
   posyandu:
     'M12 21s-7-4.35-7-10a4 4 0 0 1 7-2.65A4 4 0 0 1 19 11c0 5.65-7 10-7 10Z M12 8v6 M9 11h6',
   kunjungan:
@@ -39,6 +41,20 @@ const JALUR = {
   kirim: 'M22 2 11 13 M22 2l-7 20-4-9-9-4 20-7Z',
   waktu: 'M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20Z M12 6v6l4 2',
   masuk: 'M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4 M10 17l5-5-5-5 M15 12H3',
+  kalender: 'M8 2v4 M16 2v4 M3 10h18 M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z',
+  jam: 'M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20Z M12 6v6l4 2',
+  'panah-kiri': 'm15 18-6-6 6-6',
+  'panah-kanan': 'm9 18 6-6-6-6',
+  'panah-bawah': 'm6 9 6 6 6-6',
+}
+
+/** SVG data-uri dari path yang sama, untuk ikon kontrol native di CSS. */
+export function ikonDataUri(nama, warna = '#0f3d68') {
+  const svg =
+    `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" ` +
+    `fill="none" stroke="${warna}" stroke-width="2" stroke-linecap="round" ` +
+    `stroke-linejoin="round"><path d="${JALUR[nama] ?? ''}"/></svg>`
+  return `data:image/svg+xml,${encodeURIComponent(svg)}`
 }
 
 export default function Ikon({ nama, ukuran = 20, className = '', tebal = 2 }) {

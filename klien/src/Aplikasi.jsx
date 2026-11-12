@@ -16,7 +16,7 @@ const Laporan = lazy(() => import('./antarmuka/Laporan.jsx'))
 /** Layar sementara saat bundel sebuah layar masih diunduh. */
 function LayarMemuat() {
   return (
-    <main className="masuk-pudar mx-auto min-h-[calc(100dvh_-_4rem)] max-w-lebar px-4 pt-4 pb-[calc(6.2rem_+_env(safe-area-inset-bottom))] max-sempit:px-3 max-sempit:pb-[calc(6.4rem_+_env(safe-area-inset-bottom))]" id="isi-utama">
+    <main className="masuk-pudar mx-auto min-h-[calc(100dvh_-_4rem)] max-w-lebar px-2 pt-4 pb-[calc(6.2rem_+_env(safe-area-inset-bottom))] max-sempit:px-1.5 max-sempit:pb-[calc(6.4rem_+_env(safe-area-inset-bottom))]" id="isi-utama">
       <div className="mb-4 rounded-sedang border border-dashed border-garis-kuat bg-kartu px-5 py-8 text-center">
         <div className="mx-auto mb-3 grid size-[52px] place-items-center rounded-sedang bg-biru-100 text-biru-700">
           <Ikon nama="sinkron" ukuran={24} />
@@ -299,7 +299,7 @@ export default function Aplikasi() {
   let isi
   if (perluSiap) {
     isi = (
-      <main className="masuk-pudar mx-auto min-h-[calc(100dvh_-_4rem)] max-w-lebar px-4 pt-4 pb-[calc(6.2rem_+_env(safe-area-inset-bottom))] max-sempit:px-3 max-sempit:pb-[calc(6.4rem_+_env(safe-area-inset-bottom))]" id="isi-utama">
+      <main className="masuk-pudar mx-auto min-h-[calc(100dvh_-_4rem)] max-w-lebar px-2 pt-4 pb-[calc(6.2rem_+_env(safe-area-inset-bottom))] max-sempit:px-1.5 max-sempit:pb-[calc(6.4rem_+_env(safe-area-inset-bottom))]" id="isi-utama">
         <div className="kartu">
           <div className="mx-auto mb-3 grid size-[52px] place-items-center rounded-sedang bg-biru-100 text-biru-700">
             <Ikon nama="unduh" ukuran={24} />
@@ -423,7 +423,7 @@ export default function Aplikasi() {
       </button>
 
       <header className="sticky top-0 z-20 border-b border-white/10 bg-[image:var(--latar-kepala)] text-kartu shadow-kontrol [padding-top:env(safe-area-inset-top)]">
-        <div className="mx-auto flex min-h-16 max-w-lebar items-center justify-between gap-3 px-4 py-2 max-sempit:min-h-[58px] max-sempit:px-3">
+        <div className="mx-auto flex min-h-16 max-w-lebar items-center justify-between gap-3 px-2 py-2 max-sempit:min-h-[58px] max-sempit:px-1.5">
           <div className="flex min-w-0 items-center gap-2.5">
             <img className="size-9 shrink-0 object-contain [filter:drop-shadow(0_2px_5px_rgb(0_0_0/0.3))]" src="/logo-192.png" alt="" width="36" height="36" />
             <span className="grid min-w-0 leading-tight">
@@ -528,7 +528,7 @@ export default function Aplikasi() {
 
       {sinkron.menunggu > 0 && (
         <div className="border-b bg-kuning-100 text-kuning-800 border-kuning-100" role="status">
-          <div className="mx-auto flex max-w-lebar items-center gap-2 px-4 py-2 text-padat font-semibold">
+          <div className="mx-auto flex max-w-lebar items-center gap-2 px-2 py-2 text-padat font-semibold">
             <Ikon nama="sinkron" ukuran={16} />
             <span>
               {sinkron.menunggu} catatan menunggu dikirim ke server
@@ -547,7 +547,7 @@ export default function Aplikasi() {
 
       {sinkron.gagal > 0 && (
         <div className="border-b bg-merah-100 text-merah-800 border-merah-100" role="alert">
-          <div className="mx-auto flex max-w-lebar items-center gap-2 px-4 py-2 text-padat font-semibold">
+          <div className="mx-auto flex max-w-lebar items-center gap-2 px-2 py-2 text-padat font-semibold">
             <Ikon nama="peringatan" ukuran={16} />
             <span>
               {sinkron.gagal} catatan gagal dikirim. Hubungi admin desa.
@@ -560,7 +560,7 @@ export default function Aplikasi() {
 
       {navigasi.length > 0 && !perluSiap && (
         <nav className="nav-bawah" aria-label="Navigasi utama">
-          <div className="mx-auto flex max-w-lebar justify-center gap-2 px-4 py-1.5">
+          <div className="mx-auto flex max-w-lebar justify-center gap-2 px-2 py-1.5">
             {navigasi.map((n) => (
               <button
                 key={n.nama}

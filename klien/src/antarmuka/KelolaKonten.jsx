@@ -8,7 +8,7 @@ import {
   ubahKontenPublik,
 } from '../jaringan/api.js'
 import Ikon from './Ikon.jsx'
-import { Modal, Layar, bukaPemilih } from './Bersama.jsx'
+import { Modal, Layar } from './Bersama.jsx'
 import { RincianKonten, LencanaStatus, TabelKonten } from './KontenTabel.jsx'
 import {
   SKEMA,
@@ -79,7 +79,6 @@ function BidangJenis({ nilai, ubah, idAwal, daftarPosyandu = [], kader = false }
               required={b.wajib}
               max={jam ? undefined : bb || undefined}
               value={a}
-              onClick={bukaPemilih}
               onChange={(e) => ubah(b.kunci, gabung(e.target.value, bb))}
               aria-label={jam ? 'Tanggal' : 'Tanggal mulai'}
             />
@@ -88,7 +87,6 @@ function BidangJenis({ nilai, ubah, idAwal, daftarPosyandu = [], kader = false }
               type={jam ? 'time' : 'date'}
               min={jam ? undefined : a || undefined}
               value={bb}
-              onClick={bukaPemilih}
               onChange={(e) => ubah(b.kunci, gabung(a, e.target.value))}
               aria-label={jam ? 'Jam mulai' : 'Tanggal akhir'}
             />

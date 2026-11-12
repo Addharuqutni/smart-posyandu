@@ -26,8 +26,10 @@ const JALUR_API = [
   'cadangan', 'posyandu', 'konten-publik', 'aktivitas', 'sehat', 'waktu',
 ]
 
+// PORT_SERVER hanya untuk pengembangan lokal saat 3000 dipakai proses lain.
+const PORT_SERVER = process.env.PORT_SERVER || 3000
 const proksi = Object.fromEntries(
-  JALUR_API.map((j) => [`/${j}`, 'http://127.0.0.1:3000']),
+  JALUR_API.map((j) => [`/${j}`, `http://127.0.0.1:${PORT_SERVER}`]),
 )
 
 export default defineConfig({
@@ -35,5 +37,5 @@ export default defineConfig({
   envDir: akar,
   // Host disamakan dengan API (VITE_API di .env) supaya cookie SameSite=Strict
   // tidak dianggap lintas-situs saat pengembangan di http.
-  server: { host: '127.0.0.1', port: 5173, proxy: proksi },
+  server: { host: '127.0.0.1', port: Number(process.env.PORT_KLIEN || 5173), proxy: proksi },
 })

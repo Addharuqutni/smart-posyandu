@@ -215,7 +215,7 @@ export default function Laporan({ sesi }) {
   const tahunTersedia = []
   for (let t = TAHUN_AWAL; t <= Number(bulanIni().slice(0, 4)); t += 1) tahunTersedia.push(t)
 
-  /** Tombol ‹ / › langsung memuat, karena niatnya sudah jelas. */
+/** Tombol bulan langsung memuat, karena niatnya sudah jelas. */
   function gantiBulan(delta) {
     const berikut = geserBulan(bulan, delta)
     if (berikut < `${TAHUN_AWAL}-01` || berikut > bulanIni()) return
@@ -293,7 +293,7 @@ export default function Laporan({ sesi }) {
                   disabled={memuat || bulan <= `${TAHUN_AWAL}-01`}
                   aria-label="Bulan sebelumnya"
                 >
-                  ‹
+                  <Ikon nama="panah-kiri" ukuran={20} />
                 </button>
                 <select
                   className="w-auto min-w-[7.75rem] flex-none py-2 pr-7 pl-2.5 text-isi font-semibold text-biru-950"
@@ -328,7 +328,7 @@ export default function Laporan({ sesi }) {
                   disabled={memuat || bulan >= bulanIni()}
                   aria-label="Bulan berikutnya"
                 >
-                  ›
+                  <Ikon nama="panah-kanan" ukuran={20} />
                 </button>
               </div>
             </div>

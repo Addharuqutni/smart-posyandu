@@ -135,7 +135,7 @@ export default function KanalPublik({ keLogin }) {
         >
           Langsung ke isi utama
         </a>
-        <div className="mx-auto flex min-h-16 max-w-lebar items-center justify-between gap-4 px-4 py-2 max-sempit:min-h-[58px] max-sempit:px-3">
+        <div className="mx-auto flex min-h-16 max-w-lebar items-center justify-between gap-4 px-2 py-2 max-sempit:min-h-[58px] max-sempit:px-1.5">
           <a
             href="/"
             className="group flex min-h-11 items-center gap-3 rounded-kecil text-inherit no-underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
@@ -182,7 +182,7 @@ export default function KanalPublik({ keLogin }) {
       <main id="isi-utama">
         {/* 2. Hero: Asimetris, teks di kiri, papan jadwal terdekat di kanan */}
         <section className="relative overflow-hidden border-b border-garis bg-biru-50 bg-[radial-gradient(circle_at_84%_22%,rgb(45_212_191_/_0.22),transparent_48%),radial-gradient(circle_at_12%_86%,rgb(26_109_168_/_0.16),transparent_46%)]">
-          <div className="relative mx-auto grid max-w-lebar gap-10 px-4 pt-10 pb-12 max-sempit:px-3 max-sempit:pt-7 max-sempit:pb-10 lg:grid-cols-12 lg:items-center lg:gap-12 lg:pt-16 lg:pb-20">
+          <div className="relative mx-auto grid max-w-lebar gap-10 px-2 pt-10 pb-12 max-sempit:px-1.5 max-sempit:pt-7 max-sempit:pb-10 lg:grid-cols-12 lg:items-center lg:gap-12 lg:pt-16 lg:pb-20">
             <div className="lg:col-span-7">
               <div className="inline-flex items-center gap-2 rounded-kecil border border-white/80 bg-white/70 px-3 py-1 text-2xs font-bold tracking-[0.08em] text-biru-800 uppercase backdrop-blur-md">
                 <span className="size-2 rounded-full bg-teal-600" aria-hidden="true" />
@@ -352,7 +352,7 @@ export default function KanalPublik({ keLogin }) {
           aria-busy={memuat}
           className="scroll-mt-20 border-b border-garis bg-kartu bg-[radial-gradient(circle_at_90%_14%,rgb(226_238_248_/_0.8),transparent_48%)] py-14 max-sempit:py-10"
         >
-          <div className="mx-auto max-w-lebar px-4 max-sempit:px-3">
+          <div className="mx-auto max-w-lebar px-2 max-sempit:px-1.5">
             <div className="mb-6 flex items-end justify-between border-b border-garis pb-3">
               <h2 id="judul-pengumuman" className="rubrik m-0">
                 Pengumuman Desa
@@ -445,7 +445,7 @@ export default function KanalPublik({ keLogin }) {
           aria-busy={memuat}
           className="scroll-mt-20 border-b border-biru-950 bg-biru-950 bg-[radial-gradient(circle_at_16%_20%,rgb(45_212_191_/_0.18),transparent_46%),radial-gradient(circle_at_86%_82%,rgb(26_109_168_/_0.26),transparent_50%)] py-14 text-white max-sempit:py-10"
         >
-          <div className="mx-auto max-w-lebar px-4 max-sempit:px-3">
+          <div className="mx-auto max-w-lebar px-2 max-sempit:px-1.5">
             <div className="mb-7 flex flex-wrap items-end justify-between gap-3 border-b border-white/10 pb-4">
               <h2 id="judul-jadwal" className="rubrik rubrik-terang m-0 text-white">
                 {namaDesa ? `Posyandu Dusun Desa ${namaDesa}` : 'Posyandu Dusun'}
@@ -545,7 +545,7 @@ export default function KanalPublik({ keLogin }) {
           aria-labelledby="judul-layanan"
           className="scroll-mt-20 border-b border-garis bg-biru-50 bg-[radial-gradient(circle_at_82%_18%,rgb(45_212_191_/_0.15),transparent_46%),radial-gradient(circle_at_14%_82%,rgb(26_109_168_/_0.12),transparent_46%)] py-14 max-sempit:py-10"
         >
-          <div className="mx-auto max-w-lebar px-4 max-sempit:px-3">
+          <div className="mx-auto max-w-lebar px-2 max-sempit:px-1.5">
             <div className="mb-6 border-b border-garis pb-3">
               <h2 id="judul-layanan" className="rubrik m-0">
                 Layanan Rutin di Posyandu
@@ -586,7 +586,7 @@ export default function KanalPublik({ keLogin }) {
           aria-labelledby="judul-edukasi"
           className="scroll-mt-20 border-b border-garis bg-kartu bg-[radial-gradient(circle_at_12%_28%,rgb(226_238_248_/_0.75),transparent_48%),radial-gradient(circle_at_88%_76%,rgb(230_246_243_/_0.75),transparent_48%)] py-14 max-sempit:py-10"
         >
-          <div className="mx-auto max-w-lebar px-4 max-sempit:px-3">
+          <div className="mx-auto max-w-lebar px-2 max-sempit:px-1.5">
             <div className="mb-6 flex flex-wrap items-end justify-between gap-3 border-b border-garis pb-3">
               <h2 id="judul-edukasi" className="rubrik m-0">
                 Edukasi &amp; Pencegahan
@@ -655,7 +655,7 @@ export default function KanalPublik({ keLogin }) {
           aria-labelledby="judul-kontak"
           className="scroll-mt-20 border-b border-garis bg-latar py-14 max-sempit:py-10"
         >
-          <div className="mx-auto max-w-lebar px-4 max-sempit:px-3">
+          <div className="mx-auto max-w-lebar px-2 max-sempit:px-1.5">
             <div className="relative overflow-hidden rounded-besar border border-white/15 bg-[image:var(--latar-kepala-teduh)] p-6 text-white shadow-naik sm:p-10">
               <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_86%_16%,rgb(45_212_191_/_0.24),transparent_48%)]" aria-hidden="true" />
               <div className="relative z-10 grid gap-8 lg:grid-cols-12 lg:items-center">
@@ -716,7 +716,7 @@ export default function KanalPublik({ keLogin }) {
 
       {/* 4. Kaki Halaman (Footer) */}
       <footer className="border-t border-garis bg-white/90 backdrop-blur-md">
-        <div className="mx-auto max-w-lebar px-4 py-10 max-sempit:px-3 max-sempit:py-8">
+        <div className="mx-auto max-w-lebar px-2 py-10 max-sempit:px-1.5 max-sempit:py-8">
           {/* Akses Petugas Khusus Tampilan Ponsel */}
           <div className="mb-8 flex flex-col gap-2 rounded-sedang border border-biru-200/70 bg-biru-50/60 p-4 text-center backdrop-blur-sm sempit:hidden">
             <p className="m-0 text-2xs font-semibold text-teks-samar">

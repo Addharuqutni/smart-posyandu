@@ -5,6 +5,7 @@ import {
   daftarPengguna,
   daftarPosyandu,
   daftarSesi,
+  hapusPengguna,
   perbaruiAkun,
   ubahPengguna,
 } from '../jaringan/api.js'
@@ -36,9 +37,8 @@ export default function Pengguna({ sesi }) {
   const [galat, setGalat] = useState(null)
   const [pesan, setPesan] = useState(null)
   const [tampilSandi, setTampilSandi] = useState(false)
-  const [sandiUntuk, setSandiUntuk] = useState(null)
-  const [sandiBaru, setSandiBaru] = useState('')
   const [nonaktifUntuk, setNonaktifUntuk] = useState(null)
+  const [hapusUntuk, setHapusUntuk] = useState(null)
   const [sesiAktif, setSesiAktif] = useState(null)
   const [cabutUntuk, setCabutUntuk] = useState(null)
   const [sunting, setSunting] = useState(null)
@@ -127,17 +127,17 @@ export default function Pengguna({ sesi }) {
     }
   }
 
-  async function simpanSandi(peristiwa) {
-    peristiwa.preventDefault()
-    if (!sandiUntuk || sandiBaru.length < 8) return
-    const berhasil = await ubah(
-      sandiUntuk.id,
-      { kata_sandi_baru: sandiBaru },
-      `Kata sandi ${sandiUntuk.nama_pengguna} disetel ulang.`,
-    )
-    if (berhasil) {
-      setSandiUntuk(null)
-      setSandiBaru('')
+  async function hapus(akun) {
+    setGalat(null)
+    setPesan(null)
+    try {
+      await hapusPengguna(akun.id)
+      setHapusUntuk(null)
+      setPesan(`Akun ${akun.nama_pengguna} dihapus permanen.`)
+      await muat()
+    } catch (salah) {
+      setGalat(salah.rincian ?? 'Gagal menghapus akun.')
+      setHapusUntuk(null)
     }
   }
 
@@ -149,6 +149,11 @@ export default function Pengguna({ sesi }) {
       setGalat('Nama lengkap dan username wajib diisi.')
       return
     }
+    const sandi = (sunting.kata_sandi_baru ?? '').trim()
+    if (sandi && sandi.length < 8) {
+      setGalat('Kata sandi baru minimal 8 karakter.')
+      return
+    }
     setMenyimpan(true)
     try {
       await perbaruiAkun({
@@ -156,7 +161,8 @@ export default function Pengguna({ sesi }) {
         nama_lengkap: sunting.nama_lengkap.trim(),
         nama_pengguna: sunting.nama_pengguna.trim(),
       })
-      setPesan(`Akun ${sunting.nama_pengguna.trim()} diperbarui.`)
+      if (sandi) await ubahPengguna(sunting.id, { kata_sandi_baru: sandi })
+      setPesan(`Akun ${sunting.nama_pengguna.trim()} diperbarui${sandi ? ' termasuk kata sandinya' : ''}.`)
       setSunting(null)
       await muat()
     } catch (salah) {
@@ -327,63 +333,6 @@ export default function Pengguna({ sesi }) {
         </div>
       </form>
 
-      {sandiUntuk && (
-        <form className="kartu" onSubmit={simpanSandi}>
-          <div className="kartu-judul">
-            <h2>Setel ulang kata sandi</h2>
-            <button
-              type="button"
-              className="tombol-ikon sekunder"
-              onClick={() => {
-                setSandiUntuk(null)
-                setSandiBaru('')
-              }}
-              aria-label="Tutup formulir setel sandi"
-            >
-              <Ikon nama="tutup" ukuran={18} />
-            </button>
-          </div>
-          <p className="-mt-1.5 text-isi text-teks-redup">
-            Untuk <strong>{sandiUntuk.nama_lengkap}</strong> ({sandiUntuk.nama_pengguna}).
-          </p>
-          <div className="bidang">
-            <label htmlFor="sandi-baru">
-              <span>Kata sandi baru</span>
-              <span className="wajib" aria-hidden="true">*</span>
-            </label>
-            <input
-              id="sandi-baru"
-                name="kata_sandi_baru"
-
-              type="text"
-              autoComplete="new-password"
-              minLength={8}
-              placeholder="Minimal 8 karakter baru"
-              value={sandiBaru}
-              onChange={(e) => setSandiBaru(e.target.value)}
-              required
-            />
-            <p className="petunjuk">Minimal 8 karakter. Terlihat agar mudah disalin ke pemilik akun.</p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <button type="submit" disabled={sandiBaru.length < 8}>
-              <Ikon nama="simpan" ukuran={18} />
-              Simpan kata sandi
-            </button>
-            <button
-              type="button"
-              className="sekunder"
-              onClick={() => {
-                setSandiUntuk(null)
-                setSandiBaru('')
-              }}
-            >
-              Batal
-            </button>
-          </div>
-        </form>
-      )}
-
       <div className="kartu">
         <div className="kartu-judul">
           <h2>Daftar akun</h2>
@@ -436,16 +385,6 @@ export default function Pengguna({ sesi }) {
                     >
                       Sunting
                     </button>
-                    <button
-                      type="button"
-                      className="sekunder ml-1.5"
-                      onClick={() => {
-                        setSandiUntuk(p)
-                        setSandiBaru('')
-                      }}
-                    >
-                      Setel sandi
-                    </button>
                     {p.aktif && p.peran !== 'admin_desa' && (
                       <button
                         type="button"
@@ -462,6 +401,16 @@ export default function Pengguna({ sesi }) {
                         onClick={() => ubah(p.id, { aktif: true }, `Akun ${p.nama_pengguna} diaktifkan.`)}
                       >
                         Aktifkan
+                      </button>
+                    )}
+                    {p.id !== sesi.pengguna.id && (
+                      <button
+                        type="button"
+                        className="bahaya ml-1.5"
+                        onClick={() => setHapusUntuk(p)}
+                        aria-label={`Hapus akun ${p.nama_lengkap || p.nama_pengguna}`}
+                      >
+                        Hapus
                       </button>
                     )}
                   </td>
@@ -532,6 +481,24 @@ export default function Pengguna({ sesi }) {
               </div>
             </div>
 
+            <div className="flex flex-col gap-3">
+              <div className="border-b border-garis pb-1.5 text-2xs font-bold uppercase tracking-[0.075em] text-aksen-biru-ink">Kata Sandi (Opsional)</div>
+              <div className="bidang">
+                <label htmlFor="modal-akun-sandi">Kata sandi baru</label>
+                <input
+                  id="modal-akun-sandi"
+                  name="kata_sandi_baru"
+                  type="text"
+                  autoComplete="new-password"
+                  minLength={8}
+                  placeholder="Kosongkan bila tidak ingin mengganti"
+                  value={sunting.kata_sandi_baru ?? ''}
+                  onChange={(e) => setSunting({ ...sunting, kata_sandi_baru: e.target.value })}
+                />
+                <p className="petunjuk">Minimal 8 karakter. Mengganti sandi mencabut semua sesi akun ini.</p>
+              </div>
+            </div>
+
             <div className="flex items-center justify-end gap-2 border-t border-garis bg-biru-50 p-4 max-dialog:flex-col-reverse max-dialog:gap-2 max-dialog:[&>button]:w-full">
               <button type="button" className="sekunder" onClick={() => setSunting(null)}>
                 Batal
@@ -575,6 +542,30 @@ export default function Pengguna({ sesi }) {
                 }}
               >
                 Ya, nonaktifkan
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {hapusUntuk && (
+        <Modal
+          judul="Hapus akun permanen?"
+          subjudul={`${hapusUntuk.nama_lengkap} · ${hapusUntuk.nama_pengguna}`}
+          onTutup={() => setHapusUntuk(null)}
+        >
+          <div className="flex flex-col gap-4 p-4">
+            <p className="m-0 text-isi leading-relaxed text-teks-redup">
+              Akun <strong>{hapusUntuk.nama_lengkap}</strong> akan dihapus dari basis data dan
+              tidak bisa dipulihkan. Sesi aktifnya ikut dicabut; data balita serta riwayat
+              kunjungan tetap tersimpan.
+            </p>
+            <div className="flex items-center justify-end gap-2 border-t border-garis bg-biru-50 p-4 max-dialog:flex-col-reverse max-dialog:gap-2 max-dialog:[&>button]:w-full">
+              <button type="button" className="sekunder" onClick={() => setHapusUntuk(null)}>
+                Batal
+              </button>
+              <button type="button" className="bahaya" onClick={() => hapus(hapusUntuk)}>
+                Ya, hapus permanen
               </button>
             </div>
           </div>

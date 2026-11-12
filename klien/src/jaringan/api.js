@@ -300,6 +300,10 @@ export function ubahPengguna(id, muatan) {
   return minta(`/pengguna/${id}`, { metode: 'PATCH', isi: muatan })
 }
 
+export function hapusPengguna(id) {
+  return minta(`/pengguna/${id}`, { metode: 'DELETE' })
+}
+
 /** Sesi tablet yang masih hidup. Hanya admin desa. */
 /** Log aktivitas (admin desa): perubahan data, ekspor, masuk/keluar. */
 export function daftarAktivitas({

@@ -10,21 +10,6 @@ import Bantuan from './Bantuan.jsx'
  */
 
 /**
- * Buka pemilih tanggal/jam dari daerah input mana pun, bukan cuma ikon di
- * ujung kanan. Bawaan browser hanya membuka kalender saat ikon itu diklik,
- * yang menyulitkan kader di tablet: bidangnya lebar tapi cuma 20px kanan yang
- * bisa dipencet.
- *
- * `showPicker` belum ada di semua WebView dan bisa melempar bila pemilihnya
- * tidak tersedia; klik biasa tetap berfungsi sebagai cadangan.
- */
-export function bukaPemilih(e) {
-  const el = e.currentTarget
-  if (typeof el.showPicker !== 'function') return
-  try { el.showPicker() } catch { /* pemilih tidak tersedia */ }
-}
-
-/**
  * Kerangka satu layar kerja: kontainer, padding, dan `<main>`.
  *
  * Sebelumnya tiga belas layar menyalin string kontainer 200 karakter yang
@@ -36,7 +21,7 @@ export function Layar({ children, kelas = '' }) {
   return (
     <main
       id="isi-utama"
-      className={`masuk-pudar mx-auto min-h-[calc(100dvh_-_4rem)] max-w-lebar px-4 pt-4 pb-[calc(6.2rem_+_env(safe-area-inset-bottom))] max-sempit:px-3 max-sempit:pb-[calc(6.4rem_+_env(safe-area-inset-bottom))] ${kelas}`}
+      className={`masuk-pudar mx-auto min-h-[calc(100dvh_-_4rem)] max-w-lebar px-2 pt-4 pb-[calc(6.2rem_+_env(safe-area-inset-bottom))] max-sempit:px-1.5 max-sempit:pb-[calc(6.4rem_+_env(safe-area-inset-bottom))] ${kelas}`}
     >
       {children}
     </main>
@@ -160,7 +145,7 @@ export function KotakCari({
 /** Ukuran halaman daftar yang dimuat dari server. Satu angka untuk semua layar. */
 export const UKURAN_HALAMAN = 50
 
-/** Kendali halaman ‹ › yang sama di Beranda, Kelola Balita, dan Perangkat. */
+/** Kendali halaman yang sama di Beranda, Kelola Balita, dan Perangkat. */
 export function KendaliHalaman({ halaman, total, ukuran = UKURAN_HALAMAN, onPilih, nonaktif, keterangan }) {
   const jumlahHalaman = Math.max(1, Math.ceil(total / ukuran))
   if (jumlahHalaman <= 1) return null
@@ -170,19 +155,21 @@ export function KendaliHalaman({ halaman, total, ukuran = UKURAN_HALAMAN, onPili
       <span className="flex flex-wrap items-center gap-2">
         <button
           type="button"
-          className="sekunder"
+          className="sekunder inline-flex items-center gap-1.5"
           onClick={() => onPilih(halaman - 1)}
           disabled={nonaktif || halaman === 0}
         >
-          ‹ Sebelumnya
+          <Ikon nama="panah-kiri" ukuran={16} />
+          Sebelumnya
         </button>
         <button
           type="button"
-          className="sekunder"
+          className="sekunder inline-flex items-center gap-1.5"
           onClick={() => onPilih(halaman + 1)}
           disabled={nonaktif || halaman + 1 >= jumlahHalaman}
         >
-          Berikutnya ›
+          Berikutnya
+          <Ikon nama="panah-kanan" ukuran={16} />
         </button>
       </span>
     </div>
