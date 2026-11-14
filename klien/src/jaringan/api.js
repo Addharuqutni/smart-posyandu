@@ -216,6 +216,10 @@ export function hapusPosyandu(id) {
   return minta(`/posyandu/${id}`, { metode: 'DELETE' })
 }
 
+export function detailBalita(id) {
+  return minta(`/balita/${encodeURIComponent(id)}`)
+}
+
 export function buatBalita(muatan) {
   return minta('/balita', { metode: 'POST', isi: muatan })
 }
@@ -348,4 +352,17 @@ export async function unduhEkspor(bulan) {
 /** Perbarui data akun sendiri; admin desa boleh menyertakan id akun lain. */
 export function perbaruiAkun(muatan) {
   return minta('/akun-saya', { metode: 'PATCH', isi: muatan })
+}
+
+/** Cek Perkembangan Anak: cookie sesi wali diatur server, bukan di JS. */
+export function cariBalitaWali(kunci) {
+  return minta('/wali/cari', { metode: 'POST', isi: { kunci } })
+}
+
+export function riwayatWali() {
+  return minta('/wali/riwayat')
+}
+
+export function keluarWali() {
+  return minta('/wali/keluar', { metode: 'POST' })
 }

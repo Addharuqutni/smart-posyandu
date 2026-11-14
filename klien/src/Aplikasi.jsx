@@ -5,6 +5,7 @@ import { Modal } from './antarmuka/Bersama.jsx'
 import { inisial } from './logika/nama.js'
 import Masuk from './antarmuka/Masuk.jsx'
 import KanalPublik from './antarmuka/KanalPublik.jsx'
+import CekAnak from './antarmuka/CekAnak.jsx'
 
 // Dua layar ini dipecah dari bundel awal karena beratnya dan jarang dibuka
 // lebih dulu: Riwayat membawa Chart.js (±200 KB) dan hanya perlu saat kader
@@ -204,7 +205,7 @@ export default function Aplikasi() {
   const pindah = useCallback(
     (l, ganti = false) => {
       const jalur = jalurDari(l)
-      const salin = l.balita && (({ id, nama_lengkap, jenis_kelamin, tanggal_lahir, posyandu_id }) => ({ id, nama_lengkap, jenis_kelamin, tanggal_lahir, posyandu_id }))(l.balita)
+      const salin = l.balita && (({ id, nama_lengkap, jenis_kelamin, tanggal_lahir, posyandu_id, nama_ibu_kandung, wali }) => ({ id, nama_lengkap, jenis_kelamin, tanggal_lahir, posyandu_id, nama_ibu_kandung, wali }))(l.balita)
       const state = { ...window.history.state, layar: salin ? { ...l, balita: salin } : l }
       const jalurKini = window.location.pathname
       if (jalurKini !== jalur || window.location.hash || ganti) {
@@ -248,7 +249,15 @@ export default function Aplikasi() {
 
   if (!sesi) {
     if (layar.nama === 'publik') {
-      return <KanalPublik keLogin={() => pindah({ nama: 'masuk' })} />
+      return (
+        <KanalPublik
+          keLogin={() => pindah({ nama: 'masuk' })}
+          keCekAnak={() => pindah({ nama: 'cek-anak' })}
+        />
+      )
+    }
+    if (layar.nama === 'cek-anak') {
+      return <CekAnak kePublik={() => pindah({ nama: 'publik' })} />
     }
     return <Masuk saatMasuk={mulai} kePublik={() => pindah({ nama: 'publik' })} />
   }
@@ -339,6 +348,7 @@ export default function Aplikasi() {
         <Riwayat
           sesi={sesi}
           balita={layar.balita}
+          versiData={versiData}
           kembali={() => pindah({ nama: 'beranda' })}
           setelahUbah={async () => {
             await perbaruiAntrean(sesi.pengguna.id)

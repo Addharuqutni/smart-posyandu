@@ -63,7 +63,7 @@ export default function BalitaBaru({ sesi, setelahSimpan, kembali }) {
         nama_lengkap: isi.nama_lengkap,
         jenis_kelamin: isi.jenis_kelamin,
         tanggal_lahir: isi.tanggal_lahir,
-        nik: isi.nik.trim() || null,
+        nik: isi.nik.trim(),
         wali: {
           posyandu_id: isi.posyandu_id,
           nama_lengkap: isi.wali_nama,
@@ -213,21 +213,23 @@ export default function BalitaBaru({ sesi, setelahSimpan, kembali }) {
               <div className="bidang col-span-2 max-sempit:col-span-1">
                 <label htmlFor="nik">
                   <span>NIK balita</span>
-                  <span className="text-padat text-teks-samar">(opsional)</span>
+                  <span className="wajib" aria-hidden="true">*</span>
                 </label>
                 <input
                   id="nik"
                 name="nik"
 
                   inputMode="numeric"
-                  pattern="[0-9]*"
+                  pattern="\d{16}"
                   maxLength={16}
                   autoComplete="off"
                   placeholder="16 digit angka sesuai KK/KIA"
                   value={isi.nik}
-                  onChange={(e) => ubah('nik', e.target.value)}
+                  onChange={(e) => ubah('nik', e.target.value.replace(/\D/g, ''))}
                   aria-describedby="bantuan-nik"
+                  required
                 />
+                <p id="bantuan-nik" className="petunjuk mt-1">Wajib untuk membedakan nama balita kembar.</p>
               </div>
             </div>
           </section>

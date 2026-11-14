@@ -139,7 +139,7 @@ test('PATCH balita memakai validasi per bidang seperti POST', () => {
     data.indexOf("router.patch('/balita/:id'"),
     data.indexOf("router.delete('/balita/:id'"),
   )
-  assert.match(rute, /nilaiBalitaSah\(minta\.body/)
+  assert.match(rute, /nilaiBalitaSah\(b\)/)
   assert.ok(!/siapkan\('balita', minta\.body\)/.test(rute), 'PATCH masih meneruskan body mentah')
 })
 

@@ -2,6 +2,7 @@
 
 const express = require('express')
 const { satu, banyak, kueri, transaksi } = require('../db/pool')
+const { enkripsi } = require('../domain/rahasia')
 const {
   terima, periksaRentang, periksaMuatan, TOLAK, TERIMA,
   WAKTU_LEWAT_MASA_DEPAN, KALAH_VERSI, MUATAN_TIDAK_SAH,
@@ -78,7 +79,8 @@ router.post('/sinkron', butuhLogin, async (minta, balas) => {
   const ditolak = []
 
   for (const p of perubahan) {
-    const { nama_tabel: namaTabel, id_baris: idBaris, aksi, muatan } = p || {}
+    const { nama_tabel: namaTabel, id_baris: idBaris, aksi } = p || {}
+    let muatan = p?.muatan
 
     if (!TABEL_SINKRON.includes(namaTabel)) {
       ditolak.push({ id_baris: idBaris, alasan: 'tabel_tidak_dikenal' })
@@ -108,6 +110,25 @@ router.post('/sinkron', butuhLogin, async (minta, balas) => {
       const lahir = siapkan(namaTabel, muatan).tanggal_lahir ?? lahirTersimpan(tersimpan?.tanggal_lahir)
       if (!lahir || (muatan.tanggal_lahir !== undefined && !lahirDiterima(lahir, tanggalServer))) {
         ditolak.push({ id_baris: idBaris, alasan: 'usia_di_luar_rentang' })
+        continue
+      }
+      // NIK wajib untuk membedakan nama kembar di Cek Perkembangan Anak.
+      // Baris lama tanpa NIK tetap bisa disunting; salinan tablet lama
+      // mengirim `nik: null` dan tidak boleh menimpa ciphertext di server.
+      const nikMasuk = muatan.nik
+      if (!tersimpan && !/^\d{16}$/.test(String(nikMasuk ?? ''))) {
+        ditolak.push({ id_baris: idBaris, alasan: 'nik_wajib_16_digit' })
+        continue
+      }
+      if (nikMasuk == null || nikMasuk === '') {
+        if (tersimpan) {
+          muatan = { ...muatan }
+          delete muatan.nik
+        }
+      } else if (/^\d{16}$/.test(String(nikMasuk))) {
+        muatan = { ...muatan, nik: enkripsi(nikMasuk) }
+      } else {
+        ditolak.push({ id_baris: idBaris, alasan: 'nik_wajib_16_digit' })
         continue
       }
     }

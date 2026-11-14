@@ -18,14 +18,14 @@ function umurMenit(peran) {
   return peran === 'admin_desa' ? env.menitSesiAdmin : env.menitSesiTablet
 }
 
-function baca(minta) {
+function baca(minta, namaCookie = NAMA) {
   const mentah = minta.headers?.cookie
   if (!mentah) return null
   for (const potongan of String(mentah).split(';')) {
     const pisah = potongan.indexOf('=')
     if (pisah < 0) continue
     const nama = potongan.slice(0, pisah).trim()
-    if (nama !== NAMA) continue
+    if (nama !== namaCookie) continue
     try {
       return decodeURIComponent(potongan.slice(pisah + 1).trim()) || null
     } catch {
@@ -58,14 +58,14 @@ function wajibSecure() {
   return process.env.NODE_ENV === 'production'
 }
 
-function set(balas, token, menit) {
+function set(balas, token, menit, namaCookie = NAMA) {
   const bagian = ['Path=/', 'HttpOnly', 'SameSite=Strict', `Max-Age=${menit * 60}`]
   if (wajibSecure()) bagian.push('Secure')
-  balas.append('Set-Cookie', `${NAMA}=${encodeURIComponent(token)}; ${bagian.join('; ')}`)
+  balas.append('Set-Cookie', `${namaCookie}=${encodeURIComponent(token)}; ${bagian.join('; ')}`)
 }
 
-function hapus(balas) {
-  balas.append('Set-Cookie', `${NAMA}=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0`)
+function hapus(balas, namaCookie = NAMA) {
+  balas.append('Set-Cookie', `${namaCookie}=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0`)
 }
 
 module.exports = { NAMA, baca, set, hapus, umurMenit, wajibSecure }

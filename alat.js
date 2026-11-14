@@ -36,7 +36,7 @@ const lapor = {
 const JALUR_API = [
   'masuk', 'keluar', 'saya', 'akun-saya', 'sinkron', 'balita', 'kunjungan',
   'validasi', 'pengguna', 'sesi', 'rekap', 'ekspor\\.csv', 'kualitas',
-  'cadangan', 'posyandu', 'konten-publik', 'aktivitas', 'sehat', 'waktu',
+  'cadangan', 'posyandu', 'konten-publik', 'aktivitas', 'wali', 'sehat', 'waktu',
 ]
 
 // Pola PCRE untuk `location ~`. `\\?` di sumber tercetak sebagai `\?`;

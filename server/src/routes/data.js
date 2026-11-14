@@ -5,6 +5,7 @@ const { satu, banyak, kueri, transaksi } = require('../db/pool')
 const { butuhLogin, butuhPeran } = require('../middleware/auth')
 const { siapkan } = require('../domain/tabel')
 const { ubah, hapus, sisip, tulisTerotorisasi } = require('../domain/repositori')
+const { enkripsi, dekripsi } = require('../domain/rahasia')
 const { hitung } = require('../domain/status_gizi')
 const { lahirDiterima } = require('../domain/usia')
 
@@ -12,7 +13,11 @@ const router = express.Router()
 
 const Admin = butuhPeran('admin_desa')
 
-/** NIK tidak pernah keluar; DATE tetap 'YYYY-MM-DD' agar tidak bergeser. */
+/**
+ * Bentuk balita untuk klien. `nik` hanya dilepas ke admin desa (form sunting);
+ * kader tetap menerima `nik: null` + `nik_ada`. Tanggal DATE tetap
+ * 'YYYY-MM-DD' agar tidak bergeser.
+ */
 function rapikanBaris(baris) {
   const isi = { ...baris }
   if ('nik' in isi) isi.nik = null
@@ -22,6 +27,17 @@ function rapikanBaris(baris) {
     }
   }
   return isi
+}
+
+/** NIK asli hanya ikut untuk admin desa; kader cukup tahu keberadaannya. */
+function tandaiNik(baris, denganNik = false) {
+  const nik = dekripsi(baris.nik)
+  const ada = /^\d{16}$/.test(String(nik ?? ''))
+  return {
+    ...rapikanBaris(baris),
+    ...(denganNik && ada ? { nik } : {}),
+    nik_ada: ada,
+  }
 }
 const Nakes = butuhPeran('nakes')
 
@@ -111,7 +127,8 @@ router.get('/balita', butuhLogin, async (minta, balas) => {
     nilai,
   )
   const petaWali = await waliBanyak(baris.map((b) => b.id))
-  const keluaran = baris.map((b) => ({ ...rapikanBaris(b), wali: petaWali.get(b.id) ?? [] }))
+  const denganNik = minta.pengguna.peran === 'admin_desa'
+  const keluaran = baris.map((b) => ({ ...tandaiNik(b, denganNik), wali: petaWali.get(b.id) ?? [] }))
   const total = jumlah?.n ?? keluaran.length
   balas.json({
     balita: keluaran,
@@ -139,7 +156,10 @@ router.get('/balita/:id', butuhLogin, async (minta, balas) => {
   if (!baris || (pos && baris.posyandu_id !== pos)) {
     return balas.status(404).json({ detail: 'balita_tidak_ditemukan' })
   }
-  balas.json({ ...rapikanBaris(baris), wali: await waliUntuk(baris.id) })
+  balas.json({
+    ...tandaiNik(baris, minta.pengguna.peran === 'admin_desa'),
+    wali: await waliUntuk(baris.id),
+  })
 })
 
 // --- CRUD balita, khusus admin desa ---------------------------------------
@@ -155,42 +175,115 @@ function teksNama(nilai) {
   return bersih.length >= 1 && bersih.length <= 120 ? bersih : null
 }
 
+function teksPendek(nilai, maks = 255) {
+  if (nilai == null) return null
+  if (typeof nilai !== 'string' || nilai.trim().length > maks) return 'SALAH'
+  return nilai.trim() || null
+}
+
+function waliSah(w) {
+  if (!w || typeof w !== 'object') return null
+  const nama = teksNama(w.nama_lengkap)
+  const hubungan = ['ibu_kandung', 'ayah_kandung', 'wali'].includes(w.hubungan) ? w.hubungan : null
+  const nomorKontak = teksPendek(w.nomor_kontak, 40)
+  const alamat = teksPendek(w.alamat, 255)
+  if (!nama || !hubungan || nomorKontak === 'SALAH' || alamat === 'SALAH') return null
+  return { nama_lengkap: nama, hubungan, nomor_kontak: nomorKontak, alamat }
+}
+
+/** Wali utama: perbarui bila ada, buat bila balita lama belum punya relasi. */
+async function tulisWali(klien, idBalita, wali, metadata) {
+  const lama = (await klien.query(
+    `SELECT bot.id AS relasi_id, ot.id AS orang_tua_id
+     FROM balita_orang_tua bot JOIN orang_tua ot ON ot.id = bot.orang_tua_id
+     WHERE bot.balita_id = $1 AND bot.dihapus_pada IS NULL AND ot.dihapus_pada IS NULL
+     ORDER BY bot.kontak_utama DESC LIMIT 1`,
+    [idBalita],
+  )).rows[0]
+  const meta = { ...metadata, klien }
+  const sekarang = new Date().toISOString()
+  if (lama) {
+    await ubah('orang_tua', lama.orang_tua_id, {
+      nama_lengkap: wali.nama_lengkap,
+      nomor_kontak: wali.nomor_kontak,
+      alamat: wali.alamat,
+      terjadi_pada: sekarang,
+    }, { ...meta, terjadiPada: sekarang })
+    await ubah('balita_orang_tua', lama.relasi_id, {
+      hubungan: wali.hubungan,
+      kontak_utama: true,
+      terjadi_pada: sekarang,
+    }, { ...meta, terjadiPada: sekarang })
+    return
+  }
+  const idWali = require('crypto').randomUUID()
+  await sisip('orang_tua', {
+    id: idWali,
+    nama_lengkap: wali.nama_lengkap,
+    nomor_kontak: wali.nomor_kontak,
+    alamat: wali.alamat,
+    terjadi_pada: sekarang,
+  }, meta)
+  await sisip('balita_orang_tua', {
+    id: require('crypto').randomUUID(),
+    balita_id: idBalita,
+    orang_tua_id: idWali,
+    hubungan: wali.hubungan,
+    kontak_utama: true,
+    terjadi_pada: sekarang,
+  }, meta)
+}
+
+/** Tiga baris identitas + auditnya harus ada semua atau tidak ada sama sekali. */
+// ponytail: satu wali utama per balita; tambahkan antarmuka banyak wali bila dibutuhkan.
+async function sisipBersamaWali(nilaiBalita, wali, metadata) {
+  const sekarang = new Date().toISOString()
+  const idWali = require('crypto').randomUUID()
+  const idBalita = require('crypto').randomUUID()
+  const nik = enkripsi(nilaiBalita.nik)
+  return transaksi(async (klien) => {
+    const meta = { ...metadata, klien }
+    const baris = await sisip('balita', {
+      ...nilaiBalita, id: idBalita, nik, terjadi_pada: sekarang,
+      nama_ibu_kandung: wali.hubungan === 'ibu_kandung' ? wali.nama_lengkap : null,
+      aktif: nilaiBalita.aktif ?? true,
+    }, meta)
+    await sisip('orang_tua', {
+      id: idWali,
+      nama_lengkap: wali.nama_lengkap,
+      nomor_kontak: wali.nomor_kontak,
+      alamat: wali.alamat,
+      terjadi_pada: sekarang,
+    }, meta)
+    await sisip('balita_orang_tua', {
+      id: require('crypto').randomUUID(),
+      balita_id: idBalita,
+      orang_tua_id: idWali,
+      hubungan: wali.hubungan,
+      kontak_utama: true,
+      terjadi_pada: sekarang,
+    }, meta)
+    return { ...baris, nik: null }
+  })
+}
+
 router.post('/balita', Admin, async (minta, balas) => {
   const b = minta.body || {}
-  const posyanduId = typeof b.posyandu_id === 'string' && POLA_UUID.test(b.posyandu_id)
-    ? b.posyandu_id : null
-  const nama = teksNama(b.nama_lengkap)
-  const tanggal = typeof b.tanggal_lahir === 'string' && POLA_TANGGAL.test(b.tanggal_lahir) && lahirDiterima(b.tanggal_lahir)
-    ? b.tanggal_lahir : null
-  const kelamin = ['laki-laki', 'perempuan'].includes(b.jenis_kelamin) ? b.jenis_kelamin : null
-  const nik = b.nik == null || b.nik === '' ? null
-    : (typeof b.nik === 'string' && POLA_NIK.test(b.nik) ? b.nik : 'SALAH')
-
-  if (!posyanduId || !nama || !tanggal || !kelamin || nik === 'SALAH') {
-    return balas.status(422).json({ detail: 'muatan_tidak_sah' })
+  const { nilai, salah } = nilaiBalitaSah({ ...b, aktif: b.aktif ?? true })
+  const wali = waliSah(b.wali)
+  if (salah || !nilai.posyandu_id || !nilai.nama_lengkap || !nilai.tanggal_lahir ||
+      !nilai.jenis_kelamin || !POLA_NIK.test(String(nilai.nik ?? '')) || !wali) {
+    return balas.status(422).json({ detail: 'nik_wajib_16_digit' })
   }
 
   // Pastikan Posyandu benar-benar ada: mencegah baris yatim.
-  const pos = await satu(`SELECT id FROM posyandu WHERE id = $1 AND dihapus_pada IS NULL`, [posyanduId])
+  const pos = await satu(`SELECT id FROM posyandu WHERE id = $1 AND dihapus_pada IS NULL`, [nilai.posyandu_id])
   if (!pos) return balas.status(422).json({ detail: 'posyandu_tidak_ditemukan' })
 
-  const nilai = siapkan('balita', {
-    posyandu_id: posyanduId,
-    nama_lengkap: nama,
-    jenis_kelamin: kelamin,
-    tanggal_lahir: tanggal,
-    nama_ibu_kandung: teksNama(b.nama_ibu_kandung) ?? null,
-    berat_lahir_kg: b.berat_lahir_kg ?? null,
-    panjang_lahir_cm: b.panjang_lahir_cm ?? null,
-    aktif: b.aktif !== false,
+  const baris = await sisipBersamaWali(nilai, wali, {
+    penggunaId: minta.pengguna.id, idPerangkat: 'server', ip: minta.ip,
   })
-
-  const baris = await sisip('balita', {
-    ...nilai,
-    id: require('crypto').randomUUID(),
-    nik: nik ? require('../domain/rahasia').enkripsi(nik) : null,
-  }, { penggunaId: minta.pengguna.id, idPerangkat: 'server', ip: minta.ip })
-  balas.status(201).json({ ...baris, nik: null })
+  balas.status(201).json(baris)
 })
 
 /**
@@ -225,9 +318,11 @@ function nilaiBalitaSah(b) {
   }
   if (b.nama_ibu_kandung !== undefined) nilai.nama_ibu_kandung = teksNama(b.nama_ibu_kandung) ?? null
   if (b.nik !== undefined) {
-    if (b.nik === null || b.nik === '') nilai.nik = null
-    else if (typeof b.nik === 'string' && POLA_NIK.test(b.nik)) nilai.nik = b.nik
-    else return { salah: 'muatan_tidak_sah' }
+    // NIK wajib untuk membedakan nama balita kembar di Cek Perkembangan Anak.
+    // Baris lama yang belum punya NIK tetap bisa disunting field lain, tetapi
+    // NIK tidak boleh dikosongkan lagi.
+    if (typeof b.nik !== 'string' || !POLA_NIK.test(b.nik)) return { salah: 'nik_wajib_16_digit' }
+    nilai.nik = b.nik
   }
   // Angka: kosong -> null; selain angka wajar -> tolak (bukan 500).
   // Batasnya beda per satuan: berat lahir (kg) maks 40, panjang lahir (cm)
@@ -248,17 +343,28 @@ function nilaiBalitaSah(b) {
 }
 
 router.patch('/balita/:id', Admin, async (minta, balas) => {
-  const { nilai, salah } = nilaiBalitaSah(minta.body || {})
-  if (salah) return balas.status(422).json({ detail: salah })
-  if (Object.keys(nilai).length === 0) {
+  const b = minta.body || {}
+  const { nilai, salah } = nilaiBalitaSah(b)
+  const wali = b.wali === undefined ? null : waliSah(b.wali)
+  if (salah || (b.wali !== undefined && !wali)) return balas.status(422).json({ detail: salah ?? 'muatan_tidak_sah' })
+  if (Object.keys(nilai).length === 0 && !wali) {
     return balas.status(422).json({ detail: 'tidak_ada_yang_diubah' })
   }
-  if (nilai.nik) nilai.nik = require('../domain/rahasia').enkripsi(nilai.nik)
-  const baris = await ubah('balita', minta.params.id, nilai, {
+  if (nilai.nik) nilai.nik = enkripsi(nilai.nik)
+  if (wali) nilai.nama_ibu_kandung = wali.hubungan === 'ibu_kandung' ? wali.nama_lengkap : null
+  const metadata = {
     penggunaId: minta.pengguna.id,
     idPerangkat: 'server',
     terjadiPada: new Date().toISOString(),
     ip: minta.ip,
+  }
+  const baris = await transaksi(async (klien) => {
+    const hasil = Object.keys(nilai).length
+      ? await ubah('balita', minta.params.id, nilai, { ...metadata, klien })
+      : (await klien.query('SELECT * FROM balita WHERE id = $1 AND dihapus_pada IS NULL', [minta.params.id])).rows[0]
+    if (!hasil) return null
+    if (wali) await tulisWali(klien, minta.params.id, wali, metadata)
+    return hasil
   })
   if (!baris) return balas.status(404).json({ detail: 'balita_tidak_ditemukan' })
   balas.json({ ...baris, nik: null })

@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { db } from '../penyimpanan/db.js'
 import { jalankanSinkron, terapkan } from './sinkron.js'
 import { simpanKunjungan, ubahPengukuran } from '../penyimpanan/kunjungan.js'
+import { waliBalita } from '../penyimpanan/balita.js'
 
 const BALITA = {
   id: 'b1',
@@ -363,6 +364,22 @@ describe('penerapan perubahan dari server', () => {
       },
     ])
     expect((await db.balita.get('b1')).nama_lengkap).toBe('Nama Lokal')
+  })
+
+  it('wali dari server tersimpan sebagai relasi yang bisa dibaca Riwayat', async () => {
+    await terapkan([
+      {
+        nama_tabel: 'orang_tua', id_baris: 'o1', aksi: 'ubah',
+        terjadi_pada: '2026-11-20T05:00:00Z', dihapus_pada: null,
+        muatan: { id: 'o1', nama_lengkap: 'Siti', nomor_kontak: '0812', alamat: null },
+      },
+      {
+        nama_tabel: 'balita_orang_tua', id_baris: 'r1', aksi: 'ubah',
+        terjadi_pada: '2026-11-20T05:00:00Z', dihapus_pada: null,
+        muatan: { id: 'r1', balita_id: 'b1', orang_tua_id: 'o1', hubungan: 'ibu_kandung', kontak_utama: true },
+      },
+    ])
+    expect(await waliBalita('b1')).toMatchObject([{ nama_lengkap: 'Siti', hubungan: 'ibu_kandung' }])
   })
 
   it('hapus dari server menandai dihapus_pada, bukan menghapus baris', async () => {

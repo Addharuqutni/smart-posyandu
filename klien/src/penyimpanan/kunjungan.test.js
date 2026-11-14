@@ -2,7 +2,8 @@ import 'fake-indexeddb/auto'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { db } from './db.js'
 import { hapusKunjungan, kunjunganPadaTanggal, simpanKunjungan, ubahPengukuran } from './kunjungan.js'
-import { simpanBalita } from './balita.js'
+import { simpanBalita, waliBalita } from './balita.js'
+import { teksWali } from '../antarmuka/Riwayat.jsx'
 import { dekripsiNik } from '../logika/nik.js'
 
 const BALITA = {
@@ -166,6 +167,16 @@ describe('balita baru', () => {
       'balita_orang_tua',
       'orang_tua',
     ])
+    expect(await waliBalita(id)).toMatchObject([{ nama_lengkap: 'Siti', hubungan: 'ibu_kandung' }])
+  })
+
+  it('baris lama tanpa relasi wali tetap menampilkan nama ibu kandung', async () => {
+    await db.balita.put({ ...BALITA, id: 'b-lama', nama_ibu_kandung: 'Siti' })
+    const lama = await db.balita.get('b-lama')
+    expect(await waliBalita(lama.id)).toEqual([])
+    expect(teksWali([], lama.nama_ibu_kandung)).toBe('Siti (ibu kandung)')
+    expect(teksWali([{ nama_lengkap: 'Siti', hubungan: 'ibu_kandung' }], lama.nama_ibu_kandung)).toBe('Siti (ibu kandung)')
+    expect(teksWali([], null)).toBe('Wali belum tercatat')
   })
 })
 
@@ -180,6 +191,7 @@ describe('batas usia balita', () => {
         nama_lengkap: 'Terlalu Tua',
         jenis_kelamin: 'laki-laki',
         tanggal_lahir,
+        nik: '3301010101010009',
         wali: { posyandu_id: 'p1', nama_lengkap: 'Siti', hubungan: 'ibu_kandung' },
       }),
     ).rejects.toThrow('Usia balita harus antara 0 hari dan 7 tahun')

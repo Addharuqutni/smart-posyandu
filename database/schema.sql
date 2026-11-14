@@ -199,6 +199,17 @@ CREATE TABLE IF NOT EXISTS sesi_login (
     dicabut_pada    TIMESTAMPTZ
 );
 
+-- Sesi wali bukan akun `pengguna`: hanya memegang satu balita yang sudah
+-- dicocokkan lewat nama + NIK. Tidak ikut cadangan (seperti sesi_login).
+CREATE TABLE IF NOT EXISTS akses_wali (
+    id               UUID PRIMARY KEY,
+    balita_id        UUID        NOT NULL REFERENCES balita(id),
+    token_hash       TEXT        NOT NULL UNIQUE,
+    dibuat_pada      TIMESTAMPTZ NOT NULL DEFAULT now(),
+    kadaluarsa_pada  TIMESTAMPTZ NOT NULL,
+    dicabut_pada     TIMESTAMPTZ
+);
+
 CREATE TABLE IF NOT EXISTS log_audit (
     id              UUID PRIMARY KEY,
     pengguna_id     UUID        REFERENCES pengguna(id),   -- NULL untuk proses otomatis
@@ -251,6 +262,7 @@ CREATE INDEX IF NOT EXISTS idx_log_audit_waktu            ON log_audit (diterima
 CREATE INDEX IF NOT EXISTS idx_log_audit_pengguna_waktu   ON log_audit (pengguna_id, diterima_pada DESC);
 CREATE INDEX IF NOT EXISTS idx_uji_cadangan_waktu         ON uji_cadangan (diperiksa_pada DESC);
 CREATE INDEX IF NOT EXISTS idx_sesi_pengguna              ON sesi_login (pengguna_id) WHERE dicabut_pada IS NULL;
+CREATE INDEX IF NOT EXISTS idx_akses_wali_token           ON akses_wali (token_hash) WHERE dicabut_pada IS NULL;
 
 -- =============================================================
 -- 5. Batasan penting

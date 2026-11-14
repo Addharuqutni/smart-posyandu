@@ -23,7 +23,7 @@ const akar = fileURLToPath(new URL('..', import.meta.url))
 const JALUR_API = [
   'masuk', 'keluar', 'saya', 'akun-saya', 'sinkron', 'balita', 'kunjungan',
   'validasi', 'pengguna', 'sesi', 'rekap', 'ekspor.csv', 'kualitas',
-  'cadangan', 'posyandu', 'konten-publik', 'aktivitas', 'sehat', 'waktu',
+  'cadangan', 'posyandu', 'konten-publik', 'aktivitas', 'wali', 'sehat', 'waktu',
 ]
 
 // PORT_SERVER hanya untuk pengembangan lokal saat 3000 dipakai proses lain.

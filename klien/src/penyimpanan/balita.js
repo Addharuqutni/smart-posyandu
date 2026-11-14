@@ -21,6 +21,7 @@ export async function simpanBalita({
   if (!nama_lengkap?.trim()) throw new Error('Nama balita wajib diisi.')
   if (!['laki-laki', 'perempuan'].includes(jenis_kelamin)) throw new Error('Jenis kelamin wajib dipilih.')
   if (!tanggal_lahir) throw new Error('Tanggal lahir wajib diisi.')
+  if (!/^\d{16}$/.test(String(nik ?? '').trim())) throw new Error('NIK balita wajib 16 digit angka.')
   if (!usiaDiterima(tanggal_lahir, tanggalHariIni())) {
     throw new Error('Usia balita harus antara 0 hari dan 7 tahun (84 bulan).')
   }

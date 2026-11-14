@@ -3,11 +3,11 @@ import {
   buatBalita,
   daftarBalita,
   daftarPosyandu,
+  detailBalita,
   hapusBalita,
   ubahBalita,
 } from '../jaringan/api.js'
 import { batasTanggalLahir, tanggalHariIni, rincianUsia, usiaDiterima } from '../logika/waktu.js'
-import { rapikanDesimal } from '../logika/angka.js'
 import Ikon from './Ikon.jsx'
 import { Modal, Kosong, KotakCari, KendaliHalaman, UKURAN_HALAMAN, Layar } from './Bersama.jsx'
 const KOSONG = {
@@ -15,9 +15,10 @@ const KOSONG = {
   jenis_kelamin: 'perempuan',
   tanggal_lahir: '',
   nik: '',
-  nama_ibu_kandung: '',
-  berat_lahir_kg: '',
-  panjang_lahir_cm: '',
+  wali_nama: '',
+  hubungan: 'ibu_kandung',
+  nomor_kontak: '',
+  alamat: '',
 }
 
 const LABEL_KELAMIN = { perempuan: 'Perempuan', 'laki-laki': 'Laki-laki' }
@@ -95,22 +96,20 @@ export default function KelolaBalita({ sesi }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cari, filterPosyanduId])
 
-  function angka(nilai) {
-    const bersih = String(nilai).trim()
-    return bersih === '' ? null : Number(bersih)
-  }
-
   function muatanDariForm() {
     return {
       posyandu_id: posyanduId,
       nama_lengkap: isi.nama_lengkap.trim(),
       jenis_kelamin: isi.jenis_kelamin,
       tanggal_lahir: isi.tanggal_lahir,
-      nik: isi.nik.trim() === '' ? null : isi.nik.trim(),
-      nama_ibu_kandung: isi.nama_ibu_kandung.trim() || null,
-      berat_lahir_kg: angka(isi.berat_lahir_kg),
-      panjang_lahir_cm: angka(isi.panjang_lahir_cm),
+      nik: isi.nik.trim(),
       aktif: true,
+      wali: {
+        nama_lengkap: isi.wali_nama,
+        hubungan: isi.hubungan,
+        nomor_kontak: isi.nomor_kontak,
+        alamat: isi.alamat,
+      },
     }
   }
 
@@ -140,6 +139,27 @@ export default function KelolaBalita({ sesi }) {
     }
   }
 
+  async function bukaSunting(b) {
+    const utama = b.wali?.[0]
+    setGalat(null)
+    setSunting({
+      ...b,
+      wali_nama: utama?.nama_lengkap ?? b.nama_ibu_kandung ?? '',
+      hubungan: utama?.hubungan ?? 'ibu_kandung',
+      nomor_kontak: utama?.nomor_kontak ?? '',
+      alamat: utama?.alamat ?? '',
+    })
+    // Daftar bisa berasal dari respons lama yang belum memuat NIK (mis. server
+    // baru dimulai ulang). Ambil detail sekali agar field tidak kosong.
+    if (b.nik) return
+    try {
+      const rinci = await detailBalita(b.id)
+      setSunting((kini) => (kini?.id === b.id ? { ...kini, nik: rinci.nik ?? '' } : kini))
+    } catch {
+      // Biarkan kosong; kolom wajib mencegah simpan sampai NIK terisi.
+    }
+  }
+
   async function simpanSunting(peristiwa) {
     peristiwa.preventDefault()
     setGalat(null)
@@ -158,10 +178,14 @@ export default function KelolaBalita({ sesi }) {
         nama_lengkap: sunting.nama_lengkap.trim(),
         jenis_kelamin: sunting.jenis_kelamin,
         tanggal_lahir: sunting.tanggal_lahir,
-        nama_ibu_kandung: sunting.nama_ibu_kandung.trim() || null,
-        berat_lahir_kg: angka(sunting.berat_lahir_kg),
-        panjang_lahir_cm: angka(sunting.panjang_lahir_cm),
+        nik: sunting.nik,
         aktif: sunting.aktif,
+        wali: {
+          nama_lengkap: sunting.wali_nama,
+          hubungan: sunting.hubungan,
+          nomor_kontak: sunting.nomor_kontak,
+          alamat: sunting.alamat,
+        },
       })
       setPesan(`Data ${sunting.nama_lengkap} diperbarui.`)
       setFilterPosyanduId(sunting.posyandu_id)
@@ -236,7 +260,11 @@ export default function KelolaBalita({ sesi }) {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 items-start gap-x-4 gap-y-4 form-satu-kolom">
+        <div className="mb-3 flex items-center gap-2 text-2xs font-bold uppercase tracking-[0.075em] text-aksen-biru-ink">
+          <Ikon nama="anak" ukuran={15} />
+          <span id="judul-identitas-balita">Identitas Balita</span>
+        </div>
+        <div className="grid grid-cols-2 items-start gap-x-4 gap-y-4 form-satu-kolom" aria-labelledby="judul-identitas-balita">
           <div className="bidang flex flex-col">
             <label htmlFor="b-posyandu">
               <span>Posyandu</span>
@@ -259,7 +287,7 @@ export default function KelolaBalita({ sesi }) {
 
           <div className="bidang flex flex-col">
             <label htmlFor="b-nama">
-              <span>Nama lengkap</span>
+              <span>Nama lengkap balita</span>
               <span className="wajib" aria-hidden="true">*</span>
             </label>
             <input
@@ -267,7 +295,7 @@ export default function KelolaBalita({ sesi }) {
                 name="nama_lengkap"
 
               autoComplete="off"
-              placeholder="cth. Budi Santoso"
+              placeholder="cth. Muhammad Rizki"
               value={isi.nama_lengkap}
               onChange={(e) => setIsi({ ...isi, nama_lengkap: e.target.value })}
               required
@@ -290,7 +318,7 @@ export default function KelolaBalita({ sesi }) {
               onChange={(e) => setIsi({ ...isi, tanggal_lahir: e.target.value })}
               required
             />
-            <p className="petunjuk mt-1">Usia balita maksimal 7 tahun (84 bulan).</p>
+            <p className="petunjuk mt-1">Maksimal 7 tahun (84 bulan).</p>
           </div>
 
           <div className="bidang flex flex-col">
@@ -309,72 +337,96 @@ export default function KelolaBalita({ sesi }) {
           </div>
 
           <div className="bidang flex flex-col">
-            <label htmlFor="b-ibu">
-              <span>Nama ibu kandung</span>
-            </label>
-            <input
-              id="b-ibu"
-                name="nama_ibu"
-
-              autoComplete="off"
-              placeholder="cth. Siti"
-              value={isi.nama_ibu_kandung}
-              onChange={(e) => setIsi({ ...isi, nama_ibu_kandung: e.target.value })}
-            />
-          </div>
-
-          <div className="bidang flex flex-col">
-            <label htmlFor="b-berat">
-              <span>Berat lahir (kg)</span>
-            </label>
-            <input
-              id="b-berat"
-                name="berat_lahir_kg"
-
-              type="text"
-              inputMode="decimal"
-              autoComplete="off"
-              placeholder="cth. 3.2"
-              value={isi.berat_lahir_kg}
-              onChange={(e) => setIsi({ ...isi, berat_lahir_kg: rapikanDesimal(e.target.value) })}
-            />
-          </div>
-
-          <div className="bidang flex flex-col">
-            <label htmlFor="b-panjang">
-              <span>Panjang lahir (cm)</span>
-            </label>
-            <input
-              id="b-panjang"
-                name="panjang_lahir_cm"
-
-              type="text"
-              inputMode="decimal"
-              autoComplete="off"
-              placeholder="cth. 49.5"
-              value={isi.panjang_lahir_cm}
-              onChange={(e) => setIsi({ ...isi, panjang_lahir_cm: rapikanDesimal(e.target.value) })}
-            />
-          </div>
-
-          <div className="bidang flex flex-col">
             <label htmlFor="b-nik">
               <span>NIK balita</span>
+              <span className="wajib" aria-hidden="true">*</span>
             </label>
             <input
               id="b-nik"
                 name="nik"
 
               inputMode="numeric"
-              pattern="[0-9]*"
+              pattern="\d{16}"
               maxLength={16}
               autoComplete="off"
-              placeholder="16 digit angka (opsional)"
+              placeholder="16 digit angka sesuai KK/KIA"
               value={isi.nik}
               onChange={(e) => setIsi({ ...isi, nik: e.target.value.replace(/\D/g, '') })}
               aria-describedby="b-nik-bantuan"
+              required
             />
+            <p id="b-nik-bantuan" className="petunjuk mt-1">Wajib untuk membedakan nama balita kembar.</p>
           </div>
+
+          <section aria-labelledby="judul-wali" className="col-span-2 border-t border-garis pt-5 max-sempit:col-span-1">
+            <div className="mb-3 flex items-center gap-2 text-2xs font-bold uppercase tracking-[0.075em] text-aksen-biru-ink">
+              <Ikon nama="balita" ukuran={15} />
+              <span id="judul-wali">Data Orang Tua / Wali</span>
+            </div>
+            <div className="grid grid-cols-2 items-start gap-x-4 gap-y-4 form-satu-kolom">
+              <div className="bidang flex flex-col">
+                <label htmlFor="b-wali">
+                  <span>Nama wali</span>
+                  <span className="wajib" aria-hidden="true">*</span>
+                </label>
+                <input
+                  id="b-wali"
+                  name="nama_wali"
+                  autoComplete="off"
+                  placeholder="cth. Maryani"
+                  value={isi.wali_nama}
+                  onChange={(e) => setIsi({ ...isi, wali_nama: e.target.value })}
+                  required
+                />
+              </div>
+              <div className="bidang flex flex-col">
+                <label htmlFor="b-hubungan">
+                  <span>Hubungan dengan balita</span>
+                  <span className="wajib" aria-hidden="true">*</span>
+                </label>
+                <select
+                  id="b-hubungan"
+                  value={isi.hubungan}
+                  onChange={(e) => setIsi({ ...isi, hubungan: e.target.value })}
+                >
+                  <option value="ibu_kandung">Ibu kandung</option>
+                  <option value="ayah_kandung">Ayah kandung</option>
+                  <option value="wali">Wali</option>
+                </select>
+              </div>
+              <div className="bidang flex flex-col">
+                <label htmlFor="b-kontak">
+                  <span>Nomor kontak (HP/WA)</span>
+                  <span className="text-padat text-teks-samar">(opsional)</span>
+                </label>
+                <input
+                  id="b-kontak"
+                  name="kontak_wali"
+                  type="tel"
+                  inputMode="tel"
+                  autoComplete="tel"
+                  placeholder="cth. 08123456789"
+                  value={isi.nomor_kontak}
+                  onChange={(e) => setIsi({ ...isi, nomor_kontak: e.target.value })}
+                />
+              </div>
+              <div className="bidang flex flex-col">
+                <label htmlFor="b-alamat">
+                  <span>Alamat domisili</span>
+                  <span className="text-padat text-teks-samar">(opsional)</span>
+                </label>
+                <input
+                  id="b-alamat"
+                  name="alamat"
+                  autoComplete="street-address"
+                  placeholder="cth. RT 02 / RW 01, Dusun Melati"
+                  value={isi.alamat}
+                  onChange={(e) => setIsi({ ...isi, alamat: e.target.value })}
+                />
+              </div>
+            </div>
+          </section>
+
         </div>
 
         <div className="mt-4 flex justify-end gap-2 border-t border-garis pt-4 max-sempit:[&>button]:w-full">
@@ -393,7 +445,7 @@ export default function KelolaBalita({ sesi }) {
         >
           <form onSubmit={simpanSunting} className="flex flex-col gap-5 overflow-y-auto p-4">
             <div className="flex flex-col gap-3">
-              <div className="border-b border-garis pb-1.5 text-2xs font-bold uppercase tracking-[0.075em] text-aksen-biru-ink">Identitas Utama</div>
+              <div className="border-b border-garis pb-1.5 text-2xs font-bold uppercase tracking-[0.075em] text-aksen-biru-ink">Identitas Balita</div>
               <div className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(190px,1fr))]">
                 <div className="bidang">
                   <label htmlFor="s-posyandu">
@@ -460,21 +512,99 @@ export default function KelolaBalita({ sesi }) {
                     <option value="laki-laki">Laki-laki</option>
                   </select>
                 </div>
+
+                <div className="bidang">
+                  <label htmlFor="s-nik">
+                    <span>NIK balita</span>
+                    <span className="wajib" aria-hidden="true">*</span>
+                  </label>
+                  <input
+                    id="s-nik"
+                    name="nik"
+                    inputMode="numeric"
+                    pattern="\d{16}"
+                    maxLength={16}
+                    autoComplete="off"
+                    placeholder="16 digit angka sesuai KK/KIA"
+                    value={sunting.nik ?? ''}
+                    onChange={(e) => setSunting({ ...sunting, nik: e.target.value.replace(/\D/g, '') })}
+                    aria-describedby="s-nik-bantuan"
+                    required
+                  />
+                  <p id="s-nik-bantuan" className="petunjuk mt-1">
+                    {sunting.nik
+                      ? 'NIK tersimpan. Ubah bila perlu.'
+                      : 'Wajib untuk membedakan nama balita kembar.'}
+                  </p>
+                </div>
+
               </div>
             </div>
 
             <div className="flex flex-col gap-3">
-              <div className="border-b border-garis pb-1.5 text-2xs font-bold uppercase tracking-[0.075em] text-aksen-biru-ink">Orang Tua & Data Lahir (Opsional)</div>
+              <div className="border-b border-garis pb-1.5 text-2xs font-bold uppercase tracking-[0.075em] text-aksen-biru-ink">Data Orang Tua / Wali</div>
               <div className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(190px,1fr))]">
                 <div className="bidang">
-                  <label htmlFor="s-ibu">Nama ibu kandung</label>
+                  <label htmlFor="s-wali">
+                    <span>Nama wali</span>
+                    <span className="wajib" aria-hidden="true">*</span>
+                  </label>
                   <input
-                    id="s-ibu"
-                name="nama_ibu"
+                    id="s-wali"
+                    name="nama_wali"
+                    autoComplete="off"
+                    placeholder="cth. Maryani"
+                    value={sunting.wali_nama ?? ''}
+                    onChange={(e) => setSunting({ ...sunting, wali_nama: e.target.value })}
+                    required
+                  />
+                </div>
 
-                    placeholder="Nama ibu"
-                    value={sunting.nama_ibu_kandung ?? ''}
-                    onChange={(e) => setSunting({ ...sunting, nama_ibu_kandung: e.target.value })}
+                <div className="bidang">
+                  <label htmlFor="s-hubungan">
+                    <span>Hubungan dengan balita</span>
+                    <span className="wajib" aria-hidden="true">*</span>
+                  </label>
+                  <select
+                    id="s-hubungan"
+                    value={sunting.hubungan ?? 'ibu_kandung'}
+                    onChange={(e) => setSunting({ ...sunting, hubungan: e.target.value })}
+                  >
+                    <option value="ibu_kandung">Ibu kandung</option>
+                    <option value="ayah_kandung">Ayah kandung</option>
+                    <option value="wali">Wali</option>
+                  </select>
+                </div>
+
+                <div className="bidang">
+                  <label htmlFor="s-kontak">
+                    <span>Nomor kontak (HP/WA)</span>
+                    <span className="text-padat text-teks-samar">(opsional)</span>
+                  </label>
+                  <input
+                    id="s-kontak"
+                    name="kontak_wali"
+                    type="tel"
+                    inputMode="tel"
+                    autoComplete="tel"
+                    placeholder="cth. 08123456789"
+                    value={sunting.nomor_kontak ?? ''}
+                    onChange={(e) => setSunting({ ...sunting, nomor_kontak: e.target.value })}
+                  />
+                </div>
+
+                <div className="bidang">
+                  <label htmlFor="s-alamat">
+                    <span>Alamat domisili</span>
+                    <span className="text-padat text-teks-samar">(opsional)</span>
+                  </label>
+                  <input
+                    id="s-alamat"
+                    name="alamat"
+                    autoComplete="street-address"
+                    placeholder="cth. RT 02 / RW 01, Dusun Melati"
+                    value={sunting.alamat ?? ''}
+                    onChange={(e) => setSunting({ ...sunting, alamat: e.target.value })}
                   />
                 </div>
 
@@ -490,35 +620,6 @@ export default function KelolaBalita({ sesi }) {
                   </select>
                 </div>
 
-                <div className="bidang">
-                  <label htmlFor="s-berat">Berat lahir (kg)</label>
-                  <input
-                    id="s-berat"
-                name="berat_lahir_kg"
-
-                    type="text"
-                    inputMode="decimal"
-                    autoComplete="off"
-                    placeholder="Contoh: 3.2"
-                    value={sunting.berat_lahir_kg ?? ''}
-                    onChange={(e) => setSunting({ ...sunting, berat_lahir_kg: rapikanDesimal(e.target.value) })}
-                  />
-                </div>
-
-                <div className="bidang">
-                  <label htmlFor="s-panjang">Panjang lahir (cm)</label>
-                  <input
-                    id="s-panjang"
-                name="panjang_lahir_cm"
-
-                    type="text"
-                    inputMode="decimal"
-                    autoComplete="off"
-                    placeholder="Contoh: 49.5"
-                    value={sunting.panjang_lahir_cm ?? ''}
-                    onChange={(e) => setSunting({ ...sunting, panjang_lahir_cm: rapikanDesimal(e.target.value) })}
-                  />
-                </div>
               </div>
             </div>
 
@@ -629,8 +730,8 @@ export default function KelolaBalita({ sesi }) {
                       <td data-label="Nama">
                         <div className="flex min-w-0 flex-col gap-1">
                           <strong>{b.nama_lengkap}</strong>
-                          {b.nama_ibu_kandung && (
-                            <span className="text-padat text-teks-samar">Ibu: {b.nama_ibu_kandung}</span>
+                          {b.wali?.[0]?.nama_lengkap && (
+                            <span className="text-padat text-teks-samar">Wali: {b.wali[0].nama_lengkap} ({b.wali[0].hubungan.replaceAll('_', ' ')})</span>
                           )}
                         </div>
                       </td>
@@ -659,7 +760,7 @@ export default function KelolaBalita({ sesi }) {
                         <button
                           type="button"
                           className="sekunder"
-                          onClick={() => setSunting({ ...b })}
+                          onClick={() => bukaSunting(b)}
                         >
                           Sunting
                         </button>

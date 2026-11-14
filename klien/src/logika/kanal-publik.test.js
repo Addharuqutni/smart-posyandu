@@ -24,9 +24,12 @@ describe('kanal publik tidak mengarang data', () => {
     expect(kode).not.toMatch(/Pukul\s+\d/)
   })
 
-  it('tidak ada nama desa atau kecamatan yang ditulis langsung', () => {
-    // Nama desa harus datang dari /posyandu/publik, bukan dari kode.
-    expect(kode).not.toMatch(/Desa Ketenger/)
+  it('hanya header yang menulis nama desa, selebihnya dari data', () => {
+    // Header sengaja statis "Desa Ketenger" atas permintaan pemilik.
+    // Di luar baris itu, nama desa/kecamatan tetap harus dari /posyandu/publik.
+    expect(kode).toContain('Kanal Warga Desa Ketenger')
+    const selainHeader = kode.replace('Kanal Warga Desa Ketenger', '')
+    expect(selainHeader).not.toMatch(/Desa Ketenger/)
     expect(kode).not.toMatch(/Kec\.\s*Baturraden/)
   })
 

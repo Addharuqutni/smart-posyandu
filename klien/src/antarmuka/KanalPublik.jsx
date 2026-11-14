@@ -70,7 +70,7 @@ function gulirKeAtas() {
   window.scrollTo({ top: 0, behavior: gerakTenang() ? 'auto' : 'smooth' })
 }
 
-export default function KanalPublik({ keLogin }) {
+export default function KanalPublik({ keLogin, keCekAnak }) {
   const [daftarPos, setDaftarPos] = useState([])
   const [daftarKonten, setDaftarKonten] = useState([])
   const [memuat, setMemuat] = useState(true)
@@ -160,7 +160,7 @@ export default function KanalPublik({ keLogin }) {
                 Smart Posyandu
               </span>
               <span className="block truncate text-2xs font-medium text-biru-100/90">
-                {namaDesa ? `Kanal Warga Desa ${namaDesa}` : 'Kanal Warga'}
+                Kanal Warga Desa Ketenger
               </span>
             </div>
           </a>
@@ -208,19 +208,20 @@ export default function KanalPublik({ keLogin }) {
               <div className="mt-7 flex flex-col gap-3 mini:flex-row mini:items-center">
                 <button
                   type="button"
+                  onClick={keCekAnak}
+                  className="inline-flex min-h-14 cursor-pointer items-center justify-center gap-2.5 rounded-kecil bg-aksen-teal-ink px-6 font-bold text-white shadow-kontrol-naik ring-2 ring-teal-400/60 transition-colors duration-150 ease-ui hover:bg-biru-950 active:scale-[0.98] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-aksen-teal-ink"
+                >
+                  <Ikon nama="grafik" ukuran={20} />
+                  <span>Cek Perkembangan Anak</span>
+                </button>
+
+                <button
+                  type="button"
                   onClick={() => keBagian('jadwal')}
                   className="inline-flex min-h-12 cursor-pointer items-center justify-center gap-2.5 rounded-kecil bg-biru-800 px-6 font-bold text-white shadow-kontrol-naik transition-colors duration-150 ease-ui hover:bg-biru-900 active:scale-[0.98] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-biru-800"
                 >
                   <Ikon nama="posyandu" ukuran={18} />
                   <span>Lihat Jadwal Posyandu</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => keBagian('edukasi')}
-                  className="inline-flex min-h-12 cursor-pointer items-center justify-center gap-2.5 rounded-kecil border border-white/80 bg-white/70 px-6 font-semibold text-biru-950 backdrop-blur-md transition-colors duration-150 ease-ui hover:border-biru-600 hover:bg-white/90 active:scale-[0.98] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-biru-800"
-                >
-                  <Ikon nama="anak" ukuran={18} />
-                  <span>Panduan Gizi Balita</span>
                 </button>
               </div>
 
@@ -718,6 +719,18 @@ export default function KanalPublik({ keLogin }) {
       <footer className="border-t border-garis bg-white/90 backdrop-blur-md">
         <div className="mx-auto max-w-lebar px-2 py-10 max-sempit:px-1.5 max-sempit:py-8">
           {/* Akses Petugas Khusus Tampilan Ponsel */}
+          <div className="mb-8 flex flex-col gap-2 rounded-sedang border border-teal-400/60 bg-aksen-teal-tint p-4 text-center sempit:hidden">
+            <p className="m-0 text-2xs font-semibold text-aksen-teal-ink">Orang tua / wali balita:</p>
+            <button
+              type="button"
+              onClick={keCekAnak}
+              className="inline-flex min-h-[44px] w-full cursor-pointer items-center justify-center gap-2 rounded-kecil bg-aksen-teal-ink px-4 py-2.5 text-padat font-bold text-white shadow-kontrol transition-colors hover:bg-biru-950"
+            >
+              <Ikon nama="grafik" ukuran={16} />
+              <span>Cek Perkembangan Anak</span>
+            </button>
+          </div>
+
           <div className="mb-8 flex flex-col gap-2 rounded-sedang border border-biru-200/70 bg-biru-50/60 p-4 text-center backdrop-blur-sm sempit:hidden">
             <p className="m-0 text-2xs font-semibold text-teks-samar">
               Akses khusus kader posyandu, bidan desa, dan pengurus:
@@ -800,18 +813,6 @@ export default function KanalPublik({ keLogin }) {
                     className="block cursor-pointer text-teks-redup no-underline transition-colors hover:text-biru-800"
                   >
                     Paket Layanan Rutin
-                  </a>
-                </li>
-                <li>
-                  <a
-                    href="#edukasi"
-                    onClick={(e) => {
-                      e.preventDefault()
-                      keBagian('edukasi')
-                    }}
-                    className="block cursor-pointer text-teks-redup no-underline transition-colors hover:text-biru-800"
-                  >
-                    Panduan Gizi Balita
                   </a>
                 </li>
                 <li>

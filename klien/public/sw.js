@@ -22,7 +22,7 @@ self.addEventListener('activate', (peristiwa) => {
 // header saja tidak cukup: permintaan GET ke API otomatis membawa cookie. Bila
 // di-cache, data balita tersimpan di CacheStorage browser. Karena itu seluruh
 // path API ditolak dari cache; yang di-cache hanya kerangka aplikasi & asetnya.
-const API = /^\/(masuk|keluar|saya|akun-saya|sinkron|balita|kunjungan|validasi|posyandu|pengguna|sesi|rekap|ekspor\.csv|kualitas|cadangan|konten-publik|aktivitas|sehat|waktu)(\/|$|\?)/
+const API = /^\/(masuk|keluar|saya|akun-saya|sinkron|balita|kunjungan|validasi|posyandu|pengguna|sesi|rekap|ekspor\.csv|kualitas|cadangan|konten-publik|aktivitas|wali|sehat|waktu)(\/|$|\?)/
 const ASET = /^\/(assets\/|index\.html$|manifest\.webmanifest$|logo-(32|192|512)\.png$)/
 
 self.addEventListener('fetch', (peristiwa) => {

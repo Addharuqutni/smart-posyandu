@@ -10,7 +10,7 @@ import { inisial } from '../logika/nama.js'
 import Ikon from './Ikon.jsx'
 import Bantuan from './Bantuan.jsx'
 import { BarisPetak, Kosong, Petak, Layar } from './Bersama.jsx'
-import { detailPosyandu } from '../jaringan/api.js'
+import { detailBalita, detailPosyandu } from '../jaringan/api.js'
 
 const NAMA_BULAN = [
   'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
@@ -30,10 +30,19 @@ function tanggalLengkap(iso) {
   return `${Number(hari)} ${NAMA_BULAN[idx] ?? bulan} ${tahun}`
 }
 
+export function teksWali(wali, namaIbuKandung) {
+  if (wali.length) {
+    return wali.map((w) => `${w.nama_lengkap} (${w.hubungan.replaceAll('_', ' ')})`).join(', ')
+  }
+  // Baris lama dari admin hanya punya kolom ibu kandung, tanpa relasi wali.
+  return namaIbuKandung ? `${namaIbuKandung} (ibu kandung)` : 'Wali belum tercatat'
+}
+
 /** Riwayat ukur + grafik berat + sunting yang belum divalidasi (F-07, F-08). */
-export default function Riwayat({ sesi, balita, kembali, setelahUbah }) {
+export default function Riwayat({ sesi, balita, versiData = 0, kembali, setelahUbah }) {
   const [baris, setBaris] = useState([])
-  const [wali, setWali] = useState([])
+  const [wali, setWali] = useState(balita.wali ?? [])
+  const [ibuKandung, setIbuKandung] = useState(balita.nama_ibu_kandung ?? null)
   const [posyandu, setPosyandu] = useState(null)
   const [sunting, setSunting] = useState(null)
   const [galat, setGalat] = useState(null)
@@ -62,20 +71,23 @@ export default function Riwayat({ sesi, balita, kembali, setelahUbah }) {
       lengkap.push({ ...k, pengukuran: ukur && !ukur.dihapus_pada ? ukur : null })
     }
     setBaris(lengkap)
-    // Riwayat tetap bisa dibaca luring; detail Posyandu menyusul saat daring.
     setGalat(null)
-    setWali(await waliBalita(balita.id))
+    const lokal = await waliBalita(balita.id)
+    if (lokal.length) setWali(lokal)
     try {
+      const rinci = await detailBalita(balita.id)
+      setWali(rinci.wali?.length ? rinci.wali : lokal.length ? lokal : balita.wali ?? [])
+      setIbuKandung(rinci.nama_ibu_kandung ?? null)
       setPosyandu(balita.posyandu_id ? await detailPosyandu(balita.posyandu_id) : null)
     } catch {
-      setGalat('Detail Posyandu belum bisa dimuat.')
+      if (balita.posyandu_id) setGalat('Detail Posyandu belum bisa dimuat.')
     }
   }
 
   useEffect(() => {
     muat()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [balita.id])
+  }, [balita.id, balita.wali, versiData])
 
   useEffect(() => {
     const denganUkur = baris.filter((b) => b.pengukuran)
@@ -167,9 +179,7 @@ export default function Riwayat({ sesi, balita, kembali, setelahUbah }) {
   const denganUkur = baris.filter((b) => b.pengukuran)
   const terakhir = denganUkur[denganUkur.length - 1]
   const statusTerakhir = terakhir?.pengukuran.status_gizi
-  const waliTeks = wali.length
-    ? wali.map((w) => `${w.nama_lengkap} (${w.hubungan.replaceAll('_', ' ')})`).join(', ')
-    : 'Wali belum tercatat'
+  const waliTeks = teksWali(wali, ibuKandung)
 
   return (
     <Layar>
@@ -195,6 +205,18 @@ export default function Riwayat({ sesi, balita, kembali, setelahUbah }) {
                 <Ikon nama="balita" ukuran={14} />
                 <span>{waliTeks}</span>
               </p>
+              {wali[0]?.nomor_kontak && (
+                <p className="m-0 inline-flex items-center gap-1.5 text-padat text-teks-redup [&_svg]:shrink-0 [&_svg]:text-teks-samar">
+                  <Ikon nama="perangkat" ukuran={14} />
+                  <span>{wali[0].nomor_kontak}</span>
+                </p>
+              )}
+              {wali[0]?.alamat && (
+                <p className="m-0 inline-flex items-center gap-1.5 text-padat text-teks-redup [&_svg]:shrink-0 [&_svg]:text-teks-samar">
+                  <Ikon nama="posyandu" ukuran={14} />
+                  <span>{wali[0].alamat}</span>
+                </p>
+              )}
               <p className="m-0 inline-flex items-center gap-1.5 text-padat text-teks-redup [&_svg]:shrink-0 [&_svg]:text-teks-samar">
                 <Ikon nama="posyandu" ukuran={14} />
                 <span>

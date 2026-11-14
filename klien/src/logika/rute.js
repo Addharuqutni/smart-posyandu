@@ -14,7 +14,7 @@
 
 export const LAYAR_SAH = [
   'masuk',
-  'publik',
+  'publik', 'cek-anak',
   'beranda',
   'baru',
   'catat',
@@ -37,6 +37,7 @@ const BUTUH_MUATAN = ['riwayat']
 /** Path URL untuk sebuah layar, mis. '/app/catat' atau '/app/login'. */
 export function jalurDari(layar) {
   if (layar.nama === 'publik') return '/'
+  if (layar.nama === 'cek-anak') return '/cek-anak'
   if (layar.nama === 'masuk') return '/app/login'
   return `/app/${layar.nama}`
 }
@@ -61,6 +62,7 @@ export function layarDari(lokasi, peran, bawaan, muatan) {
     // Path bersih: / (publik), /app/login (masuk), /publik (warisan), /app/<nama>
     const jalur = teks.split('?')[0].replace(/\/+$/, '') || '/'
     if (jalur === '/' || jalur === '/publik') nama = 'publik'
+    else if (jalur === '/cek-anak') nama = 'cek-anak'
     else if (jalur === '/app/login' || jalur === '/masuk' || jalur === '/login') nama = 'masuk'
     else if (jalur.startsWith('/app/')) nama = jalur.slice(5)
     else if (jalur.startsWith('/')) nama = jalur.slice(1)
@@ -76,7 +78,7 @@ export function layarDari(lokasi, peran, bawaan, muatan) {
 
 /** Apakah peran ini boleh membuka layar tersebut (cermin navigasi). */
 export function bolehDibuka(nama, peran) {
-  if (!peran) return ['masuk', 'publik'].includes(nama)
+  if (!peran) return ['masuk', 'publik', 'cek-anak'].includes(nama)
   if (peran === 'kader') return ['beranda', 'baru', 'catat', 'riwayat', 'konten'].includes(nama)
   if (peran === 'nakes') return ['validasi', 'konten'].includes(nama)
   if (peran === 'admin_desa') return ['balita', 'laporan', 'posyandu', 'pengguna', 'konten', 'log'].includes(nama)
