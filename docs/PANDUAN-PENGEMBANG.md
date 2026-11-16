@@ -42,18 +42,20 @@ berbagai status persetujuan. Hapus dengan `npm run demo:hapus` — konten yang
 Anda buat sendiri tidak ikut terhapus, hanya baris ber-id demo.
 
 ### Skrip yang tersedia
-
-| Skrip | Kegunaan |
-|-------|----------|
 | `npm run dev` | Menjalankan API & klien bersama (`alat.js dev`). |
 | `npm run dev:server` / `dev:klien` | Menjalankan salah satu. |
 | `npm run bangun` | Bangun klien produksi → `klien/dist`. |
 | `npm run pratinjau` | Sajikan `dist` (mode produksi). **Tanpa proksi API** → panggilan API gagal di mesin lokal. |
 | `npm run uji` | Uji klien + server. |
 | `npm run migrasi` | Terapkan skema. |
+| `npm run demo` / `demo:hapus` | Isi / bersihkan data contoh (3.000 balita + 16 konten). Jangan di produksi. |
 | `npm run buat-admin -- <username> "<Nama>"` | Buat akun admin desa pertama; kata sandi ditanyakan, tidak disimpan di kode. |
 | `npm run cadangan` | Cadangkan sekarang (verifikasi & pangkas). |
 | `npm run pulih -- <berkas> [--ke <DATABASE_URL>]` | Uji pemulihan (drill). |
+| `npm run siap:produksi` | Bangun klien + terapkan skema (satu perintah). |
+| `npm run periksa` | Periksa ulang hasil bangun (mis. `VITE_API` tertanam) kapan saja. |
+| `npm run siap:vps` / `siap:vps:periksa` | Siapkan / periksa kesiapan pemasangan di VPS. |
+| `npm run pasang:https` | Minta sertifikat HTTPS untuk alamat IP. |
 | `npm run konten:kodenara` | Tarik artikel tips KodeNara sekarang (juga jalan otomatis 03.00 WIB). |
 | `npm run konten:kodenara:bersih` | Buang semua artikel hasil tarikan; konten buatan admin tetap. |
 
@@ -78,13 +80,15 @@ memakai `--prefix`.
 | Variabel | Dipakai | Catatan |
 |----------|---------|---------|
 | `DATABASE_URL` | server | Wajib. |
-| `KUNCI_RAHASIA` | server | Wajib. Enkripsi NIK & cadangan (kalau kunci lain kosong. |
+| `KUNCI_RAHASIA` | server | Wajib. Enkripsi NIK & cadangan (kalau kunci lain kosong). |
 | `KUNCI_ENKRIPSI` | server | Kosong → ikut `KUNCI_RAHASIA`. |
-
 | `KUNCI_CADANGAN` | server | Simpan **terpisah** dari berkas cadangannya. |
-| `PORT` | server | Dibaca dari `.env`. |
+| `PORT` / `HOST` | server | Port & alamat dengar. `HOST=127.0.0.1` (bawaan) = hanya lewat Nginx di mesin yang sama. |
 | `MENIT_SESI_TABLET` / `MENIT_SESI_ADMIN` | server | 10080 (7 hari) / 480 (8 jam). |
 | `TOLERANSI_JAM_KE_DEPAN` | server | 24. |
+| `COOKIE_SECURE` | server | Kosong → ikut `NODE_ENV` (produksi: Secure). `false` wajib bila diakses lewat `http://<ip-vps>` — tanpa itu cookie dibuang browser dan login selalu gagal. |
+| `TRUST_PROXY` | server | `loopback` (bawaan). Jangan `true`: batas brute-force bisa dilewati dengan memalsukan `X-Forwarded-For`. |
+| `BATAS_WAKTU_KUERI_MS` | server | 10000. Batas satu pernyataan SQL; naikkan bila pemulihan cadangan besar terpotong. |
 | `FOLDER_CADANGAN` | server | Relatif ke **root proyek** → `posyandu/cadangan`. |
 | `CADANGAN_HARIAN` | server | `true`. |
 | `KODENARA_HARIAN` | server | `true`. Setel `false` bila VPS tidak boleh keluar internet. |
@@ -248,8 +252,9 @@ membuat `/konten-publik` dan `/aktivitas` menjawab `index.html` di VPS.
 Cetak konfigurasi yang selalu mutakhir:
 
 ```bash
-node alat.js konfig internal    # http, jaringan desa
-node alat.js konfig https       # https, daftar putih jaringan
+node alat.js konfig internal    # http, jaringan desa (tanpa sertifikat)
+node alat.js konfig izin        # snippet daftar putih (allow/deny), di-include ke konfig https
+node alat.js konfig https       # https, sertifikat Let's Encrypt untuk alamat IP
 node alat.js konfig publik      # https, terbuka untuk umum
 ```
 
@@ -308,20 +313,27 @@ cadangan yang tidak bergantung pada proses web.
 ```
 server/src/
   app.js             susunan Express (helmet, CORS, batas laju, CSRF)
-  server.js          titik masuk + penjadwal cadangan
+  server.js          titik masuk + penjadwal cadangan & KodeNara
   env.js             konfigurasi (baca .env root)
   db/                pool, migrasi, demo (akun dibuat lewat bin/buat-admin.js)
-  domain/            aturan murni: sinkron, kursor, halaman-sinkron, gizi, keamanan,
-                     enkripsi, sesi-cookie, sandi-pemulihan
+  domain/            aturan murni: sinkron, kursor, halaman-sinkron, status_gizi,
+                     usia, tabel, aktivitas, keamanan, rahasia (enkripsi),
+                     sesi-cookie, sandi-pemulihan, repositori (audit otomatis)
   middleware/        autentikasi (cookie)
-  routes/            masuk, sinkron, data, laporan, pengguna, sesi, cadangan
-  jobs/              cadangan, pencadangan-harian, verifikasi, pemulihan, jadwal
-  bin/               CLI: cadangan.js, pulih.js, buat-admin.js
+  routes/            masuk, sinkron, data, laporan, pengguna, sesi, cadangan,
+                     posyandu, konten, aktivitas, wali
+  jobs/              cadangan, pencadangan-harian, verifikasi, pemulihan,
+                     jadwal, kodenara
+  bin/               CLI: cadangan.js, pulih.js, buat-admin.js, konten-kodenara.js
 klien/src/
   jaringan/api.js    satu tempat untuk panggil server
-  logika/            sinkron, rentang, waktu, nama, terakhir
+  logika/            sinkron, rentang, waktu, nama, terakhir, angka, nik,
+                     rute, konten-skema
   penyimpanan/       db.js (Dexie), balita.js, kunjungan.js, sesi.js
-  antarmuka/         layar React
+  antarmuka/         layar React: Beranda, Catat, BalitaBaru, Riwayat,
+                     Validasi, KelolaBalita, KelolaKonten, KelolaPosyandu,
+                     Pengguna, Laporan, LogAktivitas, KanalPublik, CekAnak,
+                     Masuk, Bersama, Bantuan
 ```
 
 **Aturan:** klien & server terpisah; tak ada impor silang. Keduanya hanya sepakat
@@ -357,7 +369,7 @@ Tambahkan berkas uji baru ke daftar tes di `server/package.json`.
 
 | Hal | Angka |
 |-----|-------|
-| Uji server / klien | 66 / 30 lulus. |
+| Uji server / klien | 128 / 100 lulus (132 server: 4 dilewati). |
 | `/balita` (N+1 wali | 51 kueri 138 ms → 2 kueri 16,6 ms. |
 | `/rekap` sebaran gizi | 5.331 baris → 4 baris diangkut; 309 → 200 ms. |
 | Tarikan sinkron per halaman | 154 ms (admin) / 236 ms (kader); 0 duplikat. |

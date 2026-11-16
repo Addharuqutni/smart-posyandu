@@ -40,7 +40,7 @@ sesi tetap tersimpan selama 7 hari (tablet kader) atau 8 jam (admin).
 |-------|-------------|----------|
 | **Kader** | Balita, Tambah, Perangkat | Mencatat pengukuran balita, mendaftarkan balita baru, cek riwayat sesi perangkat. |
 | **Petugas Kesehatan (Nakes)** | Validasi, Perangkat | Memeriksa dan memvalidasi hasil ukur dari kader, memberi catatan tindak lanjut gizi. |
-| **Admin Desa** | Balita, Rekap, Akun | Kelola master balita, pantau rekap bulanan & cadangan data, kelola akun pengguna. |
+| **Wali / Orang Tua** | Cek Perkembangan Anak (tanpa akun) | Melihat riwayat pengukuran anaknya sendiri dengan nama + NIK anak. |
 
 ### Kader — alur harian
 
@@ -57,6 +57,20 @@ sesi tetap tersimpan selama 7 hari (tablet kader) atau 8 jam (admin).
 1. Buka layar **Validasi**: berisi daftar pengukuran balita yang masuk dari kader.
 2. Periksa angka hasil pengukuran. Bila valid, tekan **Validasi**.
 3. Beri catatan **Tindak Lanjut** jika balita memerlukan penanganan khusus (misal: rujukan puskesmas atau PMT).
+
+### Wali / Orang Tua — Cek Perkembangan Anak (tanpa akun)
+
+1. Buka aplikasi → pilih menu **Cek Perkembangan Anak** (tidak perlu login).
+2. Ketik **nama lengkap anak** dan **NIK anak** (16 digit).
+3. Bila cocok, tampil riwayat kunjungan yang **sudah divalidasi nakes**: berat
+   dan tinggi terakhir, perubahan berat sejak kunjungan sebelumnya, status gizi,
+   dan grafik berat badan.
+4. Sesi berlaku **30 menit** lalu berakhir sendiri; tekan **Keluar** bila selesai
+   lebih awal.
+
+**Catatan:** hanya pengukuran yang sudah divalidasi nakes yang tampil. Salah
+nama/NIK 5 kali → terkunci 15 menit. Wali hanya bisa melihat **anak yang
+dicarikan sendiri** — tidak bisa membuka anak lain lewat alamat.
 
 ### Admin Desa — pengelolaan & pengawasan
 
@@ -175,6 +189,7 @@ dan rata-rata persen median. Ada tombol **Unduh CSV** untuk diolah di Excel.
 | Data ditolak server | Jam perangkat meleset lebih dari 24 jam. Aktifkan tanggal dan waktu otomatis di tablet. |
 | Pengukuran ditolak | Angka berat/tinggi di luar batas wajar. Cek kembali angka timbangan. |
 | Lupa kata sandi | Hubungi admin desa untuk reset kata sandi lewat menu **Akun**. |
+| "Cek Anak" tak bisa dibuka | Nama atau NIK anak belum cocok dengan data yang tercatat. Pastikan penulisan nama sama persis; bila tetap gagal, minta kader memeriksa data balita. Salah 5 kali → tunggu 15 menit. |
 
 ---
 

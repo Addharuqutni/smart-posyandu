@@ -53,7 +53,11 @@ Fitur disesuaikan dengan peran pengguna:
 - **Pengumuman & Layanan:** Pemberitahuan resmi desa dan daftar layanan yang tersedia.
 - **Edukasi & Pencegahan:** Materi gizi dan kesehatan, termasuk artikel tarikan dari KodeNara.
 
-### 5. Fitur Umum & Keamanan
+### 5. Cek Perkembangan Anak (wali, tanpa akun)
+- **Riwayat Anak:** Orang tua/wali melihat riwayat pengukuran anaknya dengan mencocokkan nama lengkap + NIK anak — hanya kunjungan yang sudah divalidasi nakes yang tampil.
+- **Sesi Terbatas:** Sesi baca 30 menit, cookie terpisah dari sesi petugas, dan hanya satu balita per sesi.
+
+### 6. Fitur Umum & Keamanan
 - **Log Aktivitas:** Catatan audit masuk, keluar, percobaan gagal, dan perubahan data — hanya untuk admin desa.
 - **Privasi Data:** Enkripsi NIK serta proteksi sesi berbasis cookie `HttpOnly` (`SameSite=Strict`).
 

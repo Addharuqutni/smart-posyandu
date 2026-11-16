@@ -297,6 +297,7 @@ sisanya wajib masuk, dan sebagian menambahkan syarat peran.
 | `POST /masuk`, `GET /saya`, `POST /keluar` | publik / sesi | `routes/masuk.js` |
 | `GET /posyandu/publik` | publik | `routes/posyandu.js` |
 | `GET /konten-publik` | publik | `routes/konten.js` |
+| `POST /wali/cari`, `GET /wali/riwayat`, `POST /wali/keluar` | publik (nama + NIK anak; cookie `posyandu_wali` sendiri, 30 menit) | `routes/wali.js` |
 | `GET/POST /sinkron` | sesi | `routes/sinkron.js` |
 | `GET /posyandu/semua`, `POST/PATCH/DELETE /posyandu/:id` | admin desa | `routes/posyandu.js` |
 | `GET/PATCH /akun-saya` | sesi (milik sendiri) | `routes/pengguna.js` |
@@ -367,7 +368,7 @@ Skema ada di `database/schema.sql`. Ringkas:
 |----------|-------|
 | Identitas | `posyandu`, `kader`, `orang_tua`, `balita`, `balita_orang_tua` |
 | Layanan | `kunjungan`, `pengukuran`, `tindak_lanjut` |
-| Sistem (server saja) | `pengguna`, `sesi_login`, `log_audit`, `uji_cadangan` |
+| Sistem (server saja) | `pengguna`, `sesi_login`, `akses_wali` (sesi baca wali "Cek Perkembangan Anak", token hash, 30 menit), `log_audit`, `uji_cadangan` |
 | Acuan | `acuan_berat_umur` (median BB/U menurut usia dan jenis kelamin) |
 | Khusus tablet | `antrean_sinkron` (IndexedDB, bukan PostgreSQL) |
 
