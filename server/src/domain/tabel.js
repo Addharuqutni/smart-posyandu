@@ -46,7 +46,9 @@ const KOLOM = {
 }
 
 // Tidak boleh muncul di nilai_lama / nilai_baru log_audit.
-const RAHASIA = new Set(['hash_kata_sandi', 'token_hash', 'kata_sandi', 'nik'])
+const RAHASIA = new Set([
+  'hash_kata_sandi', 'token_hash', 'kata_sandi', 'nik', 'nomor_kontak', 'alamat',
+])
 
 // Kolom yang diurus server dan tidak boleh ditimpa muatan klien.
 const KOLOM_SERVER = new Set([

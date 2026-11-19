@@ -16,10 +16,9 @@ const akar = fileURLToPath(new URL('..', import.meta.url))
 // `/konten-publik` dengan index.html -- `fetch` lalu gagal saat `.json()`, dan
 // layar menampilkan galat koneksi padahal server sehat.
 //
-// Daftarnya sengaja TIDAK disalin dari alat.js: berkas ini berjalan di Vite
-// (ESM, tanpa akses ke sana). Penjaganya ada di `server/tests/proksi.test.js`,
-// yang membandingkan daftar ini dengan rute yang benar-benar didaftarkan
-// Express, sehingga path baru tidak bisa lolos tanpa disadari.
+// Daftar ini dijaga oleh `server/tests/proksi.test.js`, yang membandingkannya
+// dengan rute yang benar-benar didaftarkan Express, sehingga path baru tidak
+// bisa lolos tanpa disadari.
 const JALUR_API = [
   'masuk', 'keluar', 'saya', 'akun-saya', 'sinkron', 'balita', 'kunjungan',
   'validasi', 'pengguna', 'sesi', 'rekap', 'ekspor.csv', 'kualitas',

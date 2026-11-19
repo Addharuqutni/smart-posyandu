@@ -180,76 +180,67 @@ const TERFOKUS =
   'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
 
 /**
- * Dialog modal: fokus awal masuk, Tab berputar di dalam, Escape menutup,
- * fokus kembali ke tombol pemicu. Tanpa ini `aria-modal` hanya menipu
- * pembaca layar, sedangkan sisanya dinyatakan inert padahal Tab tetap menembus.
+ * Dialog modal memakai `<dialog>` bawaan platform: `showModal()` memberi
+ * lapisan teratas, halaman inert, jebakan fokus, Escape, dan gestur kembali.
+ * Semuanya tidak perlu ditulis ulang di sini.
  */
 export function Modal({ judul, subjudul, onTutup, children }) {
   const idJudul = useId()
-  const wadah = useRef(null)
+  const idSubjudul = useId()
+  const ref = useRef(null)
   const pemicu = useRef(null)
   const tutupRef = useRef(onTutup)
   tutupRef.current = onTutup
 
   useEffect(() => {
-    pemicu.current = document.activeElement
-    const el = wadah.current
-    el?.querySelector(TERFOKUS)?.focus()
-
-    function tekan(e) {
-      if (e.key === 'Escape') {
-        e.preventDefault()
-        tutupRef.current()
-        return
-      }
-      if (e.key !== 'Tab' || !el) return
-      const bisa = [...el.querySelectorAll(TERFOKUS)]
-      if (bisa.length === 0) return
-      const pertama = bisa[0]
-      const terakhir = bisa[bisa.length - 1]
-      if (e.shiftKey && document.activeElement === pertama) {
-        e.preventDefault()
-        terakhir.focus()
-      } else if (!e.shiftKey && document.activeElement === terakhir) {
-        e.preventDefault()
-        pertama.focus()
-      }
+    const d = ref.current
+    // Hanya tangkap pemicu saat benar-benar membuka: pada efek ganda
+    // StrictMode, putaran kedua sudah berfokus di dalam dialog.
+    if (!d.open) {
+      pemicu.current = document.activeElement
+      d.showModal()
+      d.querySelector(TERFOKUS)?.focus()
     }
-
-    const overflowLama = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    document.addEventListener('keydown', tekan)
+    const tutup = () => tutupRef.current()
+    d.addEventListener('close', tutup)
     return () => {
-      document.removeEventListener('keydown', tekan)
-      document.body.style.overflow = overflowLama
+      d.removeEventListener('close', tutup)
+      // ponytail: induk melepas <dialog> ini dari DOM, jadi browser tidak
+      // sempat memulangkan fokus ke pemicu; lakukan sendiri.
       pemicu.current?.focus?.()
     }
   }, [])
 
   return (
-    <div
-      className="animate-pudar fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-biru-950/55 p-5 backdrop-blur-[4px] max-dialog:p-2.5"
-      onMouseDown={(e) => {
-        if (e.target === e.currentTarget) tutupRef.current()
+    <dialog
+      ref={ref}
+      closedby="any"
+      aria-labelledby={idJudul}
+      aria-describedby={subjudul ? idSubjudul : undefined}
+      className="animate-panel m-auto flex max-h-[90dvh] w-[calc(100%_-_2.5rem)] max-w-[680px] flex-col overflow-hidden rounded-besar border border-garis bg-kartu text-teks shadow-timbul backdrop:animate-pudar backdrop:bg-biru-950/55 backdrop:backdrop-blur-[4px] max-dialog:max-h-[94dvh]"
+      onPointerDown={(e) => {
+        // ponytail: Safari belum kenal `closedby`; di sana tutup manual.
+        const d = e.currentTarget
+        if (e.target !== d) return
+        const r = d.getBoundingClientRect()
+        if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) d.close()
       }}
     >
-      <div className="animate-panel flex max-h-[90vh] w-full max-w-[680px] flex-col overflow-hidden rounded-besar border border-garis bg-kartu shadow-timbul max-dialog:max-h-[94vh]" role="dialog" aria-modal="true" aria-labelledby={idJudul} ref={wadah}>
-        <div className="flex items-center justify-between gap-4 border-b border-garis bg-biru-50 p-4">
-          <div>
-            <h2 id={idJudul} className="m-0 text-subjudul font-bold tracking-[-0.015em] text-biru-950">{judul}</h2>
-            {subjudul && <span className="text-padat font-medium text-teks-samar">{subjudul}</span>}
-          </div>
-          <button
-            type="button"
-            className="tombol-ikon sekunder"
-            onClick={() => tutupRef.current()}
-            aria-label="Tutup dialog"
-          >
-            <Ikon nama="tutup" ukuran={18} />
-          </button>
+      <div className="flex items-center justify-between gap-4 border-b border-garis bg-biru-50 p-4">
+        <div>
+          <h2 id={idJudul} className="m-0 text-subjudul font-bold tracking-[-0.015em] text-biru-950">{judul}</h2>
+          {subjudul && <span id={idSubjudul} className="text-padat font-medium text-teks-samar">{subjudul}</span>}
         </div>
-        {children}
+        <button
+          type="button"
+          className="tombol-ikon sekunder"
+          onClick={() => tutupRef.current()}
+          aria-label="Tutup dialog"
+        >
+          <Ikon nama="tutup" ukuran={18} />
+        </button>
       </div>
-    </div>
+      {children}
+    </dialog>
   )
 }

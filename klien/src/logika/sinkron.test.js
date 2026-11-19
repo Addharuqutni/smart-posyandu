@@ -399,3 +399,24 @@ describe('penerapan perubahan dari server', () => {
     expect(baris.dihapus_pada).toBe('2026-11-20T05:00:00Z')
   })
 })
+
+describe('keadaan salinan saat tablet unggul karena antrean belum terkirim', () => {
+  it('tidak menghapus salinan lokal yang masih menunggu di antrean', async () => {
+    // Server bilang 1 balita, tablet punya 2: selisih dijelaskan antrean,
+    // jadi salinan TIDAK boleh dibuang.
+    await db.antrean_sinkron.add({
+      id: 'q1', nama_tabel: 'balita', id_baris: 'b2', aksi: 'buat',
+      muatan: { id: 'b2', posyandu_id: 'p1', nama_lengkap: 'Budi', jenis_kelamin: 'laki-laki', tanggal_lahir: '2025-11-01', aktif: true, terjadi_pada: new Date().toISOString() },
+      status: 'menunggu', pemilik_id: 'u1', terjadi_pada: new Date().toISOString(),
+    })
+    await db.balita.put({ ...BALITA, id: 'b2', nama_lengkap: 'Budi' })
+    await jalankanSinkron(async () => jawab({
+      perubahan: [],
+      berikutnya: null,
+      jumlah: { balita: 1 },
+      waktu_server: new Date().toISOString(),
+    }))
+    expect(await db.balita.count()).toBe(2)
+    expect(await db.antrean_sinkron.count()).toBe(1)
+  })
+})

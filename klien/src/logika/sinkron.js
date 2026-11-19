@@ -34,37 +34,43 @@ export async function jalankanSinkron(idPerangkat, pemilikId = null) {
   const hasil = { luring: false, terkirim: 0, ditolak: 0, ditarik: 0 }
 
   if (antrean.length) {
-    const perubahan = []
-    for (const a of antrean) {
-      const muatan = { ...a.muatan }
-      if (muatan.nik_terenkripsi) {
-        muatan.nik = await dekripsiNik(muatan.nik_terenkripsi)
-        delete muatan.nik_terenkripsi
+    // Server menolak lebih dari 500 perubahan per permintaan (413), dan
+    // `express.json` 1 MB juga membatasi. Kirim bergelombang.
+    const BATAS_KIRIM = 200
+    for (let i = 0; i < antrean.length; i += BATAS_KIRIM) {
+      const potong = antrean.slice(i, i + BATAS_KIRIM)
+      const perubahan = []
+      for (const a of potong) {
+        const muatan = { ...a.muatan }
+        if (muatan.nik_terenkripsi) {
+          muatan.nik = await dekripsiNik(muatan.nik_terenkripsi)
+          delete muatan.nik_terenkripsi
+        }
+        perubahan.push({
+          nama_tabel: a.nama_tabel,
+          id_baris: a.id_baris,
+          aksi: a.aksi,
+          versi: a.versi,
+          terjadi_pada: a.terjadi_pada,
+          muatan,
+        })
       }
-      perubahan.push({
-        nama_tabel: a.nama_tabel,
-        id_baris: a.id_baris,
-        aksi: a.aksi,
-        versi: a.versi,
-        terjadi_pada: a.terjadi_pada,
-        muatan,
-      })
-    }
 
-    let balasan
-    try {
-      balasan = await kirimSinkron({
-        id_perangkat: idPerangkat,
-        perubahan,
-      })
-    } catch (salah) {
-      if (salah instanceof GagalJaringan) return { ...hasil, luring: true }
-      throw salah
+      let balasan
+      try {
+        balasan = await kirimSinkron({
+          id_perangkat: idPerangkat,
+          perubahan,
+        })
+      } catch (salah) {
+        if (salah instanceof GagalJaringan) return { ...hasil, luring: true }
+        throw salah
+      }
+      await selesaikanAntrean(potong, balasan)
+      hasil.terkirim += balasan.diterima.length
+      hasil.ditolak += balasan.ditolak.length
+      await simpanPenanda(KUNCI_SELISIH, selisihDetik(balasan.waktu_server))
     }
-    await selesaikanAntrean(antrean, balasan)
-    hasil.terkirim = balasan.diterima.length
-    hasil.ditolak = balasan.ditolak.length
-    await simpanPenanda(KUNCI_SELISIH, selisihDetik(balasan.waktu_server))
   }
 
   let sejak = (await db.penyiapan.get(KUNCI_KURSOR))?.nilai ?? null
@@ -278,7 +284,13 @@ async function keadaanSalinan(jumlahServer) {
   const harus = Number(jumlahServer?.balita)
   if (!Number.isFinite(harus)) return null
   const punya = await db.balita.count()
-  if (punya > harus) return 'lebih'
   if (punya < harus) return 'kurang'
-  return null
+  if (punya === harus) return null
+  // Tablet wajar UNGGUL dari server saat antrean belum terkirim; itu bukan
+  // tanda server di-reset. Tanpa koreksi ini, mengisi 100 balita luring lalu
+  // menekan sinkron menghapus salinan lokal yang belum terkirim.
+  const menunggu = await db.antrean_sinkron
+    .filter((a) => a.nama_tabel === 'balita' && a.aksi !== 'hapus')
+    .count()
+  return punya - harus > menunggu ? 'lebih' : null
 }

@@ -18,24 +18,13 @@ const MENIT_KUNCI = 15
 
 // ponytail: penghitung di memori satu proses, sama seperti /masuk. Pindahkan
 // ke tabel bila server nanti berjalan lebih dari satu proses.
-const gagal = new Map()
+const { buatPembatasGagal } = require('../domain/pembatas-gagal')
+const gagal = buatPembatasGagal({ batas: BATAS_GAGAL, menit: MENIT_KUNCI })
 
-function kunci(nama, ip) {
-  return `${String(nama).trim().toLowerCase()}|${ip || '-'}`
-}
-
-function daftarGagal(nama, ip) {
-  const batas = Date.now() - MENIT_KUNCI * 60_000
-  return (gagal.get(kunci(nama, ip)) || []).filter((w) => w > batas)
-}
-
-function terkunci(nama, ip) {
-  return daftarGagal(nama, ip).length >= BATAS_GAGAL
-}
-
-function catatGagal(nama, ip) {
-  gagal.set(kunci(nama, ip), [...daftarGagal(nama, ip), Date.now()])
-}
+const kunci = (nama, ip) => gagal.kunci(nama, ip)
+const daftarGagal = (nama, ip) => gagal.daftar(nama, ip)
+const terkunci = (nama, ip) => gagal.terkunci(nama, ip)
+const catatGagal = (nama, ip) => gagal.catat(nama, ip)
 
 /** NIK tersimpan bisa ciphertext (admin/demo) atau polos (sinkron kader lama). */
 function cocokNik(tersimpan, dicari) {
@@ -86,38 +75,52 @@ function pilihKandidat(kandidat, nik) {
 
 router.post('/wali/cari', async (minta, balas) => {
   const teks = typeof minta.body?.kunci === 'string' ? minta.body.kunci.trim() : ''
-  if (!teks || teks.length > 120) {
+  const tanggalLahir = typeof minta.body?.tanggal_lahir === 'string'
+    ? minta.body.tanggal_lahir.trim() : ''
+  // Format saja tidak cukup: `2020-02-30` lolos regex lalu ditolak PostgreSQL
+  // sebagai 500. Tanggal yang tidak ada harus jadi 422.
+  const adaTanggal = /^\d{4}-\d{2}-\d{2}$/.test(tanggalLahir) &&
+    !Number.isNaN(Date.parse(`${tanggalLahir}T00:00:00Z`)) &&
+    new Date(`${tanggalLahir}T00:00:00Z`).toISOString().slice(0, 10) === tanggalLahir
+  if (!teks || teks.length > 120 || !adaTanggal) {
     return balas.status(422).json({ detail: 'muatan_tidak_sah' })
   }
   const nik = POLA_NIK.test(teks) ? teks : null
-  if (terkunci(teks, minta.ip)) {
+  // Kunci percobaan per IP saja: kunci per-teks membuat penyerang yang
+  // mengganti nama tiap percobaan tidak pernah kena batas.
+  if (terkunci('cari', minta.ip)) {
     return balas.status(429).json({ detail: 'nama_atau_nik_tidak_cocok' })
   }
 
-  // Nama saja cukup bila hasilnya tunggal. Nama kembar harus memakai NIK.
-  // Kegagalan tetap identik supaya halaman ini tidak menjadi direktori balita.
+  // Dua faktor wajib: nama/NIK **dan** tanggal lahir. Nama lengkap anak adalah
+  // data yang mudah diketahui; dengan satu faktor, halaman ini menjadi
+  // direktori balita se-desa berikut nama ibu dan seluruh riwayat ukurnya.
+  // Kegagalan tetap identik supaya tidak bisa dipakai menebak data.
   let kandidat
   if (nik) {
     // NIK disimpan sebagai ciphertext acak, jadi tidak bisa dicocokkan di SQL.
     // ponytail: pindai + dekripsi; ganti dengan kolom hash bila data membesar.
     kandidat = await banyak(
-      `SELECT b.id, b.nik FROM balita b WHERE b.dihapus_pada IS NULL`,
+      `SELECT b.id, b.nik FROM balita b
+        WHERE b.dihapus_pada IS NULL AND b.tanggal_lahir = $1::date`,
+      [tanggalLahir],
     )
   } else {
     kandidat = await banyak(
       `SELECT b.id, b.nik FROM balita b
-       WHERE b.dihapus_pada IS NULL AND lower(b.nama_lengkap) = lower($1)
-       LIMIT 2`,
-      [teks],
+       WHERE b.dihapus_pada IS NULL AND b.tanggal_lahir = $2::date
+         AND lower(b.nama_lengkap) = lower($1)
+       LIMIT 3`,
+      [teks, tanggalLahir],
     )
   }
   const cocok = pilihKandidat(kandidat, nik)
   if (!cocok) {
-    catatGagal(teks, minta.ip)
+    catatGagal('cari', minta.ip)
     return balas.status(401).json({ detail: 'nama_atau_nik_tidak_cocok' })
   }
 
-  gagal.delete(kunci(teks, minta.ip))
+  gagal.delete(kunci('cari', minta.ip))
   const token = buatToken()
   await satu(
     `INSERT INTO akses_wali (id, balita_id, token_hash, kadaluarsa_pada, dibuat_pada)

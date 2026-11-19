@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { daftarPosyandu, daftarValidasi, tindakLanjut, validasiKunjungan, validasiSemua } from '../jaringan/api.js'
 import { PESAN_STATUS } from '../logika/rentang.js'
 import Ikon from './Ikon.jsx'
@@ -18,6 +18,8 @@ export default function Validasi({ sesi }) {
   const [tindak, setTindak] = useState({})
   const [pesan, setPesan] = useState(null)
   const [konfirmMassal, setKonfirmMassal] = useState(false)
+  // Pencarian memakai debounce; respons lama tidak boleh menimpa hasil baru.
+  const urutanMuat = useRef(0)
 
   useEffect(() => {
     daftarPosyandu()
@@ -26,16 +28,19 @@ export default function Validasi({ sesi }) {
   }, [])
 
   async function muat(kunci = cari, posId = posyanduId) {
+    const urutan = ++urutanMuat.current
     setMemuat(true)
     setGalat(null)
     try {
       const balasan = await daftarValidasi({ batas: 50, offset: 0, q: kunci.trim(), posyandu_id: posId })
+      if (urutan !== urutanMuat.current) return
       setDaftar(balasan.validasi)
       setTotal(balasan.total ?? balasan.validasi.length)
     } catch {
+      if (urutan !== urutanMuat.current) return
       setGalat('Validasi butuh koneksi ke server. Sambungkan tablet lalu coba lagi.')
     } finally {
-      setMemuat(false)
+      if (urutan === urutanMuat.current) setMemuat(false)
     }
   }
 
@@ -59,7 +64,7 @@ export default function Validasi({ sesi }) {
     setGalat(null)
     setPesan(null)
     try {
-      const balasan = await validasiSemua(cari.trim())
+      const balasan = await validasiSemua(cari.trim(), posyanduId)
       setPesan(`${balasan.divalidasi} pengukuran divalidasi.`)
       setKonfirmMassal(false)
       await muat(cari)

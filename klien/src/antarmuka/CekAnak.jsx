@@ -56,6 +56,7 @@ function GrafikBerat({ kunjungan }) {
 
 export default function CekAnak({ kePublik }) {
   const [kunci, setKunci] = useState('')
+  const [tanggalLahir, setTanggalLahir] = useState('')
   const [data, setData] = useState(null)
   const [galat, setGalat] = useState(null)
   const [memuat, setMemuat] = useState(true)
@@ -75,14 +76,15 @@ export default function CekAnak({ kePublik }) {
     setGalat(null)
     setMencari(true)
     try {
-      await cariBalitaWali(kunci)
+      await cariBalitaWali(kunci, tanggalLahir)
       setData(await riwayatWali())
       setKunci('')
+      setTanggalLahir('')
     } catch (salah) {
       setData(null)
       setGalat(salah.status === 429
         ? 'Terlalu banyak percobaan. Coba lagi 15 menit.'
-        : 'Nama atau NIK belum cocok. Bila nama sama, masukkan 16 digit NIK.')
+        : 'Nama/NIK dan tanggal lahir belum cocok. Periksa lagi ya.')
     } finally {
       setMencari(false)
     }
@@ -93,6 +95,7 @@ export default function CekAnak({ kePublik }) {
     setData(null)
     setGalat(null)
     setKunci('')
+    setTanggalLahir('')
   }
 
   return (
@@ -118,12 +121,17 @@ export default function CekAnak({ kePublik }) {
       {!data && !memuat && (
         <form className="kartu" onSubmit={cari}>
           <h2 className="mb-1 text-dasar font-bold text-teks">Cari data balita</h2>
-          <p className="mt-0 mb-4 text-padat text-teks-redup">Masukkan nama lengkap atau 16 digit NIK balita.</p>
+          <p className="mt-0 mb-4 text-padat text-teks-redup">Masukkan nama lengkap atau 16 digit NIK balita, beserta tanggal lahirnya.</p>
           <div className="bidang flex flex-col">
             <label htmlFor="wali-kunci"><span>Nama / NIK balita</span><span className="wajib" aria-hidden="true">*</span></label>
             <input id="wali-kunci" name="kunci" autoComplete="off" required maxLength={120}
               placeholder="cth. Budi Santoso atau 3301010101010009" value={kunci}
               onChange={(e) => setKunci(e.target.value)} />
+          </div>
+          <div className="bidang mt-3 flex flex-col">
+            <label htmlFor="wali-lahir"><span>Tanggal lahir balita</span><span className="wajib" aria-hidden="true">*</span></label>
+            <input id="wali-lahir" name="tanggal_lahir" type="date" required
+              value={tanggalLahir} onChange={(e) => setTanggalLahir(e.target.value)} />
           </div>
           <button type="submit" className="mt-4 besar" disabled={mencari}>
             <Ikon nama="cari" ukuran={18} />

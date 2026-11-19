@@ -9,39 +9,19 @@ const env = require('../env')
 const { catatAktivitas } = require('../domain/aktivitas')
 
 const router = express.Router()
-
-// Penghitung percobaan disimpan di memori proses. Cukup untuk satu VPS satu
-// proses; bila nanti lebih dari satu proses, pindahkan ke tabel.
-//
-// Dikunci per (nama + alamat IP): penyerang tidak bisa mengunci akun orang lain
-// hanya dengan menebak nama pengguna, dan tidak bisa menghindari batas dengan
-// mengganti huruf besar-kecil.
-const gagal = new Map()
 const BATAS_GAGAL = 5
 const MENIT_KUNCI = 15
 
-function kunciPercobaan(nama, ip) {
-  return `${String(nama).trim().toLowerCase()}|${ip || '-'}`
-}
+// Dikunci per (nama + alamat IP): penyerang tidak bisa mengunci akun orang lain
+// hanya dengan menebak nama pengguna, dan tidak bisa menghindari batas dengan
+// mengganti huruf besar-kecil.
+const { buatPembatasGagal } = require('../domain/pembatas-gagal')
+const gagal = buatPembatasGagal({ batas: BATAS_GAGAL, menit: MENIT_KUNCI })
 
-function masihTerkunci(nama, ip) {
-  const kunci = kunciPercobaan(nama, ip)
-  const batas = Date.now() - MENIT_KUNCI * 60_000
-  const daftar = (gagal.get(kunci) || []).filter((w) => w > batas)
-  gagal.set(kunci, daftar)
-  return daftar.length >= BATAS_GAGAL
-}
-
-function catatGagal(nama, ip) {
-  const kunci = kunciPercobaan(nama, ip)
-  const daftar = gagal.get(kunci) || []
-  daftar.push(Date.now())
-  gagal.set(kunci, daftar)
-}
-
-function hapusGagal(nama, ip) {
-  gagal.delete(kunciPercobaan(nama, ip))
-}
+const kunciPercobaan = (nama, ip) => gagal.kunci(nama, ip)
+const masihTerkunci = (nama, ip) => gagal.terkunci(nama, ip)
+const catatGagal = (nama, ip) => gagal.catat(nama, ip)
+const hapusGagal = (nama, ip) => gagal.hapus(nama, ip)
 
 router.post('/masuk', async (minta, balas) => {
   const { nama_pengguna, kata_sandi, id_perangkat } = minta.body || {}

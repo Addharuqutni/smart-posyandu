@@ -63,18 +63,6 @@ export async function simpanKunjungan({
     throw new Error('Usia balita sudah melewati 7 tahun (84 bulan).')
   }
 
-  if (!izinkanGanda) {
-    const sudah = await kunjunganPadaTanggal(balita.id, tanggal)
-    if (sudah) {
-      // Kode galat, bukan kalimat: layar Catat menampilkan dialog konfirmasi
-      // dan bisa mengirim ulang dengan `izinkanGanda: true`.
-      const salah = new Error('kunjungan_ganda')
-      salah.kode = 'kunjungan_ganda'
-      salah.kunjungan = sudah
-      throw salah
-    }
-  }
-
   const kunjungan = {
     id: kunjunganId,
     balita_id: balita.id,
@@ -110,6 +98,20 @@ export async function simpanKunjungan({
       }
 
   await db.transaction('rw', [db.kunjungan, db.pengukuran, db.antrean_sinkron], async () => {
+    // Di dalam transaksi: dua tab PWA (atau simpan ulang setelah dialog
+    // "kunjungan ganda") bisa lolos cek paralel dan menulis dua baris; server
+    // hanya menerima satu, sisanya macet `gagal` di antrean.
+    if (!izinkanGanda) {
+      const sudah = await kunjunganPadaTanggal(balita.id, tanggal)
+      if (sudah) {
+        // Kode galat, bukan kalimat: layar Catat menampilkan dialog konfirmasi
+        // dan bisa mengirim ulang dengan `izinkanGanda: true`.
+        const salah = new Error('kunjungan_ganda')
+        salah.kode = 'kunjungan_ganda'
+        salah.kunjungan = sudah
+        throw salah
+      }
+    }
     await db.kunjungan.put(kunjungan)
     if (pengukuran) await db.pengukuran.put(pengukuran)
     await masukAntrean('kunjungan', kunjunganId, 'buat', kunjungan, pemilik_id)
@@ -163,7 +165,12 @@ export async function hapusKunjungan(id, idPerangkat, pemilik_id = null) {
   }
   await db.transaction('rw', [db.kunjungan, db.antrean_sinkron], async () => {
     await db.kunjungan.put(baru)
-    await masukAntrean('kunjungan', id, 'hapus', {}, pemilik_id, lama)
+    // Server menuntut `id` + `terjadi_pada` untuk setiap aksi, termasuk hapus;
+    // muatan kosong membuat setiap pembatalan kunjungan ditolak permanen.
+    await masukAntrean('kunjungan', id, 'hapus', {
+      id,
+      terjadi_pada: baru.terjadi_pada,
+    }, pemilik_id, lama)
   })
 }
 

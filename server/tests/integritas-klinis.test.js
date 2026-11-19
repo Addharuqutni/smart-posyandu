@@ -144,18 +144,25 @@ test('PATCH balita memakai validasi per bidang seperti POST', () => {
 })
 
 // Regresi: hapus balita hanya menandai balita, kunjungan dan pengukurannya
-// tertinggal yatim sehingga Posyandu tetap dianggap terpakai.
+// tertinggal yatim sehingga Posyandu tetap dianggap terpakai. Aturan ini kini
+// satu fungsi di `domain/balita.js`, dipakai DELETE HTTP dan jalur /sinkron.
 test('hapus balita ikut menandai kunjungan, pengukuran, dan relasi wali', () => {
-  const blok = data.slice(
+  const rute = data.slice(
     data.indexOf("router.delete('/balita/:id'"),
     data.indexOf('// --- Kunjungan & validasi'),
   )
-  assert.match(blok, /transaksi\(async \(klien\)/)
+  assert.match(rute, /transaksi\(/)
+  assert.match(rute, /hapusBalita\(klien, minta\.params\.id/)
+
+  const inti = baca('domain/balita.js')
   for (const t of ['pengukuran', 'tindak_lanjut', 'kunjungan', 'balita_orang_tua', 'balita']) {
-    assert.match(blok, new RegExp(`hapus\\('${t}'`), t)
+    assert.match(inti, new RegExp(`hapus\\('${t}'`), t)
   }
   // Soft delete, bukan DELETE fisik.
-  assert.ok(!/DELETE FROM/i.test(blok), 'hapus balita tidak boleh DELETE fisik')
+  assert.ok(!/DELETE FROM/i.test(inti), 'hapus balita tidak boleh DELETE fisik')
+  // Jalur tablet wajib memakai aturan yang sama.
+  const sinkron = baca('routes/sinkron.js')
+  assert.match(sinkron, /namaTabel === 'balita'\) await hapusBalita\(klien, idBaris, meta\)/)
 })
 
 test('pesan posyandu terpakai menyebut rujukan yang sebenarnya', () => {
@@ -173,4 +180,13 @@ test('validasi massal mencatat audit untuk kunjungan dan pengukuran', () => {
   assert.match(blok, /audit_kunjungan AS/)
   assert.match(blok, /audit_pengukuran AS/)
   assert.match(blok, /FROM ukur_baru/)
+})
+
+test('pembatalan kunjungan tidak tertahan cek usia di antrean sinkron', () => {
+  const sinkron = baca('routes/sinkron.js')
+  const balita = baca('domain/balita.js')
+  // Muatan hapus hanya `{ id, terjadi_pada }`; cek usia harus dilewati.
+  assert.match(sinkron, /namaTabel === 'kunjungan' && aksi !== 'hapus'/)
+  // Pengukuran milik kunjungan yang sudah dibatalkan tetap ikut dibersihkan.
+  assert.match(balita, /SELECT id FROM kunjungan WHERE balita_id = \$1`/)
 })

@@ -42,7 +42,6 @@ berbagai status persetujuan. Hapus dengan `npm run demo:hapus` — konten yang
 Anda buat sendiri tidak ikut terhapus, hanya baris ber-id demo.
 
 ### Skrip yang tersedia
-| `npm run dev` | Menjalankan API & klien bersama (`alat.js dev`). |
 | `npm run dev:server` / `dev:klien` | Menjalankan salah satu. |
 | `npm run bangun` | Bangun klien produksi → `klien/dist`. |
 | `npm run pratinjau` | Sajikan `dist` (mode produksi). **Tanpa proksi API** → panggilan API gagal di mesin lokal. |
@@ -53,9 +52,6 @@ Anda buat sendiri tidak ikut terhapus, hanya baris ber-id demo.
 | `npm run cadangan` | Cadangkan sekarang (verifikasi & pangkas). |
 | `npm run pulih -- <berkas> [--ke <DATABASE_URL>]` | Uji pemulihan (drill). |
 | `npm run siap:produksi` | Bangun klien + terapkan skema (satu perintah). |
-| `npm run periksa` | Periksa ulang hasil bangun (mis. `VITE_API` tertanam) kapan saja. |
-| `npm run siap:vps` / `siap:vps:periksa` | Siapkan / periksa kesiapan pemasangan di VPS. |
-| `npm run pasang:https` | Minta sertifikat HTTPS untuk alamat IP. |
 | `npm run konten:kodenara` | Tarik artikel tips KodeNara sekarang (juga jalan otomatis 03.00 WIB). |
 | `npm run konten:kodenara:bersih` | Buang semua artikel hasil tarikan; konten buatan admin tetap. |
 
@@ -246,27 +242,18 @@ dan memberi peringatan (`npm run periksa` untuk memeriksa ulang kapan saja).
 
 Sajikan `klien/dist`, teruskan path API ke `127.0.0.1:3000`.
 
-**Jangan salin blok proksi dari dokumen ini.** Daftar path API berubah setiap
-kali ada rute baru, dan salinan di dokumen pasti tertinggal — itulah yang
-membuat `/konten-publik` dan `/aktivitas` menjawab `index.html` di VPS.
-Cetak konfigurasi yang selalu mutakhir:
-
-```bash
-node alat.js konfig internal    # http, jaringan desa (tanpa sertifikat)
-node alat.js konfig izin        # snippet daftar putih (allow/deny), di-include ke konfig https
-node alat.js konfig https       # https, sertifikat Let's Encrypt untuk alamat IP
-node alat.js konfig publik      # https, terbuka untuk umum
-```
-
-Daftar path-nya ada di `JALUR_API` dalam `alat.js`, dan `server/tests/proksi.test.js`
-menjaga agar daftar itu (serta proksi Vite dan daftar API service worker) tetap
-sama dengan rute yang benar-benar didaftarkan Express.
+Salin blok proksi di bawah ke situs Nginx dan tambahkan setiap rute baru secara
+manual ke daftar `location ~`. Daftar path API ada di `JALUR_API` dalam
+`klien/vite.config.js`, dan `server/tests/proksi.test.js` menjaga daftar itu
+(serta daftar API service worker) tetap sama dengan rute yang didaftarkan
+Express. Karena konfigurasi Nginx ditulis manual, perbarui blok proksi bila ada
+rute baru.
 
 Bentuknya sekilas seperti ini — perhatikan `location ~` yang meneruskan ke Node,
 lalu `location /` yang menyerahkan sisanya ke SPA:
 
 ```nginx
-  location ~ ^/(masuk|keluar|saya|akun-saya|sinkron|balita|kunjungan|validasi|pengguna|sesi|rekap|ekspor\.csv|kualitas|cadangan|posyandu|konten-publik|aktivitas|sehat|waktu)(/|$|\?) {
+  location ~ ^/(masuk|keluar|saya|akun-saya|sinkron|balita|kunjungan|validasi|pengguna|sesi|rekap|ekspor\.csv|kualitas|cadangan|posyandu|konten-publik|aktivitas|wali|sehat|waktu)(/|$|\?) {
     proxy_pass http://127.0.0.1:3000;
     proxy_set_header Host $host;
     proxy_set_header X-Real-IP $remote_addr;
@@ -354,8 +341,8 @@ Tambahkan berkas uji baru ke daftar tes di `server/package.json`.
 3. **Menyaring kursor di Node** (bukan di SQL) → kehilangan 421.128 dari 433.134
    baris tanpa galat. |
 
-4. **`npm run dev` memanggil `bash alat/dev.sh`** yang tak pernah ada → selalu
-   gagal. Sekarang `alat.js dev` (Node murni, tanpa pustaka).
+4. **`npm run dev` memanggil skrip yang tak pernah ada** → gagal. Sekarang
+   jalankan `npm run dev:server` dan `npm run dev:klien` di dua terminal.
 
 5. **Bundel produksi menanam `VITE_API=http://127.0.0.1:3000`** → browser
    memanggil `127.0.0.1:3000` & diblokir CSP. Kosongkan `VITE_API` di `.env`

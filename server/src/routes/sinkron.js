@@ -11,37 +11,103 @@ const { TABEL_SINKRON, siapkan } = require('../domain/tabel')
 const { bacaKursor, tulisKursor } = require('../domain/kursor')
 const { ambilMentah, sisip, ubah, hapus } = require('../domain/repositori')
 const { bangunKueriHalaman } = require('../domain/halaman-sinkron')
-const { butuhLogin } = require('../middleware/auth')
+const { butuhLogin, butuhPosyandu } = require('../middleware/auth')
 const { lahirDiterima, kunjunganDiterima } = require('../domain/usia')
+const { hapusBalita } = require('../domain/balita')
 
 const router = express.Router()
+
+router.use(butuhPosyandu)
 
 /** Posyandu yang diizinkan pemakai ini. Admin desa/nakes = semua. */
 function posyanduDiizinkan(pengguna) {
   return pengguna.peran === 'kader' ? pengguna.posyandu_id : null
 }
 
-/** Posyandu pemilik sebuah baris, atau null bila tidak bisa ditentukan. */
-async function posyanduBaris(namaTabel, idBaris, muatan) {
-  if (namaTabel === 'balita' || namaTabel === 'kunjungan') {
-    return muatan?.posyandu_id ?? null
-  }
-  if (namaTabel === 'pengukuran') {
-    const k = await satu(`SELECT posyandu_id FROM kunjungan WHERE id = $1`, [muatan?.kunjungan_id])
-    return k?.posyandu_id ?? null
-  }
-  if (namaTabel === 'tindak_lanjut') {
-    const k = await satu(`SELECT posyandu_id FROM kunjungan WHERE id = $1`, [muatan?.kunjungan_id])
-    return k?.posyandu_id ?? null
-  }
-  if (namaTabel === 'balita_orang_tua') {
-    const b = await satu(`SELECT posyandu_id FROM balita WHERE id = $1`, [muatan?.balita_id])
-    return b?.posyandu_id ?? null
-  }
-  // orang_tua bukan milik satu Posyandu; kepemilikan lewat balita_orang_tua.
-  return null
-}
+const samaId = (a, b) => a != null && b != null && String(a) === String(b)
 
+/**
+ * Amankan satu perubahan milik kader. `[alasan, muatan]`; muatan yang
+ * dikembalikan memakai induk/Posyandu hasil verifikasi basis data, bukan
+ * kiriman tablet. `ambil` bisa disuntik untuk uji tanpa DB.
+ *
+ * `baru.relasi` = petunjuk pasangan (orang_tua_id -> balita_id) dari relasi
+ * yang ikut dikirim; `baru.orangTua` = id orang_tua yang sudah diterima dalam
+ * permintaan yang sama. Induk tetap diverifikasi dari basis data.
+ */
+async function amankanKepemilikan(
+  namaTabel, idBaris, muatanAwal, tersimpan, pengguna, baru, db = { satu, banyak },
+) {
+  const { satu: ambilSatu, banyak: ambilBanyak } = db
+  const pos = pengguna.posyandu_id
+  const muatan = muatanAwal
+  const tolak = () => ['tidak_diizinkan', muatan]
+  const ambilBalita = async (id) => id
+    ? ambilSatu(`SELECT posyandu_id FROM balita WHERE id = $1`, [id])
+    : null
+  const ambilKunjungan = async (id) => id
+    ? ambilSatu(`SELECT posyandu_id FROM kunjungan WHERE id = $1`, [id])
+    : null
+  const ambilWali = async (id) => id
+    ? ambilBanyak(
+      `SELECT b.posyandu_id FROM balita_orang_tua bot
+         JOIN balita b ON b.id = bot.balita_id
+        WHERE bot.orang_tua_id = $1 AND bot.dihapus_pada IS NULL`,
+      [id],
+    )
+    : []
+  const waliMilikSendiri = (relasi) => relasi.length > 0 &&
+    relasi.every((r) => samaId(r.posyandu_id, pos))
+
+  if (namaTabel === 'balita') {
+    if (tersimpan && !samaId(tersimpan.posyandu_id, pos)) return tolak()
+    if (muatan.posyandu_id !== undefined && !samaId(muatan.posyandu_id, pos)) return tolak()
+    return [null, { ...muatan, posyandu_id: pos }]
+  }
+
+  if (namaTabel === 'kunjungan') {
+    if (tersimpan && muatan.balita_id !== undefined &&
+        !samaId(muatan.balita_id, tersimpan.balita_id)) return tolak()
+    const idBalita = tersimpan?.balita_id ?? muatan.balita_id
+    const induk = await ambilBalita(idBalita)
+    if (!samaId(induk?.posyandu_id, pos)) return tolak()
+    if (muatan.posyandu_id !== undefined && !samaId(muatan.posyandu_id, pos)) return tolak()
+    return [null, { ...muatan, balita_id: idBalita, posyandu_id: pos }]
+  }
+
+  if (namaTabel === 'pengukuran' || namaTabel === 'tindak_lanjut') {
+    if (tersimpan && muatan.kunjungan_id !== undefined &&
+        !samaId(muatan.kunjungan_id, tersimpan.kunjungan_id)) return tolak()
+    const idKunjungan = tersimpan?.kunjungan_id ?? muatan.kunjungan_id
+    const induk = await ambilKunjungan(idKunjungan)
+    if (!samaId(induk?.posyandu_id, pos)) return tolak()
+    return [null, { ...muatan, kunjungan_id: idKunjungan }]
+  }
+
+  if (namaTabel === 'balita_orang_tua') {
+    if (tersimpan && muatan.balita_id !== undefined &&
+        !samaId(muatan.balita_id, tersimpan.balita_id)) return tolak()
+    if (tersimpan && muatan.orang_tua_id !== undefined &&
+        !samaId(muatan.orang_tua_id, tersimpan.orang_tua_id)) return tolak()
+    const idBalita = tersimpan?.balita_id ?? muatan.balita_id
+    const induk = await ambilBalita(idBalita)
+    if (!samaId(induk?.posyandu_id, pos)) return tolak()
+    const idOrangTua = tersimpan?.orang_tua_id ?? muatan.orang_tua_id
+    const relasi = await ambilWali(idOrangTua)
+    if (waliMilikSendiri(relasi) || (!relasi.length && baru.orangTua.has(String(idOrangTua)))) {
+      return [null, { ...muatan, balita_id: idBalita, orang_tua_id: idOrangTua }]
+    }
+    return tolak()
+  }
+
+  // `orang_tua` tidak punya posyandu_id. Baris lama memakai relasi tersimpan;
+  // baris baru wajib disertai relasi ke balita milik kader dalam permintaan ini.
+  if (tersimpan) {
+    return waliMilikSendiri(await ambilWali(idBaris)) ? [null, muatan] : tolak()
+  }
+  const induk = await ambilBalita(baru.relasi.get(String(idBaris)))
+  return samaId(induk?.posyandu_id, pos) ? [null, muatan] : tolak()
+}
 /**
  * Potongan SQL pembatas posyandu untuk satu tabel, atau '' bila pemakai
  * boleh melihat semua. `nilai` diisi di tempat supaya nomor parameter
@@ -71,13 +137,25 @@ function syaratPosyandu(namaTabel, pos, nilai) {
 router.post('/sinkron', butuhLogin, async (minta, balas) => {
   const pengguna = minta.pengguna
   const perubahan = Array.isArray(minta.body?.perubahan) ? minta.body.perubahan : []
+  // Satu permintaan = satu jalur kueri berurutan per baris; badan 1 MB bisa
+  // memuat ribuan baris dan menghabiskan koneksi basis data.
+  const BATAS_PERUBAHAN = 500
+  if (perubahan.length > BATAS_PERUBAHAN) {
+    return balas.status(413).json({ detail: 'terlalu_banyak_perubahan', batas: BATAS_PERUBAHAN })
+  }
   const idPerangkat = minta.body?.id_perangkat || 'server'
   const toleransi = require('../env').muat().toleransiJam
   const sekarang = new Date()
 
   const diterima = []
   const ditolak = []
-
+  const baru = { relasi: new Map(), orangTua: new Set() }
+  for (const p of perubahan) {
+    if (p?.nama_tabel === 'balita_orang_tua' && p.aksi !== 'hapus' &&
+        p.muatan?.orang_tua_id && p.muatan?.balita_id) {
+      baru.relasi.set(String(p.muatan.orang_tua_id), p.muatan.balita_id)
+    }
+  }
   for (const p of perubahan) {
     const { nama_tabel: namaTabel, id_baris: idBaris, aksi } = p || {}
     let muatan = p?.muatan
@@ -98,8 +176,27 @@ router.post('/sinkron', butuhLogin, async (minta, balas) => {
       continue
     }
 
+    // Menghapus data induk hanya admin desa, sama seperti DELETE HTTP-nya.
+    if (aksi === 'hapus' && (namaTabel === 'balita' || namaTabel === 'orang_tua') &&
+        pengguna.peran !== 'admin_desa') {
+      ditolak.push({ id_baris: idBaris, alasan: 'tidak_diizinkan' })
+      continue
+    }
+
     const tersimpan = await ambilMentah(namaTabel, idBaris)
 
+    // Kader hanya boleh menulis baris yang induk/Posyandunya masih miliknya.
+    // Muatan yang sudah disanitasi dipakai oleh semua pemeriksaan di bawah.
+    if (pengguna.peran === 'kader') {
+      const [alasanKepemilikan, muatanAman] = await amankanKepemilikan(
+        namaTabel, idBaris, muatan, tersimpan, pengguna, baru,
+      )
+      if (alasanKepemilikan) {
+        ditolak.push({ id_baris: idBaris, alasan: alasanKepemilikan })
+        continue
+      }
+      muatan = muatanAman
+    }
     // Batas usia balita 0 hari s.d. 7 tahun. Baris lama (mis. sudah tidak
     // aktif) tetap boleh disunting/dihapus agar riwayatnya tidak macet di
     // antrean sinkron; yang dilarang adalah memasukkan usia baru yang salah.
@@ -112,15 +209,17 @@ router.post('/sinkron', butuhLogin, async (minta, balas) => {
         ditolak.push({ id_baris: idBaris, alasan: 'usia_di_luar_rentang' })
         continue
       }
-      // NIK wajib untuk membedakan nama kembar di Cek Perkembangan Anak.
-      // Baris lama tanpa NIK tetap bisa disunting; salinan tablet lama
-      // mengirim `nik: null` dan tidak boleh menimpa ciphertext di server.
+    }
+    // NIK selalu tersimpan terenkripsi. Wajib 16 digit hanya untuk balita
+    // (membedakan nama kembar); NIK wali opsional.
+    if (namaTabel === 'balita' || namaTabel === 'orang_tua') {
       const nikMasuk = muatan.nik
-      if (!tersimpan && !/^\d{16}$/.test(String(nikMasuk ?? ''))) {
+      if (!tersimpan && namaTabel === 'balita' && !/^\d{16}$/.test(String(nikMasuk ?? ''))) {
         ditolak.push({ id_baris: idBaris, alasan: 'nik_wajib_16_digit' })
         continue
       }
       if (nikMasuk == null || nikMasuk === '') {
+        // salinan tablet lama mengirim `nik: null`; jangan menimpa ciphertext.
         if (tersimpan) {
           muatan = { ...muatan }
           delete muatan.nik
@@ -143,7 +242,10 @@ router.post('/sinkron', butuhLogin, async (minta, balas) => {
         continue
       }
     }
-    if (namaTabel === 'kunjungan') {
+    // Pembatalan kunjungan hanya mengirim { id, terjadi_pada }: tidak ada usia
+    // baru yang masuk, jadi cek usia dilewati. Tanpa ini setiap "Batalkan
+    // pencatatan" ditolak `usia_di_luar_rentang` dan tertahan selamanya.
+    if (namaTabel === 'kunjungan' && aksi !== 'hapus') {
       const b = await satu(`SELECT tanggal_lahir FROM balita WHERE id = $1`, [muatan.balita_id])
       const lahir = lahirTersimpan(b?.tanggal_lahir)
       const tanggal = lahirTersimpan(muatan.tanggal_kunjungan)
@@ -153,27 +255,20 @@ router.post('/sinkron', butuhLogin, async (minta, balas) => {
       }
     }
 
-    // Otorisasi kepemilikan: kader hanya boleh menulis ke Posyandunya sendiri.
-    // Tanpa ini, kader bisa menitipkan data ke Posyandu lain (bocor lintas unit).
+    // Kader tidak boleh menyunting/menghapus yang sudah divalidasi (PRD 5).
+    // `pengukuran`/`tindak_lanjut` mewarisi status dari kunjungannya.
     if (pengguna.peran === 'kader') {
-      const posBaris = await posyanduBaris(namaTabel, idBaris, muatan)
-      if (posBaris && String(posBaris) !== String(pengguna.posyandu_id)) {
-        ditolak.push({ id_baris: idBaris, alasan: 'tidak_diizinkan' })
+      let divalidasi = Boolean(tersimpan?.divalidasi_oleh)
+      if (!divalidasi && (namaTabel === 'pengukuran' || namaTabel === 'tindak_lanjut')) {
+        const k = await satu(`SELECT divalidasi_oleh FROM kunjungan WHERE id = $1`, [
+          muatan?.kunjungan_id ?? tersimpan?.kunjungan_id,
+        ])
+        divalidasi = Boolean(k?.divalidasi_oleh)
+      }
+      if (divalidasi) {
+        ditolak.push({ id_baris: idBaris, alasan: 'sudah_divalidasi' })
         continue
       }
-      if (tersimpan) {
-        const posLama = await posyanduBaris(namaTabel, idBaris, tersimpan)
-        if (posLama && String(posLama) !== String(pengguna.posyandu_id)) {
-          ditolak.push({ id_baris: idBaris, alasan: 'tidak_diizinkan' })
-          continue
-        }
-      }
-    }
-
-    // Kader tidak boleh menyunting yang sudah divalidasi (PRD Bagian 5).
-    if (pengguna.peran === 'kader' && tersimpan?.divalidasi_oleh) {
-      ditolak.push({ id_baris: idBaris, alasan: 'sudah_divalidasi' })
-      continue
     }
 
     // Rentang wajar (F-11) diperiksa sebelum keputusan benturan.
@@ -197,10 +292,13 @@ router.post('/sinkron', butuhLogin, async (minta, balas) => {
       await transaksi(async (klien) => {
         if (aksi === 'hapus') {
           if (tersimpan) {
-            await hapus(namaTabel, idBaris, {
+            const meta = {
               klien, penggunaId: pengguna.id, idPerangkat,
               terjadiPada: muatan.terjadi_pada, ip: minta.ip,
-            })
+            }
+            // Balita menghapus turunannya; tabel lain cukup barisnya sendiri.
+            if (namaTabel === 'balita') await hapusBalita(klien, idBaris, meta)
+            else await hapus(namaTabel, idBaris, meta)
           }
         } else if (tersimpan) {
           await ubah(namaTabel, idBaris, siapkan(namaTabel, muatan), {
@@ -214,6 +312,7 @@ router.post('/sinkron', butuhLogin, async (minta, balas) => {
         }
       })
       diterima.push(idBaris)
+      if (namaTabel === 'orang_tua' && !tersimpan) baru.orangTua.add(String(idBaris))
     } catch (salah) {
       ditolak.push({ id_baris: idBaris, alasan: MUATAN_TIDAK_SAH })
     }
@@ -224,7 +323,7 @@ router.post('/sinkron', butuhLogin, async (minta, balas) => {
 
 router.get('/sinkron', butuhLogin, async (minta, balas) => {
   const pengguna = minta.pengguna
-  const batas = Math.min(Number(minta.query.batas) || 500, 2000)
+  const batas = Math.min(Math.max(Math.floor(Number(minta.query.batas)) || 500, 1), 2000)
   const pos = posyanduDiizinkan(pengguna)
   const kursor = bacaKursor(minta.query.sejak)
 
@@ -318,3 +417,4 @@ router.get('/sinkron', butuhLogin, async (minta, balas) => {
 
 module.exports = router
 module.exports.syaratPosyandu = syaratPosyandu
+module.exports.amankanKepemilikan = amankanKepemilikan

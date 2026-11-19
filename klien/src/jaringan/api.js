@@ -1,3 +1,5 @@
+import { hapusSesi } from '../penyimpanan/sesi.js'
+
 // Permintaan HTTP ke server. Satu tempat untuk alamat, kepala, dan kegagalan.
 //
 // Sesi memakai cookie HttpOnly yang ikut terkirim otomatis (`credentials:
@@ -20,9 +22,7 @@
 // sehingga aplikasi yang sudah terpasang tidak bisa menghubungi server sama
 // sekali. Isi VITE_API hanya bila klien sengaja dipisah dari API.
 const AKAR = (import.meta.env?.VITE_API ?? '').replace(/\/$/, '')
-
 const KEPALA_DASAR = { 'X-Requested-With': 'smart-posyandu' }
-
 /** Jaringan tidak terjangkau. Bukan kesalahan pengguna; antrean tetap menunggu. */
 export class GagalJaringan extends Error {
   constructor() {
@@ -41,6 +41,44 @@ export class KesalahanApi extends Error {
   }
 }
 
+/**
+ * Sesi tidak sah (cookie kedaluwarsa/dicabut): buang salinan lokal lalu
+ * beri tahu lapisan aplikasi, di satu tempat. Tanpa ini setiap layar yang
+ * kena 401 hanya menampilkan "periksa koneksi" dan kader tetap di halaman
+ * yang datanya tidak akan pernah termuat.
+ */
+function sesiHabis() {
+  hapusSesi()
+  if (typeof window !== 'undefined') window.dispatchEvent(new Event('posyandu:sesi-habis'))
+}
+
+/**
+ * Terjemahkan balasan gagal jadi `KesalahanApi`, termasuk detail dari server.
+ * 401 pada jalur publik (/masuk, /wali/*) adalah galat kredensial, bukan sesi
+ * petugas yang habis. Menyamakan keduanya mengeluarkan petugas dari aplikasi.
+ */
+async function galatDari(jawab, jalur = '') {
+  let rincian = null
+  try {
+    const isi = await jawab.json()
+    const detail = isi.detail ?? null
+    // Server mengirim `detail` berupa teks, atau objek {detail, rincian}
+    // untuk kasus yang perlu kalimat penjelas. Jangan biarkan bentuk objek
+    // masuk ke React.
+    // `pesan` dipakai server untuk kalimat utuh yang sudah spesifik
+    // (mis. "Posyandu masih dipakai 1 kunjungan dan 2 akun pengguna").
+    rincian =
+      typeof detail === 'string'
+        ? (isi.pesan ?? isi.rincian ?? detail)
+        : detail?.rincian ?? isi.pesan ?? isi.rincian ?? 'kesalahan_server'
+  } catch {
+    // balasan bukan JSON; biarkan rincian null
+  }
+  const publik = jalur === '/masuk' || jalur.startsWith('/wali/')
+  if (jawab.status === 401 && !publik) sesiHabis()
+  return new KesalahanApi(jawab.status, rincian)
+}
+
 async function minta(jalur, { metode = 'GET', isi, kepala: tambahan } = {}) {
   const kepala = { ...KEPALA_DASAR, ...(tambahan ?? {}) }
   if (isi !== undefined) kepala['Content-Type'] = 'application/json'
@@ -55,25 +93,7 @@ async function minta(jalur, { metode = 'GET', isi, kepala: tambahan } = {}) {
   } catch {
     throw new GagalJaringan()
   }
-  if (!jawab.ok) {
-    let rincian = null
-    try {
-      const isi = await jawab.json()
-      const detail = isi.detail ?? null
-      // Server mengirim `detail` berupa teks, atau objek {detail, rincian}
-      // untuk kasus yang perlu kalimat penjelas. Jangan biarkan bentuk objek
-      // masuk ke React.
-      // `pesan` dipakai server untuk kalimat utuh yang sudah spesifik
-      // (mis. "Posyandu masih dipakai 1 kunjungan dan 2 akun pengguna").
-      rincian =
-        typeof detail === 'string'
-          ? (isi.pesan ?? isi.rincian ?? detail)
-          : detail?.rincian ?? isi.pesan ?? isi.rincian ?? 'kesalahan_server'
-    } catch {
-      // balasan bukan JSON; biarkan rincian null
-    }
-    throw new KesalahanApi(jawab.status, rincian)
-  }
+  if (!jawab.ok) throw await galatDari(jawab, jalur)
   if (jawab.status === 204) {
     // Badan balasan 204 dibaca habis meski kosong: kalau tidak, Chrome
     // mencatat "net::ERR_ABORTED" di konsol untuk permintaan yang sebenarnya
@@ -123,8 +143,8 @@ export function daftarValidasi({ batas = 50, offset = 0, q = '', posyandu_id = '
 }
 
 /** Validasi massal: kunjungan yang cocok dengan q (atau semua). */
-export function validasiSemua(q = '') {
-  return minta('/validasi/semua', { metode: 'POST', isi: { q } })
+export function validasiSemua(q = '', posyanduId = '') {
+  return minta('/validasi/semua', { metode: 'POST', isi: { q, posyandu_id: posyanduId } })
 }
 
 export function validasiKunjungan(id) {
@@ -247,7 +267,7 @@ export async function unduhCadangan(nama) {
   } catch {
     throw new GagalJaringan()
   }
-  if (!jawab.ok) throw new KesalahanApi(jawab.status, null)
+  if (!jawab.ok) throw await galatDari(jawab, `/cadangan/${encodeURIComponent(nama)}`)
   return jawab.blob()
 }
 
@@ -281,14 +301,7 @@ export async function pulihkanDariBerkas(berkas, kataSandi) {
   } catch {
     throw new GagalJaringan()
   }
-  if (!jawab.ok) {
-    let rincian = null
-    try {
-      const d = await jawab.json()
-      rincian = typeof d.detail === 'string' ? d.detail : d.detail?.rincian ?? null
-    } catch {}
-    throw new KesalahanApi(jawab.status, rincian)
-  }
+  if (!jawab.ok) throw await galatDari(jawab, '/cadangan/pulihkan-unggah')
   return jawab.json()
 }
 
@@ -345,7 +358,7 @@ export async function unduhEkspor(bulan) {
   } catch {
     throw new GagalJaringan()
   }
-  if (!jawab.ok) throw new KesalahanApi(jawab.status, null)
+  if (!jawab.ok) throw await galatDari(jawab, '/ekspor.csv')
   return jawab.blob()
 }
 
@@ -355,8 +368,8 @@ export function perbaruiAkun(muatan) {
 }
 
 /** Cek Perkembangan Anak: cookie sesi wali diatur server, bukan di JS. */
-export function cariBalitaWali(kunci) {
-  return minta('/wali/cari', { metode: 'POST', isi: { kunci } })
+export function cariBalitaWali(kunci, tanggalLahir) {
+  return minta('/wali/cari', { metode: 'POST', isi: { kunci, tanggal_lahir: tanggalLahir } })
 }
 
 export function riwayatWali() {

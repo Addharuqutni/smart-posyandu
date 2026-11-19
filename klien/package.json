@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "bangun": "vite build && node ../alat.js periksa-bangun",
+    "bangun": "vite build",
     "pratinjau": "vite preview",
     "uji": "vitest run"
   },

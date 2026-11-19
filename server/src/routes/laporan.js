@@ -37,7 +37,11 @@ router.get('/rekap', NakesAtauAdmin, async (minta, balas) => {
   const [awal, akhir] = rentangBulan(bulan)
   const pengguna = minta.pengguna
   const nilai = [awal, akhir]
-  let syarat = 'k.tanggal_kunjungan >= $1 AND k.tanggal_kunjungan < $2 AND k.dihapus_pada IS NULL'
+  // Balita yang sudah dihapus tidak boleh ikut terhitung: kunjungannya
+  // dihapus lunak juga, tapi baris lama dari jalur sinkron bisa tertinggal.
+  let syarat = `k.tanggal_kunjungan >= $1 AND k.tanggal_kunjungan < $2
+    AND k.dihapus_pada IS NULL
+    AND EXISTS (SELECT 1 FROM balita b WHERE b.id = k.balita_id AND b.dihapus_pada IS NULL)`
   if (pengguna.peran === 'kader') {
     nilai.push(pengguna.posyandu_id)
     syarat += ` AND k.posyandu_id = $${nilai.length}`
@@ -127,6 +131,7 @@ router.get('/ekspor.csv', Admin, async (minta, balas) => {
      JOIN pengukuran p ON p.kunjungan_id = k.id
      WHERE k.tanggal_kunjungan >= $1 AND k.tanggal_kunjungan < $2
        AND k.dihapus_pada IS NULL AND p.dihapus_pada IS NULL
+       AND b.dihapus_pada IS NULL
      ORDER BY k.tanggal_kunjungan, b.nama_lengkap`,
     [awal, akhir],
   )

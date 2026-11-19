@@ -19,20 +19,15 @@ test('hapus akun hanya untuk admin, menolak diri sendiri, dan admin terakhir', (
   assert.match(hapus, /admin_terakhir/)
 })
 
-test('hapus akun melepas semua referensi dan mencabut sesi sebelum DELETE', () => {
+test('hapus akun memakai hapus lunak dan mempertahankan atribusi riwayat', () => {
   assert.match(hapus, /DELETE FROM sesi_login/)
-  for (const pasangan of [
-    "['kader', 'pengguna_id']",
-    "['konten_publik', 'pengaju_id']",
-    "['konten_publik', 'diputuskan_oleh']",
-    "['kunjungan', 'divalidasi_oleh']",
-    "['log_audit', 'pengguna_id']",
-    "['tindak_lanjut', 'petugas_id']",
-  ]) {
-    assert.ok(hapus.includes(pasangan), `pasangan ${pasangan} hilang`)
+  // Akun dihapus lunak; jejak validasi & audit tidak boleh dinolkan.
+  assert.match(hapus, /UPDATE pengguna/)
+  assert.match(hapus, /SET aktif = FALSE, dihapus_pada = now\(\)/)
+  for (const pasangan of ["'kunjungan', 'divalidasi_oleh'", "'log_audit', 'pengguna_id'"]) {
+    assert.ok(!hapus.includes(pasangan), `referensi ${pasangan} tidak boleh dilepas`)
   }
-  assert.match(hapus, /UPDATE \$\{tabel\} SET \$\{kolom\} = NULL WHERE \$\{kolom\} = \$1/)
-  assert.ok(hapus.indexOf('DELETE FROM pengguna') > hapus.indexOf('DELETE FROM sesi_login'))
+  assert.ok(!/DELETE FROM pengguna/.test(hapus), 'akun tidak boleh dihapus fisik')
   assert.match(hapus, /INSERT INTO log_audit/)
 })
 

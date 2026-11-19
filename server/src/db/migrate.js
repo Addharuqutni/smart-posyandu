@@ -25,10 +25,10 @@ function berkasMigrasi() {
     .map((f) => path.join(folder, f))
 }
 
-async function terapkan(pool, berkas, label) {
+async function terapkan(klien, berkas, label) {
   const sql = fs.readFileSync(berkas, 'utf8')
   try {
-    await pool.query(sql)
+    await klien.query(sql)
     console.log(`  ok  ${label}`)
   } catch (salah) {
     throw new Error(`${label} gagal: ${salah.message}`)
@@ -38,20 +38,23 @@ async function terapkan(pool, berkas, label) {
 async function utama() {
   muat()
   const pool = dapatkan()
-
   // Satu transaksi: bila salah satu gagal, tidak ada yang setengah jadi.
-  await pool.query('BEGIN')
+  // Wajib satu klien: `pool.query()` meminjam koneksi berbeda tiap pernyataan,
+  // sehingga BEGIN dan COMMIT berakhir di sesi yang tidak sama.
+  const klien = await pool.connect()
   try {
-    await terapkan(pool, path.join(AKAR, 'database/schema.sql'), 'database/schema.sql')
+    await klien.query('BEGIN')
+    await terapkan(klien, path.join(AKAR, 'database/schema.sql'), 'database/schema.sql')
     for (const berkas of berkasMigrasi()) {
-      await terapkan(pool, berkas, `database/migrasi/${path.basename(berkas)}`)
+      await terapkan(klien, berkas, `database/migrasi/${path.basename(berkas)}`)
     }
-    await pool.query('COMMIT')
+    await klien.query('COMMIT')
     console.log('Migrasi selesai.')
   } catch (salah) {
-    await pool.query('ROLLBACK')
+    await klien.query('ROLLBACK').catch(() => {})
     throw salah
   } finally {
+    klien.release()
     await pool.end()
   }
 }

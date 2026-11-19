@@ -488,7 +488,7 @@ export default function Pengguna({ sesi }) {
                 <input
                   id="modal-akun-sandi"
                   name="kata_sandi_baru"
-                  type="text"
+                  type={tampilSandi ? 'text' : 'password'}
                   autoComplete="new-password"
                   minLength={8}
                   placeholder="Kosongkan bila tidak ingin mengganti"

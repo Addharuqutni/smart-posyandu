@@ -220,6 +220,25 @@
   }
 }
 
+/* Utilitas `flex` di <dialog> mengalahkan `dialog:not([open]) { display:none }`
+   bawaan peramban, jadi dialog yang sudah tertutup tetap tampil sebagai panel. */
+dialog:not([open]) {
+  display: none;
+}
+
+/* Modal `<dialog>`: tanpa dua aturan ini, gestur gulir di dalam dialog atau
+   di atas backdrop merembes ke halaman di belakangnya. */
+dialog:modal {
+  overscroll-behavior: contain;
+}
+
+dialog::backdrop {
+  /* ::backdrop bawaannya overflow: visible, jadi bukan wadah gulir dan
+     mengabaikan overscroll-behavior sampai dijadikan wadah di sini. */
+  overflow: hidden;
+  overscroll-behavior: contain;
+}
+
 @layer base {
   html {
     /* Nav bawah menempel; gulir fokus keyboard harus berhenti di atasnya. */
@@ -404,16 +423,18 @@
   }
 
   @media (hover: hover) {
-    input:hover:not(:disabled),
-    select:hover:not(:disabled),
-    textarea:hover:not(:disabled) {
+    /* `:not([aria-invalid='true'])`: tanpa ini warna hover/garis-kuat menimpa
+       merah galat, karena spesifisitasnya lebih tinggi dari aturan di bawah. */
+    input:hover:not(:disabled):not([aria-invalid='true']),
+    select:hover:not(:disabled):not([aria-invalid='true']),
+    textarea:hover:not(:disabled):not([aria-invalid='true']) {
       border-color: var(--color-garis-kuat);
     }
   }
 
-  input:focus-visible,
-  select:focus-visible,
-  textarea:focus-visible {
+  input:focus-visible:not([aria-invalid='true']),
+  select:focus-visible:not([aria-invalid='true']),
+  textarea:focus-visible:not([aria-invalid='true']) {
     border-color: var(--color-biru-800);
     background: var(--color-kartu);
   }
@@ -503,7 +524,8 @@
 
 
   input[aria-invalid='true'],
-  select[aria-invalid='true'] {
+  select[aria-invalid='true'],
+  textarea[aria-invalid='true'] {
     border-color: var(--color-merah-700);
     background: var(--color-merah-100);
   }
@@ -533,7 +555,8 @@
     .masuk-pudar,
     .masuk-baris,
     .animate-pudar,
-    .animate-panel {
+    .animate-panel,
+    dialog::backdrop {
       animation: none !important;
       opacity: 1 !important;
       transform: none !important;

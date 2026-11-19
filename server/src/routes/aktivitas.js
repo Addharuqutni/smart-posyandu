@@ -6,7 +6,7 @@
 
 const express = require('express')
 const { banyak, satu } = require('../db/pool')
-const { butuhPeran } = require('../middleware/auth')
+const { bersihkan } = require('../domain/tabel')
 
 const router = express.Router()
 const Admin = butuhPeran('admin_desa')
@@ -128,6 +128,10 @@ router.get('/aktivitas', Admin, async (minta, balas) => {
 
   // Nilai JSONB sering berupa UUID (mis. divalidasi_oleh). Tanpa penerjemahan,
   // rincian hanya memperlihatkan deret angka yang tidak berarti bagi admin.
+  for (const b of baris) {
+    b.nilai_lama = bersihkan(b.nilai_lama)
+    b.nilai_baru = bersihkan(b.nilai_baru)
+  }
   await terjemahkanId(baris)
 
   balas.json({

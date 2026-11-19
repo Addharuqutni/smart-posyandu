@@ -151,7 +151,6 @@ export default function KanalPublik({ keLogin, keCekAnak }) {
                 alt="Logo Smart Posyandu"
                 width="36"
                 height="36"
-                fetchPriority="high"
                 decoding="async"
               />
             </div>

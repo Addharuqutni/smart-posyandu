@@ -2,14 +2,17 @@
 
 const express = require('express')
 const { satu, banyak, kueri, transaksi } = require('../db/pool')
-const { butuhLogin, butuhPeran } = require('../middleware/auth')
+const { butuhLogin, butuhPeran, butuhPosyandu } = require('../middleware/auth')
 const { siapkan } = require('../domain/tabel')
 const { ubah, hapus, sisip, tulisTerotorisasi } = require('../domain/repositori')
 const { enkripsi, dekripsi } = require('../domain/rahasia')
 const { hitung } = require('../domain/status_gizi')
 const { lahirDiterima } = require('../domain/usia')
+const { hapusBalita } = require('../domain/balita')
 
 const router = express.Router()
+
+router.use(butuhPosyandu)
 
 const Admin = butuhPeran('admin_desa')
 
@@ -370,50 +373,15 @@ router.patch('/balita/:id', Admin, async (minta, balas) => {
   balas.json({ ...baris, nik: null })
 })
 
-/**
- * Hapus balita BESERTA turunannya dalam satu transaksi.
- *
- * Versi lama hanya menandai `balita.dihapus_pada`. Kunjungan, pengukuran,
- * relasi wali, dan tindak lanjutnya tetap hidup, sehingga balita "sudah
- * dihapus" tetapi Posyandunya tetap dianggap terpakai dan tidak bisa dihapus.
- * Semua memakai soft delete yang sama (AGENTS 2.3), bukan DELETE fisik.
- */
 router.delete('/balita/:id', Admin, async (minta, balas) => {
-  const { id } = minta.params
   const metadata = { penggunaId: minta.pengguna.id, idPerangkat: 'server', ip: minta.ip }
-  const berhasil = await transaksi(async (klien) => {
-    const meta = { ...metadata, klien }
-    const lama = (await klien.query(
-      `SELECT * FROM balita WHERE id = $1 AND dihapus_pada IS NULL`, [id],
-    )).rows[0]
-    if (!lama) return false
-
-    const kunjungan = (await klien.query(
-      `SELECT id FROM kunjungan WHERE balita_id = $1 AND dihapus_pada IS NULL`, [id],
-    )).rows.map((r) => r.id)
-    if (kunjungan.length) {
-      const pengukuran = (await klien.query(
-        `SELECT id FROM pengukuran WHERE kunjungan_id = ANY($1::uuid[]) AND dihapus_pada IS NULL`,
-        [kunjungan],
-      )).rows.map((r) => r.id)
-      const tindak = (await klien.query(
-        `SELECT id FROM tindak_lanjut WHERE kunjungan_id = ANY($1::uuid[]) AND dihapus_pada IS NULL`,
-        [kunjungan],
-      )).rows.map((r) => r.id)
-      for (const u of pengukuran) await hapus('pengukuran', u, meta)
-      for (const t of tindak) await hapus('tindak_lanjut', t, meta)
-      for (const k of kunjungan) await hapus('kunjungan', k, meta)
-    }
-    const relasi = (await klien.query(
-      `SELECT id FROM balita_orang_tua WHERE balita_id = $1 AND dihapus_pada IS NULL`, [id],
-    )).rows.map((r) => r.id)
-    for (const r of relasi) await hapus('balita_orang_tua', r, meta)
-
-    return hapus('balita', id, meta)
-  })
+  const berhasil = await transaksi(
+    (klien) => hapusBalita(klien, minta.params.id, { ...metadata, klien }),
+  )
   if (!berhasil) return balas.status(404).json({ detail: 'balita_tidak_ditemukan' })
   balas.status(204).send()
 })
+
 
 // --- Kunjungan & validasi --------------------------------------------------
 
@@ -425,7 +393,7 @@ router.get('/kunjungan', butuhLogin, async (minta, balas) => {
     nilai.push(pos)
     syarat += ` AND k.posyandu_id = $${nilai.length}`
   }
-  nilai.push(Number(minta.query.batas) || 200)
+  nilai.push(Math.min(Math.max(Number(minta.query.batas) || 200, 1), 500))
   const baris = await banyak(
     `SELECT k.* FROM kunjungan k WHERE ${syarat}
      ORDER BY k.tanggal_kunjungan DESC LIMIT $${nilai.length}`,
@@ -570,6 +538,10 @@ router.post('/validasi/semua', butuhPeran('nakes', 'admin_desa'), async (minta, 
   let cari = ''
   const q = String(minta.body?.q ?? '').trim()
   if (q) cari = `AND b.nama_lengkap ILIKE ${tandai(`%${q}%`)}`
+  // Tombol ini menjanjikan "yang sedang ditampilkan filter", dan daftar
+  // validasi memang disaring per Posyandu; tanpa ini seluruh desa tervalidasi.
+  const posyanduId = String(minta.body?.posyandu_id ?? '').trim()
+  if (posyanduId) cari += ` AND k.posyandu_id = ${tandai(posyanduId)}::uuid`
 
   try {
     const hasil = await kueri(

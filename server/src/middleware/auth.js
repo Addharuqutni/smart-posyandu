@@ -50,4 +50,15 @@ function butuhPeran(...peran) {
   }
 }
 
-module.exports = { muatPengguna, butuhLogin, butuhPeran, tokenSesi }
+/**
+ * Tolak kader tanpa Posyandu. Tanpa ini `posyandu_id` NULL membuat setiap
+ * pembatas "Posyandu sendiri" hilang dan kader melihat semua unit.
+ */
+function butuhPosyandu(minta, balas, lanjut) {
+  if (minta.pengguna?.peran === 'kader' && !minta.pengguna.posyandu_id) {
+    return balas.status(403).json({ detail: 'kader_tanpa_posyandu' })
+  }
+  lanjut()
+}
+
+module.exports = { muatPengguna, butuhLogin, butuhPeran, butuhPosyandu, tokenSesi }

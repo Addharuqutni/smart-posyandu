@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   buatBalita,
   daftarBalita,
@@ -40,6 +40,9 @@ export default function KelolaBalita({ sesi }) {
   const [total, setTotal] = useState(0)
   const [halaman, setHalaman] = useState(0)
   const [memuatLagi, setMemuatLagi] = useState(false)
+  // Penjaga urutan: pencarian memakai debounce 300 ms, jadi respons lama bisa
+  // datang setelah respons baru dan menimpa tabel dengan hasil kueri lain.
+  const urutanMuat = useRef(0)
 
 
   async function muatPosyandu() {
@@ -59,6 +62,7 @@ export default function KelolaBalita({ sesi }) {
    * menyaring potongan itu, sehingga balita ke-501 ke atas seolah tidak ada.
    */
   async function muat(kunci = cari, h = halaman, posId = filterPosyanduId) {
+    const urutan = ++urutanMuat.current
     if (!posId) {
       setDaftar([])
       setTotal(0)
@@ -74,13 +78,16 @@ export default function KelolaBalita({ sesi }) {
         q: kunci.trim(),
         posyandu_id: posId,
       })
+      // Abaikan jawaban yang sudah kedaluwarsa.
+      if (urutan !== urutanMuat.current) return
       setDaftar(hasil.balita)
       setTotal(hasil.total ?? hasil.balita.length)
       setGalat(null)
     } catch {
+      if (urutan !== urutanMuat.current) return
       setGalat('Daftar balita butuh koneksi ke server.')
     } finally {
-      setMemuat(false)
+      if (urutan === urutanMuat.current) setMemuat(false)
     }
   }
 
@@ -131,6 +138,9 @@ export default function KelolaBalita({ sesi }) {
       setIsi(KOSONG)
       setPesan('Balita terdaftar.')
       setFilterPosyanduId(posyanduId)
+      // Daftar dimuat dari offset 0, jadi nomor halaman harus ikut kembali;
+      // tanpa ini label pager menunjuk halaman lama.
+      setHalaman(0)
       await muat(cari, 0, posyanduId)
     } catch (salah) {
       setGalat(salah.rincian ?? 'Gagal mendaftarkan balita.')
@@ -190,6 +200,7 @@ export default function KelolaBalita({ sesi }) {
       setPesan(`Data ${sunting.nama_lengkap} diperbarui.`)
       setFilterPosyanduId(sunting.posyandu_id)
       setSunting(null)
+      setHalaman(0)
       await muat(cari, 0, sunting.posyandu_id)
     } catch (salah) {
       setGalat(salah.rincian ?? 'Gagal menyimpan perubahan.')

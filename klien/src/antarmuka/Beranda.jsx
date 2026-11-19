@@ -110,23 +110,30 @@ export default function Beranda({
     let hidup = true
     setStatusSiap(false)
     async function hitung() {
-      const ids = kunciHalaman.split(',')
-      const kunjungan = await db.kunjungan.where('balita_id').anyOf(ids).toArray()
-      const terakhir = kunjunganTerbaruPerBalita(kunjungan)
-      const idKunjungan = [...terakhir.values()].map((k) => k.id)
-      const ukur = idKunjungan.length
-        ? await db.pengukuran.where('kunjungan_id').anyOf(idKunjungan).toArray()
-        : []
-      const ukurPerKunjungan = new Map(ukur.map((u) => [u.kunjungan_id, u]))
-      const peta = {}
-      for (const [idBalita, k] of terakhir) {
-        const u = ukurPerKunjungan.get(k.id)
-        if (u?.status_gizi) peta[idBalita] = u.status_gizi
+      try {
+        const ids = kunciHalaman.split(',')
+        const kunjungan = await db.kunjungan.where('balita_id').anyOf(ids).toArray()
+        const terakhir = kunjunganTerbaruPerBalita(kunjungan)
+        const idKunjungan = [...terakhir.values()].map((k) => k.id)
+        const ukur = idKunjungan.length
+          ? await db.pengukuran.where('kunjungan_id').anyOf(idKunjungan).toArray()
+          : []
+        const ukurPerKunjungan = new Map(ukur.map((u) => [u.kunjungan_id, u]))
+        const peta = {}
+        for (const [idBalita, k] of terakhir) {
+          const u = ukurPerKunjungan.get(k.id)
+          if (u?.status_gizi) peta[idBalita] = u.status_gizi
+        }
+        if (!hidup) return
+        cacheStatus.current.set(kunciHalaman, peta)
+        setStatusTerakhir(peta)
+      } catch {
+        // Kuota penuh / basis data rusak: biarkan status kosong, jangan
+        // biarkan penanda memuat berputar selamanya.
+        if (hidup) setStatusTerakhir({})
+      } finally {
+        if (hidup) setStatusSiap(true)
       }
-      if (!hidup) return
-      cacheStatus.current.set(kunciHalaman, peta)
-      setStatusTerakhir(peta)
-      setStatusSiap(true)
     }
     hitung()
     return () => {

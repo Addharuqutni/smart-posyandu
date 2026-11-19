@@ -149,20 +149,35 @@ export default function Aplikasi() {
           return
         }
         simpanPengguna(jawab.pengguna)
-        setSesi((lama) => ({
-          pengguna: jawab.pengguna,
-          id_perangkat: lama?.id_perangkat ?? idPerangkat(),
-        }))
+        // Objek sesi baru selalu memicu efek sinkron dibongkar-pasang (timer
+        // di-clear, backoff di-reset) padahal penggunanya sama.
+        setSesi((lama) => {
+          if (lama && lama.pengguna?.id === jawab.pengguna?.id &&
+              lama.pengguna?.peran === jawab.pengguna?.peran &&
+              lama.pengguna?.posyandu_id === jawab.pengguna?.posyandu_id &&
+              lama.pengguna?.nama_lengkap === jawab.pengguna?.nama_lengkap) {
+            return lama
+          }
+          return {
+            pengguna: jawab.pengguna,
+            id_perangkat: lama?.id_perangkat ?? idPerangkat(),
+          }
+        })
       } catch {
         // Luring: jangan tendang kader keluar.
       }
     }
     periksa()
     const daring = () => periksa()
+    // 401 dari layar mana pun (api.js) membuang sesi di satu tempat; layar
+    // lain cukup menunggu event ini alih-alih menampilkan "periksa koneksi".
+    const habis = () => setSesi(null)
     window.addEventListener('online', daring)
+    window.addEventListener('posyandu:sesi-habis', habis)
     return () => {
       hidup = false
       window.removeEventListener('online', daring)
+      window.removeEventListener('posyandu:sesi-habis', habis)
     }
   }, [])
 

@@ -60,13 +60,21 @@ router.post('/pengguna', Admin, async (minta, balas) => {
   const id = require('crypto').randomUUID()
   const hash = await hashSandi(String(kata_sandi))
 
-  await kueri(
-    `INSERT INTO pengguna
-       (id, nama_pengguna, nama_lengkap, hash_kata_sandi, peran, posyandu_id, aktif,
-        dibuat_pada, diperbarui_pada, dihapus_pada, id_perangkat, harus_ganti_sandi)
-     VALUES ($1, $2, $3, $4, $5, $6, TRUE, now(), now(), NULL, 'server', FALSE)`,
-    [id, nama_pengguna, nama_lengkap, hash, peran, posyanduId],
-  )
+  try {
+    await kueri(
+      `INSERT INTO pengguna
+         (id, nama_pengguna, nama_lengkap, hash_kata_sandi, peran, posyandu_id, aktif,
+          dibuat_pada, diperbarui_pada, dihapus_pada, id_perangkat, harus_ganti_sandi)
+       VALUES ($1, $2, $3, $4, $5, $6, TRUE, now(), now(), NULL, 'server', FALSE)`,
+      [id, nama_pengguna, nama_lengkap, hash, peran, posyanduId],
+    )
+  } catch (salah) {
+    // `nama_pengguna` UNIQUE; tanpa ini benturan jadi 500 mentah.
+    if (salah.code === '23505') {
+      return balas.status(409).json({ detail: 'nama_pengguna_sudah_dipakai' })
+    }
+    throw salah
+  }
 
   const baris = await satu(`SELECT id, nama_pengguna, nama_lengkap, peran, posyandu_id, aktif FROM pengguna WHERE id = $1`, [id])
   // Pembuatan akun adalah aktivitas admin yang harus terlihat di log.
@@ -158,9 +166,11 @@ router.patch('/pengguna/:id', Admin, async (minta, balas) => {
   balas.json(hasil)
 })
 
-// Hapus akun permanen. Referensi riwayat dilepas, bukan ikut dihapus, dan
-// sesi lama dibuang supaya cookie yang masih tersimpan tidak lagi berlaku.
-// ponytail: bila butuh pemulihan akun, ganti jadi soft delete + alur pulihkan.
+// Hapus akun = hapus lunak. Tabel pengguna memakai `dihapus_pada` seperti
+// tabel lain, dan atribusi klinis/audit (`kunjungan.divalidasi_oleh`,
+// `log_audit.pengguna_id`) tidak boleh dinolkan: tanpa itu riwayat validasi
+// hilang dan kunjungan tervalidasi kembali ke antrean "belum divalidasi".
+// Sesi lama dibuang supaya cookie yang masih tersimpan tidak lagi berlaku.
 router.delete('/pengguna/:id', Admin, async (minta, balas) => {
   const id = minta.params.id
   if (!/^[0-9a-f-]{36}$/i.test(id)) {
@@ -182,17 +192,12 @@ router.delete('/pengguna/:id', Admin, async (minta, balas) => {
 
   await transaksi(async (klien) => {
     await klien.query('DELETE FROM sesi_login WHERE pengguna_id = $1', [id])
-    for (const [tabel, kolom] of [
-      ['kader', 'pengguna_id'],
-      ['konten_publik', 'pengaju_id'],
-      ['konten_publik', 'diputuskan_oleh'],
-      ['kunjungan', 'divalidasi_oleh'],
-      ['log_audit', 'pengguna_id'],
-      ['tindak_lanjut', 'petugas_id'],
-    ]) {
-      await klien.query(`UPDATE ${tabel} SET ${kolom} = NULL WHERE ${kolom} = $1`, [id])
-    }
-    await klien.query('DELETE FROM pengguna WHERE id = $1', [id])
+    await klien.query(
+      `UPDATE pengguna
+          SET aktif = FALSE, dihapus_pada = now(), diperbarui_pada = now(), id_perangkat = 'server'
+        WHERE id = $1`,
+      [id],
+    )
     await klien.query(
       `INSERT INTO log_audit
          (id, pengguna_id, id_perangkat, nama_tabel, id_baris, aksi,

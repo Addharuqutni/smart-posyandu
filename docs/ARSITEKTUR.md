@@ -309,10 +309,11 @@ sisanya wajib masuk, dan sebagian menambahkan syarat peran.
 | `GET /balita`, `/kunjungan`, `/validasi`, `/rekap`, `/kualitas`, `/ekspor.csv` | sesi, lingkup per peran | `routes/data.js`, `routes/laporan.js` |
 | `GET/POST /cadangan`, `POST /cadangan/:nama/pulihkan` | admin desa | `routes/cadangan.js` |
 
-Setiap rute baru **wajib** ditambahkan ke `JALUR_API` di `alat.js` (proksi Nginx)
-dan `klien/vite.config.js` (proksi pengembangan). `server/tests/proksi.test.js`
-menjaga ketiganya tetap sinkron dengan `routes/*.js`; rute yang lupa diproksikan
-tetap jalan di mesin pengembang tetapi mati di VPS.
+Setiap rute baru **wajib** ditambahkan ke `JALUR_API` di `klien/vite.config.js`
+(proksi pengembangan) dan ke daftar API `klien/public/sw.js`.
+`server/tests/proksi.test.js` menjaga keduanya tetap sinkron dengan `routes/*.js`;
+rute yang lupa ditambahkan tetap jalan di mesin pengembang tetapi bisa terkena
+cache service worker di produksi.
 
 ## 5. Keamanan
 
@@ -408,9 +409,8 @@ dengan basis data ujian untuk bagian `db/`.
 | Uji | `node --test` (server), Vitest (klien) |
 
 Backend Python (FastAPI) sudah dipensiunkan seluruhnya; tidak ada kode Python
-di jalur jalan. `npm run dev` memakai `alat.js` di root, yang juga berisi
-pemeriksa hasil bangun dan konfigurasi Nginx. Berkas pembangkit dokumen
-`.docx`/`.xlsx` tidak ada di repositori.
+di jalur jalan. `npm run dev:server` dan `npm run dev:klien` dijalankan di dua
+terminal. Berkas pembangkit dokumen `.docx`/`.xlsx` tidak ada di repositori.
 
 Klien dan server terpisah: `klien/` tidak mengimpor apa pun dari `server/`, dan
 sebaliknya. Keduanya hanya sepakat pada bentuk JSON yang dijelaskan di Bagian 4.2.
