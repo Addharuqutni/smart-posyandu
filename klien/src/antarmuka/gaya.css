@@ -171,6 +171,15 @@
   /* Panel masuk memakai arah 160deg dan berakhir di navy terdalam, bukan teal:
      satu-satunya permukaan gelap penuh di aplikasi. */
   --latar-kepala-masuk: linear-gradient(160deg, var(--color-biru-800) 0%, var(--color-biru-950) 100%);
+  /* Public channel borrows the village portal identity: pine green + teal + gold. */
+  --color-hijau-desa: #064d4b;
+  --color-hijau-tua: #096b68;
+  --color-hijau-gelap: #0b1f1e;
+  --color-emas: #e8b830;
+  --color-emas-muda: #f4cf5d;
+  --latar-topbar-desa: linear-gradient(135deg, var(--color-hijau-desa) 0%, var(--color-hijau-tua) 100%);
+  --latar-kepala-publik: linear-gradient(100deg, var(--color-hijau-desa) 0%, var(--color-hijau-tua) 58%, var(--color-hijau-800) 100%);
+  --latar-hero-desa: radial-gradient(circle at 85% 15%, rgb(232 184 48 / 0.16), transparent 45%), radial-gradient(circle at 15% 85%, rgb(9 107 104 / 0.22), transparent 50%), linear-gradient(180deg, #082928 0%, #061e1d 100%);
 
   --animate-denyut: denyut 1.1s ease-in-out infinite;
   --animate-putar: putar 0.7s linear infinite;
@@ -217,6 +226,18 @@
 @keyframes putar {
   to {
     transform: rotate(1turn);
+  }
+}
+
+/* Motion graphics latar: hanya transform, dibolak-balik pelan supaya tidak
+   menjadi perhatian utama. Dua lingkaran memakai satu keyframe yang sama. */
+@keyframes apung {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(14px, -10px, 0) scale(1.06);
   }
 }
 
@@ -280,6 +301,25 @@ dialog::backdrop {
     font-weight: 600;
   }
 
+  /* Kanal publik mengikuti tipografi formal portal pemerintah desa: sans-serif tegas. */
+  .kanal-publik h1,
+  .kanal-publik .rubrik {
+    font-family: var(--font-sans);
+    letter-spacing: -0.025em;
+    font-weight: 800;
+  }
+
+  /* Neutral tints for the public channel only; keeps the portal green family
+     consistent without touching the app or login surfaces. */
+  .kanal-publik {
+    --color-latar: #f6faf7;
+    --color-teks: #142b24;
+    --color-teks-redup: #40544b;
+    --color-teks-samar: #5c7067;
+    --color-garis: #d7e5df;
+    --color-garis-kuat: #b7cdc4;
+  }
+
   /* Rubrik section publik.
      Sebelumnya semua h2 memakai text-judul yang sama, sehingga enam section
      publik punya bobot identik dan halaman terbaca datar. Rubrik memakai
@@ -291,7 +331,7 @@ dialog::backdrop {
     line-height: 1.12;
     letter-spacing: -0.02em;
     font-weight: 600;
-    color: var(--color-biru-950);
+    color: var(--color-hijau-800);
     margin: 0;
     text-wrap: balance;
   }
@@ -556,6 +596,8 @@ dialog::backdrop {
     .masuk-baris,
     .animate-pudar,
     .animate-panel,
+    .latar-gerak::before,
+    .latar-gerak::after,
     dialog::backdrop {
       animation: none !important;
       opacity: 1 !important;
@@ -1262,6 +1304,44 @@ dialog::backdrop {
 
   .masuk-3 {
     animation-delay: 160ms;
+  }
+
+  /* ---------- Motion graphics latar hero ----------
+     Satu lapisan dekoratif, dua pita cahaya. Keduanya di luar alur dokumen,
+     tidak menerima klik, dan hanya menggerakkan transform/opacity. */
+  .latar-gerak {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+  }
+
+  .latar-gerak::before,
+  .latar-gerak::after {
+    content: '';
+    position: absolute;
+    border-radius: 9999px;
+    animation: apung 14s var(--ease-ui) infinite alternate;
+    will-change: transform;
+  }
+
+  .latar-gerak::before {
+    top: -12rem;
+    right: -9rem;
+    width: 32rem;
+    height: 32rem;
+    background: radial-gradient(circle, rgb(232 184 48 / 0.26), transparent 65%);
+  }
+
+  .latar-gerak::after {
+    bottom: -14rem;
+    left: -10rem;
+    width: 30rem;
+    height: 30rem;
+    background: radial-gradient(circle, rgb(9 107 104 / 0.24), transparent 66%);
+    animation-duration: 18s;
+    animation-delay: -6s;
+    animation-direction: alternate-reverse;
   }
 
   /* ---------- Nav bawah ---------- */

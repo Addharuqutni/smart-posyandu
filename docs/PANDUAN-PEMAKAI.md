@@ -40,7 +40,7 @@ sesi tetap tersimpan selama 7 hari (tablet kader) atau 8 jam (admin).
 |-------|-------------|----------|
 | **Kader** | Balita, Tambah, Perangkat | Mencatat pengukuran balita, mendaftarkan balita baru, cek riwayat sesi perangkat. |
 | **Petugas Kesehatan (Nakes)** | Validasi, Perangkat | Memeriksa dan memvalidasi hasil ukur dari kader, memberi catatan tindak lanjut gizi. |
-| **Wali / Orang Tua** | Cek Perkembangan Anak (tanpa akun) | Melihat riwayat pengukuran anaknya sendiri dengan nama + NIK anak. |
+| **Wali / Orang Tua** | Cek Perkembangan Anak (tanpa akun) | Melihat riwayat pengukuran anaknya sendiri dengan nama + NIK anak + tanggal lahir. |
 
 ### Kader — alur harian
 
@@ -61,15 +61,16 @@ sesi tetap tersimpan selama 7 hari (tablet kader) atau 8 jam (admin).
 ### Wali / Orang Tua — Cek Perkembangan Anak (tanpa akun)
 
 1. Buka aplikasi → pilih menu **Cek Perkembangan Anak** (tidak perlu login).
-2. Ketik **nama lengkap anak** dan **NIK anak** (16 digit).
-3. Bila cocok, tampil riwayat kunjungan yang **sudah divalidasi nakes**: berat
+2. Ketik **nama lengkap anak** atau **NIK anak** (16 digit).
+3. Pilih **tanggal lahir anak** dari tiga kolom: **Hari** (1–31), **Bulan** (Januari–Desember), lalu **Tahun**. Tidak perlu mengetik format tanggal manual. Bila ragu, lihat Buku KIA atau Kartu Keluarga.
+4. Bila cocok, tampil riwayat kunjungan yang **sudah divalidasi nakes**: berat
    dan tinggi terakhir, perubahan berat sejak kunjungan sebelumnya, status gizi,
    dan grafik berat badan.
-4. Sesi berlaku **30 menit** lalu berakhir sendiri; tekan **Keluar** bila selesai
+5. Sesi berlaku **30 menit** lalu berakhir sendiri; tekan **Keluar** bila selesai
    lebih awal.
 
 **Catatan:** hanya pengukuran yang sudah divalidasi nakes yang tampil. Salah
-nama/NIK 5 kali → terkunci 15 menit. Wali hanya bisa melihat **anak yang
+nama/NIK/tanggal lahir 5 kali → terkunci 15 menit. Wali hanya bisa melihat **anak yang
 dicarikan sendiri** — tidak bisa membuka anak lain lewat alamat.
 
 ### Admin Desa — pengelolaan & pengawasan
@@ -98,6 +99,12 @@ Petugas kesehatan (nakes) membuka layar **Validasi** untuk memeriksa jadwal yang
 diajukan kader: **Setujui dan tayangkan**, atau **Tolak** dengan catatan wajib
 supaya kader tahu apa yang perlu diperbaiki. Jadwal yang ditolak tidak pernah
 tampil ke warga.
+
+**Tampilan di peramban.** Kanal publik memakai identitas resmi Desa Ketenger
+(hijau pine dan emas): header dua tingkat, pita **Sekilas Info** yang menampilkan
+jadwal terdekat dari data tervalidasi, serta tombol "Masuk Petugas / Kader" di
+footer saat halaman dibuka di ponsel (lebar di bawah 760 px). Warga tidak perlu
+mencari tombol login di bagian atas halaman.
 
 **Masa berlaku pengumuman.** Isi kolom "Masa berlaku" dengan rentang tanggal.
 Kosongkan tanggal akhir bila pengumuman berlaku sampai dicabut.

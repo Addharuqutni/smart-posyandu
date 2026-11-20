@@ -52,9 +52,10 @@ Fitur disesuaikan dengan peran pengguna:
 - **Jadwal Posyandu:** Jadwal terdekat per dusun, hanya yang sudah disetujui petugas kesehatan.
 - **Pengumuman & Layanan:** Pemberitahuan resmi desa dan daftar layanan yang tersedia.
 - **Edukasi & Pencegahan:** Materi gizi dan kesehatan, termasuk artikel tarikan dari KodeNara.
+- **Tampilan Portal Desa:** Header dua tingkat (topbar hijau pine + navbar putih), pita **Sekilas Info** berisi jadwal terdekat dari API, dan tombol "Masuk Petugas" dipindah ke footer saat lebar layar di bawah 760 px. Semua tanggal dan jadwal diambil dari data yang sudah disetujui — tidak ada teks hardcoded.
 
 ### 5. Cek Perkembangan Anak (wali, tanpa akun)
-- **Riwayat Anak:** Orang tua/wali melihat riwayat pengukuran anaknya dengan mencocokkan nama lengkap + NIK anak — hanya kunjungan yang sudah divalidasi nakes yang tampil.
+- **Riwayat Anak:** Orang tua/wali melihat riwayat pengukuran anaknya dengan mencocokkan nama lengkap + NIK anak **dan tanggal lahir** (dipilih lewat dropdown Hari, Bulan, Tahun) — hanya kunjungan yang sudah divalidasi nakes yang tampil.
 - **Sesi Terbatas:** Sesi baca 30 menit, cookie terpisah dari sesi petugas, dan hanya satu balita per sesi.
 
 ### 6. Fitur Umum & Keamanan

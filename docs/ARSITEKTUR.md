@@ -34,6 +34,10 @@ Dua bagian yang berjalan terpisah dan jarang saling bicara:
 Bagian tablet **tidak pernah menunggu** bagian server untuk menyimpan atau menampilkan
 data. Ini inti dari desain offline-first.
 
+Selain tablet, SPA yang sama melayani dua permukaan tanpa login: `/publik`
+(kanal warga) dan `/cek-anak` (wali balita). Keduanya memanggil API yang sama,
+memakai sesi wali terpisah dari sesi petugas, dan tidak menulis IndexedDB kader.
+
 ## 2. Susunan direktori
 
 ```

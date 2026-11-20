@@ -326,6 +326,28 @@ klien/src/
 **Aturan:** klien & server terpisah; tak ada impor silang. Keduanya hanya sepakat
 pada bentuk JSON.
 
+### Kanal publik dan CekAnak
+
+`KanalPublik.jsx` dan `CekAnak.jsx` memakai kelas scope `editorial kanal-publik`.
+Token warna dan latar didefinisikan di `@theme` `gaya.css`
+(`--color-hijau-desa`, `--color-hijau-tua`, `--color-emas`,
+`--latar-topbar-desa`, `--latar-hero-desa`); override netral hijau juga hanya
+berlaku di dalam `.kanal-publik`, supaya layar kader dan login tidak ikut berubah.
+
+- Header kanal publik dua tingkat: topbar hijau pine berisi identitas + tautan
+  portal utama, navbar putih berisi navigasi warga. Pita **Sekilas Info** memakai
+  `jadwalTerdekat[0]` dan `formatJadwal(hariIni)` — jangan menambah nama desa,
+  jam, atau tanggal hardcoded. Pengaman ini diuji di `kanal-publik.test.js`.
+- Breakpoint tombol "Masuk Petugas" harus sama di header dan footer:
+  `sempit:inline-flex` (≥760 px) di header, `sempit:hidden` (<760 px) di footer.
+  Kalau beda dengan `sm:` (640 px), tombol hilang di rentang 640–759 px.
+- Tombol navigasi navbar harus punya `bg-transparent` dan `shadow-none` secara
+  eksplisit; gaya global `button` di `gaya.css` memberi latar biru tua dan bayangan.
+- `CekAnak.jsx` menggabungkan tiga state (`hari`, `bulan`, `tahun`) menjadi
+  `YYYY-MM-DD` sebelum memanggil `cariBalitaWali(kunci, tanggalLahir)`.
+  Opsi tahun dibatasi 7 tahun terakhir (balita usia 0–6 tahun).
+  Gunakan `<fieldset>/<legend>` untuk label tanggal lahir.
+
 **Uji murni tanpa basis data** (`server/tests/`) mengunci bentuk kueri & aturan.
 Tambahkan berkas uji baru ke daftar tes di `server/package.json`.
 
@@ -349,6 +371,12 @@ Tambahkan berkas uji baru ke daftar tes di `server/package.json`.
    lalu bangun ulang. |
 
 6. **Mengira `ps -W`** bekerja di sesi ini — tidak. |
+
+7. **Lupa `bg-transparent` pada tombol navbar** → gaya `button` global menimpa
+   latar menjadi navy pekat dengan teks gelap; kontras hancur di ponsel. |
+
+8. **Breakpoint header beda dengan footer** (`sempit:` vs `sm:`) → tombol
+   "Masuk Petugas" hilang di lebar 640–759 px. Samakan ke `sempit:` (760 px). |
 
 ---
 
