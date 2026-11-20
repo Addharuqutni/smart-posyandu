@@ -51,3 +51,7 @@ test('saringan aktivitas divalidasi sebelum masuk kueri', () => {
   assert.match(aktivitas, /POLA_UUID\.test\(minta\.query\.pengguna_id/)
   assert.match(aktivitas, /POLA_TANGGAL\.test\(minta\.query\.dari/)
 })
+
+test('semua rute dapat dimuat (menangkap import middleware yang hilang)', () => {
+  assert.doesNotThrow(() => require('../src/app'))
+})

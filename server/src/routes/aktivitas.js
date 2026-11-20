@@ -7,6 +7,7 @@
 const express = require('express')
 const { banyak, satu } = require('../db/pool')
 const { bersihkan } = require('../domain/tabel')
+const { butuhPeran } = require('../middleware/auth')
 
 const router = express.Router()
 const Admin = butuhPeran('admin_desa')

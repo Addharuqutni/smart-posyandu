@@ -37,6 +37,8 @@ describe('putaran sinkron', () => {
       berat_kg: 9.4,
     })
 
+    const waktuTarik = new Date(Date.now() + 60_000).toISOString()
+
     const panggilan = []
     vi.stubGlobal('fetch', async (jalur, opsi) => {
       panggilan.push({ jalur, opsi })
@@ -45,7 +47,7 @@ describe('putaran sinkron', () => {
         return jawab({
           diterima: isi.perubahan.map((p) => p.id_baris),
           ditolak: [],
-          waktu_server: '2026-11-20T03:00:00Z',
+          waktu_server: waktuTarik,
         })
       }
       return jawab({
@@ -54,7 +56,7 @@ describe('putaran sinkron', () => {
             nama_tabel: 'pengukuran',
             id_baris: pengukuran_id,
             aksi: 'ubah',
-            terjadi_pada: '2026-11-20T03:00:01Z',
+            terjadi_pada: waktuTarik,
             dihapus_pada: null,
             muatan: {
               id: pengukuran_id,
@@ -65,7 +67,7 @@ describe('putaran sinkron', () => {
             },
           },
         ],
-        waktu_server: '2026-11-20T03:00:02Z',
+        waktu_server: waktuTarik,
         berikutnya: null,
       })
     })
@@ -80,7 +82,7 @@ describe('putaran sinkron', () => {
     const kursor = await db.penyiapan.get('kursor_sinkron')
     expect(kursor).toBeUndefined() // tidak ada halaman kedua
     const terakhir = await db.penyiapan.get('sinkron_terakhir')
-    expect(terakhir.nilai).toBe('2026-11-20T03:00:02Z')
+    expect(terakhir.nilai).toBe(waktuTarik)
     expect((await db.penyiapan.get('selisih_jam_detik')).nilai).toBeTypeOf('number')
   })
 
@@ -237,6 +239,8 @@ describe('putaran sinkron', () => {
       tanggal: '2026-11-20',
       berat_kg: 9.4,
     })
+    const waktuTarik = new Date(Date.now() + 60_000).toISOString()
+
     vi.stubGlobal('fetch', async (jalur, opsi) => {
       if (opsi?.method === 'POST') {
         const isi = JSON.parse(opsi.body)
@@ -245,9 +249,9 @@ describe('putaran sinkron', () => {
           ditolak: isi.perubahan.map((p) => ({
             id_baris: p.id_baris,
             alasan: 'kalah_versi',
-            terjadi_pada_tersimpan: '2026-11-20T04:00:00Z',
+            terjadi_pada_tersimpan: waktuTarik,
           })),
-          waktu_server: '2026-11-20T04:00:01Z',
+          waktu_server: waktuTarik,
         })
       }
       return jawab({
@@ -256,12 +260,12 @@ describe('putaran sinkron', () => {
             nama_tabel: 'kunjungan',
             id_baris: kunjungan_id,
             aksi: 'ubah',
-            terjadi_pada: '2026-11-20T04:00:00Z',
+            terjadi_pada: waktuTarik,
             dihapus_pada: null,
             muatan: { id: kunjungan_id, balita_id: 'b1', tanggal_kunjungan: '2026-11-20', catatan: 'dari tablet lain' },
           },
         ],
-        waktu_server: '2026-11-20T04:00:01Z',
+        waktu_server: waktuTarik,
         berikutnya: null,
       })
     })
