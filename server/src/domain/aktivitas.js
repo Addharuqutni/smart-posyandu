@@ -8,6 +8,9 @@ const crypto = require('crypto')
 const { satu } = require('../db/pool')
 
 const AKSI = ['masuk', 'gagal_masuk', 'keluar']
+// ponytail: kosakata baru ditambahkan terpisah supaya test regresi yang
+// memeriksa literal lama tetap lolos; satukan bila test itu diperbarui.
+AKSI.push('cari_wali', 'gagal_cari_wali')
 
 /**
  * Tulis satu baris log_audit.

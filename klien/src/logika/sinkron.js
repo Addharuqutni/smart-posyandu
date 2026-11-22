@@ -3,7 +3,7 @@
 // jaringan hanya menunda pengiriman, tidak membatalkan apa pun.
 
 import { db } from '../penyimpanan/db.js'
-import { GagalJaringan, kirimSinkron, tarikSinkron } from '../jaringan/api.js'
+import { GagalJaringan, galatSementara, kirimSinkron, tarikSinkron } from '../jaringan/api.js'
 import { sekarangIso } from './waktu.js'
 import { dekripsiNik } from './nik.js'
 
@@ -26,12 +26,13 @@ export async function ambilPenanda() {
 
 /**
  * Jalankan satu putaran sinkron.
- * @returns {{luring:boolean, terkirim:number, ditolak:number, ditarik:number}}
+ * @returns {{luring:boolean, galat?:string, terkirim:number, ditolak:number, ditarik:number}}
  */
 export async function jalankanSinkron(idPerangkat, pemilikId = null) {
   const semua = await db.antrean_sinkron.where('status').equals('menunggu').toArray()
   const antrean = semua.filter((a) => pemilikId == null || a.pemilik_id === pemilikId)
   const hasil = { luring: false, terkirim: 0, ditolak: 0, ditarik: 0 }
+  const kalahVersi = []
 
   if (antrean.length) {
     // Server menolak lebih dari 500 perubahan per permintaan (413), dan
@@ -64,9 +65,10 @@ export async function jalankanSinkron(idPerangkat, pemilikId = null) {
         })
       } catch (salah) {
         if (salah instanceof GagalJaringan) return { ...hasil, luring: true }
+        if (galatSementara(salah)) return { ...hasil, luring: true, galat: 'sementara' }
         throw salah
       }
-      await selesaikanAntrean(potong, balasan)
+      kalahVersi.push(...(await selesaikanAntrean(potong, balasan)))
       hasil.terkirim += balasan.diterima.length
       hasil.ditolak += balasan.ditolak.length
       await simpanPenanda(KUNCI_SELISIH, selisihDetik(balasan.waktu_server))
@@ -85,6 +87,7 @@ export async function jalankanSinkron(idPerangkat, pemilikId = null) {
       balasan = await tarikSinkron(sejak)
     } catch (salah) {
       if (salah instanceof GagalJaringan) return { ...hasil, luring: true }
+      if (galatSementara(salah)) return { ...hasil, luring: true, galat: 'sementara' }
       throw salah
     }
     await terapkan(balasan.perubahan)
@@ -109,6 +112,9 @@ export async function jalankanSinkron(idPerangkat, pemilikId = null) {
     halaman += 1
     await simpanPenanda(KUNCI_KURSOR, sejak)
   }
+  // Antrean kalah_versi baru dibuang setelah tarikan tuntas. Bila tarikan
+  // gagal, antrean tetap utuh untuk putaran berikutnya.
+  if (kalahVersi.length) await db.antrean_sinkron.bulkDelete(kalahVersi)
   return hasil
 }
 
@@ -119,6 +125,7 @@ async function selesaikanAntrean(antrean, balasan) {
   const selisih = Number.isFinite(waktuServer) ? Date.now() - waktuServer : 0
   const disesuaikan = []
   const dipulihkan = []
+  const kalahVersi = []
 
   await db.transaction('rw', db.antrean_sinkron, async () => {
     for (const a of antrean) {
@@ -136,9 +143,13 @@ async function selesaikanAntrean(antrean, balasan) {
         dipulihkan.push({ nama_tabel: a.nama_tabel, id_baris: a.id_baris, baris: a.sebelum })
       }
       if (alasan?.alasan === 'kalah_versi') {
-        // KONTRAK_API 3: server sudah punya versi lebih baru; tarikan
-        // berikutnya menimpa lokal, jadi antrean ini tidak perlu disimpan.
-        await db.antrean_sinkron.delete(a.urut)
+        // Server punya versi lebih baru. Tarikan yang tuntas akan menimpa
+        // lokal; sampai saat itu antrean ini tetap menunggu, bukan hilang.
+        await db.antrean_sinkron.update(a.urut, {
+          status: 'menunggu',
+          pesan_gagal: 'kalah_versi',
+        })
+        kalahVersi.push(a.urut)
         continue
       }
 
@@ -185,6 +196,7 @@ async function selesaikanAntrean(antrean, balasan) {
     const tabel = db[d.nama_tabel]
     if (tabel) await tabel.put(d.baris)
   }
+  return kalahVersi
 }
 
 /**

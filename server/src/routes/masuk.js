@@ -37,6 +37,7 @@ router.post('/masuk', async (minta, balas) => {
 
   if (masihTerkunci(nama_pengguna, ip)) {
     return balas
+      .set('Retry-After', '900')
       .status(429)
       .json({ detail: { rincian: 'terkunci_sementara', menit: MENIT_KUNCI } })
   }

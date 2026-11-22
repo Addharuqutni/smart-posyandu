@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { cariBalitaWali, keluarWali, riwayatWali } from '../jaringan/api.js'
-import { PESAN_STATUS } from '../logika/rentang.js'
+import { labelStatus } from '../logika/rentang.js'
 import { usiaRingkas } from '../logika/waktu.js'
 import { BarisPetak, Layar, Petak } from './Bersama.jsx'
 import Ikon from './Ikon.jsx'
@@ -311,7 +311,7 @@ export default function CekAnak({ kePublik }) {
             <Petak ikon="kunjungan" nilai={data.ringkasan.jumlah_kunjungan} label="Kunjungan tercatat" />
             <Petak ikon="grafik" nilai={angka(data.ringkasan.berat_terakhir_kg)} satuan="kg" label="Berat terakhir" />
             <Petak ikon="anak" nilai={angka(data.ringkasan.tinggi_terakhir_cm)} satuan="cm" label="Tinggi terakhir" />
-            <Petak ikon="centang" warna="hijau" nilai={PESAN_STATUS[data.ringkasan.status_gizi_terakhir] ?? 'Belum ada'} label="Status gizi terakhir" />
+            <Petak ikon="info" warna="slate" nilai={labelStatus(data.ringkasan.status_gizi_terakhir, data.ringkasan.sumber_status_terakhir) ?? 'Belum ada'} label="Keterangan gizi terakhir" />
           </BarisPetak>
 
           {data.ringkasan.perubahan_berat_kg != null && (
@@ -338,7 +338,7 @@ export default function CekAnak({ kePublik }) {
                         <td data-label="Berat">{angka(k.berat_kg)} kg</td>
                         <td data-label="Tinggi">{angka(k.tinggi_cm)} cm</td>
                         <td data-label="Lingkar kepala">{angka(k.lingkar_kepala_cm)} cm</td>
-                        <td data-label="Status gizi">{PESAN_STATUS[k.status_gizi] ?? (k.status_gizi ? k.status_gizi : '-')}</td>
+                        <td data-label="Status gizi">{labelStatus(k.status_gizi, k.sumber_status) ?? '-'}</td>
                       </tr>
                     ))}
                   </tbody>

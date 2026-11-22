@@ -12,7 +12,7 @@ const zlib = require('zlib')
 const { promisify } = require('util')
 const { banyak, kueri } = require('../db/pool')
 const { dekripsi } = require('../domain/rahasia')
-const { TABEL, namaSah } = require('./cadangan')
+const { TABEL, namaSah, hashIsi } = require('./cadangan')
 
 const gunzip = promisify(zlib.gunzip)
 const baca = promisify(fs.readFile)
@@ -67,14 +67,27 @@ async function periksa(nama, folderCadangan) {
     if (beda.length && !kurang.length) {
       catatan.push(`basis data bertambah setelah cadangan: ${beda.join(', ')}`)
     }
-    return await simpan({ nama, ukuran, jumlah, db, cocok, catatan })
+
+    let integritas = 'tanpa_metadata_integritas'
+    const sha256 = isi._meta?.sha256
+    if (typeof sha256 === 'string') {
+      const dihitung = hashIsi(isi)
+      integritas = dihitung === sha256 ? 'cocok' : 'tidak_cocok'
+      if (integritas === 'tidak_cocok') {
+        cocok = false
+        catatan.push(`sha256_tidak_cocok: harap ${sha256}, dapat ${dihitung}`)
+      }
+    } else {
+      catatan.push('tanpa_metadata_integritas')
+    }
+    return await simpan({ nama, ukuran, jumlah, db, cocok, catatan, integritas })
   } catch (salah) {
     catatan.push(salah.message)
-    return await simpan({ nama, ukuran, jumlah, db: null, cocok: false, catatan })
+    return await simpan({ nama, ukuran, jumlah, db: null, cocok: false, catatan, integritas: 'tidak_diperiksa' })
   }
 }
 
-async function simpan({ nama, ukuran, jumlah, db, cocok, catatan }) {
+async function simpan({ nama, ukuran, jumlah, db, cocok, catatan, integritas }) {
   const isiCatatan = catatan.join('; ') || null
   await kueri(
     `INSERT INTO uji_cadangan
@@ -82,7 +95,7 @@ async function simpan({ nama, ukuran, jumlah, db, cocok, catatan }) {
      VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, now())`,
     [nama, ukuran ?? 0, JSON.stringify(jumlah ?? {}), JSON.stringify(db ?? {}), cocok, isiCatatan],
   )
-  return { berkas: nama, ukuran_byte: ukuran, cocok, jumlah, jumlah_db: db, catatan: isiCatatan }
+  return { berkas: nama, ukuran_byte: ukuran, cocok, jumlah, jumlah_db: db, catatan: isiCatatan, integritas }
 }
 
 /** Verifikasi terbaru untuk ditampilkan di layar admin. */

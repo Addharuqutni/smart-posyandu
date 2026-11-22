@@ -52,6 +52,8 @@ Anda buat sendiri tidak ikut terhapus, hanya baris ber-id demo.
 | `npm run cadangan` | Cadangkan sekarang (verifikasi & pangkas). |
 | `npm run pulih -- <berkas> [--ke <DATABASE_URL>]` | Uji pemulihan (drill). |
 | `npm run siap:produksi` | Bangun klien + terapkan skema (satu perintah). |
+| `npm run cek:jenis` | Cek tipe TypeScript bertahap (`klien/src/**/*.ts`). |
+| `npm run periksa:produksi` | Preflight konfigurasi produksi, hanya membaca berkas. |
 | `npm run konten:kodenara` | Tarik artikel tips KodeNara sekarang (juga jalan otomatis 03.00 WIB). |
 | `npm run konten:kodenara:bersih` | Buang semua artikel hasil tarikan; konten buatan admin tetap. |
 
@@ -66,6 +68,24 @@ cd klien  && npx vitest run --root . src/logika/terakhir.test.js
 atas, menemukan `server/tests/*.js` yang memakai `node:test`, lalu melaporkan
 "No test suite found" untuk 17 berkas. `npm run uji` di root sudah benar karena
 memakai `--prefix`.
+
+Empat tes di `server/tests/cadangan-potong.test.js` butuh basis data terpisah
+dengan nama memuat `uji`/`test`; tanpa itu tes **diskip**, bukan gagal. Jangan
+pernah menunjukkannya ke basis data `posyandu` produksi: tes membuat dan
+menghapus tabel `uji_cadangan_*`. Siapkan sekali di PostgreSQL lokal:
+
+```bash
+# Muat .env root tanpa menampilkan nilainya; cek host lokal dulu.
+export DATABASE_URL="$(node -e "require('./server/node_modules/dotenv').config({path:'.env'});const u=new URL(process.env.DATABASE_URL);if(!['localhost','127.0.0.1','::1'].includes(u.hostname))process.exit(2);u.pathname='/posyandu_uji';process.stdout.write(u.toString())")"
+
+node -e "const u=new URL(process.env.DATABASE_URL);u.pathname='/postgres';const {Client}=require('./server/node_modules/pg');const c=new Client({connectionString:u.toString()});c.connect().then(()=>c.query('CREATE DATABASE posyandu_uji')).catch(e=>{if(e.code!=='42P04')throw e}).finally(()=>c.end())"
+node server/src/db/migrate.js
+cd server && NODE_ENV=test node --test tests/cadangan-potong.test.js
+```
+
+`dotenv` tidak menimpa `DATABASE_URL` yang sudah ada di lingkungan, jadi env
+eksplisit aman. Dari root, `npm run uji` dengan `DATABASE_URL` yang sama akan
+menjalankan seluruh tes server tanpa skip.
 
 ---
 
@@ -89,6 +109,7 @@ memakai `--prefix`.
 | `CADANGAN_HARIAN` | server | `true`. |
 | `KODENARA_HARIAN` | server | `true`. Setel `false` bila VPS tidak boleh keluar internet. |
 | `ASAL_DIIZINKAN` | server | Daftar asal CORS (koma). Perlu bila klien & API beda asal. |
+| `METRIK_TOKEN` | server | Opsional. Diisi → `/metrik` wajib header `X-Metrik-Token`; kosong → sesi `admin_desa`. `/metrik` mengembalikan `lingkup: "proses_ini"`: metrik & pembatas laju reset saat restart, tidak sah untuk multi-instance. |
 | `VITE_API` | klien (bangun) | Kosong → path relatif (satu asal). Untuk dev: `http://127.0.0.1:3000`. |
 
 **Mode produksi:** kosongkan `VITE_API` di `.env` sebelum `npm run bangun`
@@ -176,11 +197,18 @@ bulanan; cadangan pengaman `posyandu-pengaman-` dijaga 3 terbaru. |
 **Ukuran & laju terukur:** ~39 MB untuk 433.134 baris; cadangan dari basis data
 kosong hanya 8 KB. Tarikan dingin 433.134 baris ≈ 252 detik (~1.719 baris/detik).
 
-**Drill bulanan disarankan** (SOP desain 8.4):
+**Drill bulanan tetap wajib dikerjakan manual** (SOP desain 8.4). `/metrik` hanya
+menolong memantau kedaluwarsa lewat `uji_cadangan_usia_jam` dan hasil verifikasi
+terakhir; angka itu bukan pengganti drill pemulihan sungguhan:
 
 ```bash
 npm run pulih -- posyandu-2026-11-02T02-00-00-000Z.json.gz.enc --ke postgres://postgres@127.0.0.1/posyandu_drill
 ```
+
+Cek `/metrik` sebelum drill: bila `uji_cadangan_usia_jam` lebih dari ~720 jam
+(30 hari) atau `uji_cadangan_terakhir.cocok` bukan `true`, jadwalkan drill dan
+catat hasilnya. Target pemulihan harus basis data terpisah, bukan `posyandu`
+produksi.
 
 ---
 
@@ -190,7 +218,7 @@ npm run pulih -- posyandu-2026-11-02T02-00-00-000Z.json.gz.enc --ke postgres://p
 |---------|---------|
 | Sesi | Cookie `posyandu_sesi`: `HttpOnly`, `SameSite=Strict`, `Secure` **hanya saat `NODE_ENV=production`**. Token tak bisa dibaca JS. |
 | CSRF | Header `X-Requested-With: smart-posyandu` wajib pada POST/PATCH/PUT/DELETE. Tanpa itu → **403**. |
-| Batas laju | 300 permintaan/menit per IP; masuk 5 gagal/15 menit; pemulihan 5 gagal/15 menit. |
+| Batas laju | 300 permintaan/menit per IP per proses; `POST /masuk` & `POST /wali/cari` 60/menit (dua kelas kuota, dihitung sebelum CSRF sehingga `429` bisa mendahului `403`); masuk 5 gagal/15 menit; pemulihan 5 gagal/15 menit. **Berlaku per proses** (Map in-memory): reset saat restart, tidak terpakai bareng antar-instance/cluster. |
 | Header | `helmet` (CSP; `connect-src 'self'`) |
 | Cadangan | AES-256-GCM; `KUNCI_CADANGAN` terpisah dari berkasnya. |
 | NIK | AES-256-GCM; tak pernah muncul di ekspor yang diedarkan. |
@@ -405,6 +433,9 @@ Tambahkan berkas uji baru ke daftar tes di `server/package.json`.
 | Penyedia hosting & nama domain | Tim & desa. |
 
 **Catatan:** `log_audit` saat ini **tidak dipangkas** — audit memang harus utuh. |
+
+Checklist keputusan klinis (acuan pertumbuhan, batas usia, rentang ukur) ada di
+`docs/VALIDASI-KLINIS.md`; statusnya masih menunggu tanda tangan nakes.
 
 ---
 

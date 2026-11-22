@@ -118,6 +118,8 @@ npm run uji                     # Jalankan unit test (klien & server)
 npm run cadangan                # Buat file cadangan database
 npm run konten:kodenara         # Tarik artikel tips KodeNara sekarang
 npm run konten:kodenara:bersih  # Buang artikel hasil tarikan
+npm run cek:jenis               # Cek tipe TypeScript bertahap
+npm run periksa:produksi        # Preflight konfigurasi produksi (hanya membaca)
 ```
 
 ---
@@ -128,3 +130,6 @@ Panduan mendalam ada di folder `docs/`:
 - `docs/PANDUAN-PEMAKAI.md` — Panduan alur operasional bagi kader dan admin.
 - `docs/PANDUAN-PENGEMBANG.md` — Petunjuk pengembangan dan arsitektur kode.
 - `docs/ARSITEKTUR.md` — Desain sistem, skema data, dan keamanan.
+- `docs/API.md` — Referensi seluruh endpoint, autentikasi, dan balasan galat.
+- `docs/PANDUAN-TLS.md` — Blok Nginx HTTPS, cookie `Secure`, preflight produksi.
+- `docs/VALIDASI-KLINIS.md` — Lembar keputusan nakes (belum ditandatangani).

@@ -41,6 +41,12 @@ export class KesalahanApi extends Error {
   }
 }
 
+/** 429 dan 5xx: server sibuk/rusak, antrean harus menunggu, bukan dibuang. */
+export function galatSementara(err) {
+  const status = err?.status
+  return status === 429 || (status >= 500 && status < 600)
+}
+
 /**
  * Sesi tidak sah (cookie kedaluwarsa/dicabut): buang salinan lokal lalu
  * beri tahu lapisan aplikasi, di satu tempat. Tanpa ini setiap layar yang

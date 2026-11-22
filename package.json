@@ -10,6 +10,8 @@
     "uji": "npm run uji:klien && npm run uji:server",
     "uji:klien": "cd klien && npm run uji",
     "uji:server": "cd server && npm test",
+    "cek:jenis": "npm run cek:jenis --prefix klien",
+    "periksa:produksi": "npm run periksa:produksi --prefix server",
     "migrasi": "cd server && npm run migrate",
     "demo": "cd server && npm run demo",
     "demo:hapus": "cd server && npm run demo:hapus",

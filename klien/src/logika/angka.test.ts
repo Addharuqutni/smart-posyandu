@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { rapikanDesimal, keAngka } from './angka.js'
+import { rapikanDesimal, keAngka } from './angka'
 
 describe('rapikanDesimal', () => {
   it('mengubah koma menjadi titik', () => {

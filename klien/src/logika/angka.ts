@@ -4,7 +4,7 @@
 // type="text" inputMode="decimal" dan normalisasi dilakukan di sini.
 
 /** Ubah teks yang diketik kader menjadi teks angka bertitik, atau '' bila kosong. */
-export function rapikanDesimal(nilai) {
+export function rapikanDesimal(nilai: unknown): string {
   if (nilai == null) return ''
   return String(nilai)
     .replace(/,/g, '.')
@@ -12,7 +12,7 @@ export function rapikanDesimal(nilai) {
 }
 
 /** Angka dari teks berkoma; NaN bila tidak bisa dibaca. */
-export function keAngka(nilai) {
+export function keAngka(nilai: unknown): number {
   const bersih = rapikanDesimal(nilai)
   if (bersih === '' || bersih === '.') return NaN
   return Number(bersih)

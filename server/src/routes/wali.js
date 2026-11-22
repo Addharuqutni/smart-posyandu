@@ -3,10 +3,12 @@
 // sesi petugas: cookie sendiri, bukan baris di `pengguna`, dan hanya memegang
 // satu balita_id. Tidak ada jalur dari sini ke /balita atau /sinkron.
 
+const crypto = require('node:crypto')
 const express = require('express')
 const { satu, banyak } = require('../db/pool')
 const { buatToken, hashToken } = require('../domain/keamanan')
 const { dekripsi } = require('../domain/rahasia')
+const { catatAktivitas } = require('../domain/aktivitas')
 const cookie = require('../domain/sesi-cookie')
 
 const router = express.Router()
@@ -42,6 +44,9 @@ function ringkasanDari(baris) {
     berat_terakhir_kg: terakhir?.berat_kg ?? null,
     tinggi_terakhir_cm: mundur.find((b) => b.tinggi_cm != null)?.tinggi_cm ?? null,
     status_gizi_terakhir: mundur.find((b) => b.status_gizi)?.status_gizi ?? null,
+    // Missing growth reference is not "unassessed": report the reason explicitly.
+    sumber_status_terakhir:
+      mundur.find((b) => b.status_gizi || b.sumber_status)?.sumber_status ?? null,
     perubahan_berat_kg: terakhir && sebelumnya
       ? Number((Number(terakhir.berat_kg) - Number(sebelumnya.berat_kg)).toFixed(2))
       : null,
@@ -89,7 +94,17 @@ router.post('/wali/cari', async (minta, balas) => {
   // Kunci percobaan per IP saja: kunci per-teks membuat penyerang yang
   // mengganti nama tiap percobaan tidak pernah kena batas.
   if (terkunci('cari', minta.ip)) {
-    return balas.status(429).json({ detail: 'nama_atau_nik_tidak_cocok' })
+    // barisId acak: log tidak boleh mengarah ke baris balita yang dicari.
+    await catatAktivitas({
+      aksi: 'gagal_cari_wali',
+      barisId: crypto.randomUUID(),
+      rincian: { alasan: 'terkunci' },
+      ip: minta.ip,
+    }).catch(() => {})
+    return balas
+      .set('Retry-After', '900')
+      .status(429)
+      .json({ detail: 'nama_atau_nik_tidak_cocok' })
   }
 
   // Dua faktor wajib: nama/NIK **dan** tanggal lahir. Nama lengkap anak adalah
@@ -100,9 +115,13 @@ router.post('/wali/cari', async (minta, balas) => {
   if (nik) {
     // NIK disimpan sebagai ciphertext acak, jadi tidak bisa dicocokkan di SQL.
     // ponytail: pindai + dekripsi; ganti dengan kolom hash bila data membesar.
+    // DoS ceiling: this branch decrypts every candidate in JS, so cap the
+    // number of rows fetched per request to keep one lookup from exhausting
+    // the server.
     kandidat = await banyak(
       `SELECT b.id, b.nik FROM balita b
-        WHERE b.dihapus_pada IS NULL AND b.tanggal_lahir = $1::date`,
+        WHERE b.dihapus_pada IS NULL AND b.tanggal_lahir = $1::date
+        LIMIT 2000`,
       [tanggalLahir],
     )
   } else {
@@ -117,6 +136,12 @@ router.post('/wali/cari', async (minta, balas) => {
   const cocok = pilihKandidat(kandidat, nik)
   if (!cocok) {
     catatGagal('cari', minta.ip)
+    await catatAktivitas({
+      aksi: 'gagal_cari_wali',
+      barisId: crypto.randomUUID(),
+      rincian: { alasan: 'tidak_cocok' },
+      ip: minta.ip,
+    }).catch(() => {})
     return balas.status(401).json({ detail: 'nama_atau_nik_tidak_cocok' })
   }
 
@@ -128,6 +153,12 @@ router.post('/wali/cari', async (minta, balas) => {
     [cocok.id, hashToken(token), String(MENIT_SESI)],
   )
   cookie.set(balas, token, MENIT_SESI, NAMA_KUKI)
+  await catatAktivitas({
+    aksi: 'cari_wali',
+    barisId: crypto.randomUUID(),
+    rincian: { alasan: 'cocok' },
+    ip: minta.ip,
+  }).catch(() => {})
   balas.json({ status: 'cocok', waktu_server: new Date().toISOString() })
 })
 
@@ -139,7 +170,7 @@ router.get('/wali/riwayat', async (minta, balas) => {
   // kunjungan yang belum diperiksa nakes tidak pernah keluar.
   const baris = await banyak(
     `SELECT k.tanggal_kunjungan, k.usia_bulan, k.status_kehadiran,
-            p.berat_kg, p.tinggi_cm, p.lingkar_kepala_cm, p.status_gizi
+           p.berat_kg, p.tinggi_cm, p.lingkar_kepala_cm, p.status_gizi, p.sumber_status
      FROM kunjungan k
      LEFT JOIN pengukuran p ON p.kunjungan_id = k.id AND p.dihapus_pada IS NULL
      WHERE k.balita_id = $1 AND k.dihapus_pada IS NULL

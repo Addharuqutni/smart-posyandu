@@ -7,7 +7,8 @@
     "dev": "vite",
     "bangun": "vite build",
     "pratinjau": "vite preview",
-    "uji": "vitest run"
+    "uji": "vitest run",
+    "cek:jenis": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
     "chart.js": "^4.6.1",
@@ -20,6 +21,7 @@
     "@vitejs/plugin-react": "^4.3.1",
     "fake-indexeddb": "^6.2.6",
     "tailwindcss": "^4.3.4",
+    "typescript": "^5.9.3",
     "vite": "^5.4.8",
     "vitest": "^2.1.2"
   }

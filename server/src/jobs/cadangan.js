@@ -2,6 +2,7 @@
 // Berkas = JSON semua tabel, di-gzip, lalu dienkripsi AES-256-GCM.
 
 const fs = require('fs')
+const crypto = require('crypto')
 const path = require('path')
 const zlib = require('zlib')
 const { promisify } = require('util')
@@ -18,6 +19,29 @@ const baca = promisify(fs.readFile)
 // tidak boleh ditulis ulang.
 const TABEL = ['posyandu', 'pengguna', 'kader', 'orang_tua', 'balita', 'balita_orang_tua',
   'kunjungan', 'pengukuran', 'tindak_lanjut', 'acuan_berat_umur']
+
+// JSON kanonik: kunci diurutkan supaya hash tidak berubah hanya karena urutan
+// kunci objek berbeda. Perlakuan `undefined`/`toJSON` mengikuti JSON.stringify
+// agar hash hasil penulisan sama dengan hash hasil baca berkas.
+function kanonik(nilai) {
+  if (nilai && typeof nilai.toJSON === 'function') return kanonik(nilai.toJSON())
+  if (Array.isArray(nilai)) return `[${nilai.map((v) => kanonik(v)).join(',')}]`
+  if (nilai && typeof nilai === 'object') {
+    const pasangan = Object.keys(nilai)
+      .filter((k) => nilai[k] !== undefined)
+      .sort()
+      .map((k) => `${JSON.stringify(k)}:${kanonik(nilai[k])}`)
+    return `{${pasangan.join(',')}}`
+  }
+  return JSON.stringify(nilai) ?? 'null'
+}
+
+/** SHA-256 dari JSON kanonik data TABEL yang dikenal; `_meta` tidak ikut. */
+function hashIsi(isi) {
+  const diketahui = {}
+  for (const t of TABEL) diketahui[t] = isi?.[t] ?? []
+  return crypto.createHash('sha256').update(kanonik(diketahui), 'utf8').digest('hex')
+}
 
 /**
  * Baca seluruh tabel per potongan KEYSET, bukan satu pernyataan raksasa.
@@ -91,12 +115,17 @@ async function jalankan(folder, { awalan = 'posyandu' } = {}) {
     for (const t of TABEL) hasil[t] = await bacaSemua(t, { kueri: kueriKlien })
     return hasil
   })
-  const mentah = Buffer.from(JSON.stringify(isi), 'utf8')
+  const dibuatPada = new Date().toISOString()
+  const isiCadangan = {
+    ...isi,
+    _meta: { format: 1, dibuat_pada: dibuatPada, sha256: hashIsi(isi) },
+  }
+  const mentah = Buffer.from(JSON.stringify(isiCadangan), 'utf8')
   const terkompres = await gzip(mentah)
   // Kunci cadangan terpisah dari kunci NIK (AGENTS Bagian 6).
   const terenkripsi = enkripsi(terkompres.toString('base64'), 'cadangan')
 
-  const cap = new Date().toISOString().replace(/[:.]/g, '-')
+  const cap = dibuatPada.replace(/[:.]/g, '-')
   const nama = `${awalan}-${cap}.json.gz.enc`
   await tulis(path.join(tujuan, nama), terenkripsi, 'utf8')
   return { nama, ukuran_byte: Buffer.byteLength(terenkripsi, 'utf8') }
@@ -217,4 +246,4 @@ function pangkas(folder) {
 
 // `bacaSemua` diekspor agar bisa diuji langsung (tests/cadangan-potong.test.js)
 // tanpa menulis berkas cadangan.
-module.exports = { jalankan, daftar, namaSah, pangkas, berkasDisimpan, AWALAN_PENGAMAN, TABEL, bacaSemua }
+module.exports = { jalankan, daftar, namaSah, pangkas, berkasDisimpan, AWALAN_PENGAMAN, TABEL, bacaSemua, hashIsi }

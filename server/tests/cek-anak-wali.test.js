@@ -79,6 +79,18 @@ test('statistik ringkas dihitung dari urutan kunjungan', () => {
   assert.equal(ringkasanDari([]).jumlah_kunjungan, 0)
 })
 
+test('ringkasan wali membedakan alasan acuan dari belum dinilai', () => {
+  const denganAlasan = ringkasanDari([
+    { berat_kg: 9.2, status_gizi: null, sumber_status: 'acuan_tidak_tersedia' },
+  ])
+  assert.equal(denganAlasan.status_gizi_terakhir, null)
+  assert.equal(denganAlasan.sumber_status_terakhir, 'acuan_tidak_tersedia')
+
+  const polos = ringkasanDari([{ berat_kg: 9.2, status_gizi: null }])
+  assert.equal(polos.status_gizi_terakhir, null)
+  assert.equal(polos.sumber_status_terakhir, null)
+})
+
 test('halaman wali bisa dibuka tamu, punya CTA, dan menampilkan riwayat', () => {
   assert.match(rute, /'publik', 'cek-anak'/)
   assert.match(rute, /jalur === '\/cek-anak'/)
@@ -88,4 +100,48 @@ test('halaman wali bisa dibuka tamu, punya CTA, dan menampilkan riwayat', () => 
   assert.match(ui, /status_gizi_terakhir/)
   assert.match(ui, /waliTeks\(data\.balita\)/, 'nama wali ikut ditampilkan')
   assert.match(ui, /nama_ibu_kandung/, 'nama ibu kandung jadi cadangan')
+})
+
+test('pencarian wali mencatat hasil tanpa data pribadi', () => {
+  const domain = baca('server/src/domain/aktivitas.js')
+  assert.match(domain, /cari_wali/)
+  assert.match(domain, /gagal_cari_wali/)
+  const awal = wali.indexOf("router.post('/wali/cari'")
+  const akhir = wali.indexOf("router.get('/wali/riwayat'")
+  const blok = wali.slice(awal, akhir)
+  assert.match(blok, /aksi: 'cari_wali'/)
+  assert.match(blok, /aksi: 'gagal_cari_wali'/)
+  const rincian = [...blok.matchAll(/rincian: \{([^}]*)\}/g)].map((m) => m[1])
+  assert.ok(rincian.length >= 2, 'harus ada jejak berhasil dan gagal')
+  for (const isi of rincian) {
+    assert.match(isi, /alasan:/)
+    assert.ok(!/nik|nama|tanggal_lahir|teks/i.test(isi), `rincian bocor: ${isi}`)
+  }
+  assert.match(blok, /ip: minta\.ip/)
+  assert.match(blok, /barisId: crypto\.randomUUID\(\)/)
+  assert.equal((blok.match(/catatAktivitas\(/g) || []).length, rincian.length)
+  assert.equal((blok.match(/\.catch\(\(\) => \{\}\)/g) || []).length, rincian.length)
+})
+
+test('pindai NIK dibatasi sebagai pagu DoS, jalur nama tidak diubah', () => {
+  const awal = wali.indexOf("router.post('/wali/cari'")
+  const cabangNik = wali.indexOf('if (nik) {', awal)
+  const cabangNama = wali.indexOf('} else {', cabangNik)
+  const akhir = wali.indexOf('const cocok = pilihKandidat', cabangNama)
+  const nik = wali.slice(cabangNik, cabangNama)
+  const nama = wali.slice(cabangNama, akhir)
+  assert.match(nik, /LIMIT 2000/)
+  assert.match(nik, /DoS/i)
+  assert.match(nama, /LIMIT 3/)
+  assert.ok(!/LIMIT 2000/.test(nama))
+})
+
+test('batas percobaan memberi Retry-After pada balasan 429', () => {
+  const masuk = baca('server/src/routes/masuk.js')
+  const awal = wali.indexOf("router.post('/wali/cari'")
+  const akhir = wali.indexOf("router.get('/wali/riwayat'")
+  for (const [nama, teks] of [['wali', wali.slice(awal, akhir)], ['masuk', masuk]]) {
+    assert.match(teks, /\.set\('Retry-After', '900'\)/, `${nama} tanpa Retry-After`)
+    assert.match(teks, /status\(429\)/, `${nama} tanpa 429`)
+  }
 })

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { daftarPosyandu, daftarValidasi, tindakLanjut, validasiKunjungan, validasiSemua } from '../jaringan/api.js'
-import { PESAN_STATUS } from '../logika/rentang.js'
+import { labelStatus, kelasStatus } from '../logika/rentang.js'
 import Ikon from './Ikon.jsx'
 import { Kosong, KotakCari, Modal, Layar } from './Bersama.jsx'
 import { idBaru } from '../logika/waktu.js'
@@ -275,12 +275,10 @@ export default function Validasi({ sesi }) {
               </dd>
             </div>
             <div className="bg-kartu px-2.5 py-2">
-              <dt className="text-2xs font-semibold uppercase tracking-[0.075em] text-teks-samar">Status gizi</dt>
+              <dt className="text-2xs font-semibold uppercase tracking-[0.075em] text-teks-samar">Keterangan gizi</dt>
               <dd className="m-0 mt-1">
-                <span className={`lencana-gizi w-fit ${k.pengukuran?.status_gizi ?? 'menunggu'}`}>
-                  {k.pengukuran?.status_gizi
-                    ? PESAN_STATUS[k.pengukuran.status_gizi]
-                    : 'Belum dinilai'}
+                <span className={`lencana-gizi w-fit ${kelasStatus(k.pengukuran?.status_gizi, k.pengukuran?.sumber_status)}`}>
+                  {labelStatus(k.pengukuran?.status_gizi, k.pengukuran?.sumber_status) ?? 'Belum dinilai'}
                 </span>
               </dd>
             </div>

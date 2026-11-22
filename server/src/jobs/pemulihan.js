@@ -18,7 +18,7 @@ const zlib = require('zlib')
 const { promisify } = require('util')
 const { transaksi } = require('../db/pool')
 const { dekripsi } = require('../domain/rahasia')
-const { namaSah, TABEL, jalankan: cadangkan, AWALAN_PENGAMAN } = require('./cadangan')
+const { namaSah, TABEL, jalankan: cadangkan, AWALAN_PENGAMAN, hashIsi } = require('./cadangan')
 
 const gunzip = promisify(zlib.gunzip)
 const baca = promisify(fs.readFile)
@@ -71,6 +71,14 @@ async function bacaIsi(nama) {
     salah.kode = masalah
     throw salah
   }
+  // Cek terakhir sebelum pemulihan menyentuh basis data (termasuk cadangan
+  // pengaman): isi yang sudah diubah tidak boleh ikut ditulis.
+  const sha256 = isi._meta?.sha256
+  if (typeof sha256 === 'string' && hashIsi(isi) !== sha256) {
+    const salah = new Error('integritas_cadangan_tidak_cocok')
+    salah.kode = 'integritas_cadangan_tidak_cocok'
+    throw salah
+  }
   return isi
 }
 
@@ -80,7 +88,7 @@ async function bacaIsi(nama) {
  */
 function periksaIsi(isi) {
   if (!isi || typeof isi !== 'object' || Array.isArray(isi)) return 'isi_cadangan_tidak_sah'
-  const tabel = Object.keys(isi)
+  const tabel = Object.keys(isi).filter((k) => k !== '_meta')
   if (tabel.length === 0) return 'isi_cadangan_kosong'
   if (!tabel.some((t) => TABEL.includes(t))) return 'tidak_ada_tabel_dikenal'
   for (const t of tabel) {
@@ -123,7 +131,7 @@ async function pratinjau(nama) {
     tabel.push({ nama: t, jumlah: isi[t].length })
     total += isi[t].length
   }
-  const tidakDikenal = Object.keys(isi).filter((t) => !TABEL.includes(t))
+  const tidakDikenal = Object.keys(isi).filter((t) => t !== '_meta' && !TABEL.includes(t))
   return {
     nama,
     ukuran_byte: st.size,
@@ -194,7 +202,7 @@ async function pulihkan(nama, { penggunaId = null, buatCadanganPengaman = true }
       dibuat_pada: st.mtime.toISOString(),
       cadangan_pengaman: pengaman?.nama ?? null,
       tabel: [],
-      tabel_tidak_dikenal: Object.keys(isi).filter((t) => !TABEL.includes(t)),
+      tabel_tidak_dikenal: Object.keys(isi).filter((t) => t !== '_meta' && !TABEL.includes(t)),
       kolom_tidak_dikenal: [],
       kader_id_dikosongkan: 0,
       total_baris: 0,

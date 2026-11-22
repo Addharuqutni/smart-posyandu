@@ -2,6 +2,7 @@ import 'fake-indexeddb/auto'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { db } from '../penyimpanan/db.js'
 import { jalankanSinkron, terapkan } from './sinkron.js'
+import { galatSementara, KesalahanApi } from '../jaringan/api.js'
 import { simpanKunjungan, ubahPengukuran } from '../penyimpanan/kunjungan.js'
 import { waliBalita } from '../penyimpanan/balita.js'
 
@@ -16,6 +17,25 @@ const BALITA = {
 
 function jawab(isi) {
   return { ok: true, status: 200, json: async () => isi }
+}
+
+function gagalHttp(status) {
+  return { ok: false, status, json: async () => ({ detail: 'gangguan sementara' }) }
+}
+
+function antreanPalsu(jumlah) {
+  return Array.from({ length: jumlah }, (_, i) => ({
+    id: `q-${i}`,
+    nama_tabel: 'kunjungan',
+    id_baris: `k-${i}`,
+    aksi: 'ubah',
+    versi: 1,
+    terjadi_pada: '2026-11-20T03:00:00Z',
+    muatan: { id: `k-${i}`, tanggal_kunjungan: '2026-11-20' },
+    status: 'menunggu',
+    jumlah_coba: 0,
+    pesan_gagal: null,
+  }))
 }
 
 beforeEach(async () => {
@@ -232,7 +252,7 @@ describe('putaran sinkron', () => {
     expect(await db.kunjungan.count()).toBe(1)
   })
 
-  it('tolakan kalah_versi menandai antrean gagal, lalu tarikan menimpa data lokal', async () => {
+  it('kalah_versi menunggu saat tarikan berjalan, lalu dihapus setelah tarikan tuntas', async () => {
     const { kunjungan_id } = await simpanKunjungan({
       balita: BALITA,
       idPerangkat: 'tablet-uji',
@@ -254,6 +274,9 @@ describe('putaran sinkron', () => {
           waktu_server: waktuTarik,
         })
       }
+      const menunggu = await db.antrean_sinkron.where('status').equals('menunggu').toArray()
+      expect(menunggu).toHaveLength(2)
+      expect(menunggu.every((a) => a.pesan_gagal === 'kalah_versi')).toBe(true)
       return jawab({
         perubahan: [
           {
@@ -272,11 +295,163 @@ describe('putaran sinkron', () => {
 
     const hasil = await jalankanSinkron('tablet-uji')
     expect(hasil.ditolak).toBe(2)
-    // KONTRAK_API 3: kalah_versi dibuang dari antrean; tarikan menimpa lokal.
+    // Antrean hanya dibuang setelah seluruh tarikan berhasil.
     expect(await db.antrean_sinkron.count()).toBe(0)
 
     const kunjungan = await db.kunjungan.get(kunjungan_id)
     expect(kunjungan.catatan).toBe('dari tablet lain')
+  })
+
+  it('429 pada halaman tarikan pertama tidak menggeser kursor', async () => {
+    await db.penyiapan.put({ kunci: 'kursor_sinkron', nilai: '2026-11-01T00:00:00Z' })
+    await db.penyiapan.put({ kunci: 'sinkron_terakhir', nilai: '2026-10-31T00:00:00Z' })
+    const jalurTarik = []
+    vi.stubGlobal('fetch', async (jalur, opsi) => {
+      if (opsi?.method === 'POST') {
+        const isi = JSON.parse(opsi.body)
+        return jawab({
+          diterima: isi.perubahan.map((p) => p.id_baris),
+          ditolak: [],
+          waktu_server: new Date().toISOString(),
+        })
+      }
+      jalurTarik.push(jalur)
+      return gagalHttp(429)
+    })
+
+    const hasil = await jalankanSinkron('tablet-uji')
+    expect(hasil).toMatchObject({ luring: true, galat: 'sementara', ditarik: 0 })
+    expect(jalurTarik).toHaveLength(1)
+    expect(jalurTarik[0]).toContain('sejak=2026-11-01T00%3A00%3A00Z')
+    expect((await db.penyiapan.get('kursor_sinkron')).nilai).toBe('2026-11-01T00:00:00Z')
+    expect((await db.penyiapan.get('sinkron_terakhir')).nilai).toBe('2026-10-31T00:00:00Z')
+  })
+
+  it('500 pada gelombang kirim kedua: sisanya menunggu dan kursor tidak bergeser', async () => {
+    await db.antrean_sinkron.bulkAdd(antreanPalsu(201))
+    const kursorAwal = '2026-11-01T00:00:00Z'
+    await db.penyiapan.put({ kunci: 'kursor_sinkron', nilai: kursorAwal })
+    const ukuran = []
+    let kirim = 0
+    vi.stubGlobal('fetch', async (jalur, opsi) => {
+      if (opsi?.method === 'POST') {
+        kirim += 1
+        const isi = JSON.parse(opsi.body)
+        ukuran.push(isi.perubahan.length)
+        if (kirim === 2) return gagalHttp(500)
+        return jawab({
+          diterima: isi.perubahan.map((p) => p.id_baris),
+          ditolak: [],
+          waktu_server: new Date().toISOString(),
+        })
+      }
+      return jawab({ perubahan: [], waktu_server: new Date().toISOString(), berikutnya: null })
+    })
+
+    const hasil = await jalankanSinkron('tablet-uji')
+    expect(ukuran).toEqual([200, 1])
+    expect(hasil).toMatchObject({ luring: true, galat: 'sementara', terkirim: 200, ditarik: 0 })
+    const sisa = await db.antrean_sinkron.toArray()
+    expect(sisa).toHaveLength(1)
+    expect(sisa[0]).toMatchObject({ id_baris: 'k-200', status: 'menunggu' })
+    expect((await db.penyiapan.get('kursor_sinkron')).nilai).toBe(kursorAwal)
+  })
+
+  it('restart setelah kirim sebagian melanjutkan dari antrean yang tersimpan', async () => {
+    await db.antrean_sinkron.bulkAdd(antreanPalsu(201))
+    const waktu = new Date().toISOString()
+    let kirim = 0
+    vi.stubGlobal('fetch', async (jalur, opsi) => {
+      if (opsi?.method === 'POST') {
+        kirim += 1
+        const isi = JSON.parse(opsi.body)
+        if (kirim === 2) return gagalHttp(503)
+        return jawab({
+          diterima: isi.perubahan.map((p) => p.id_baris),
+          ditolak: [],
+          waktu_server: waktu,
+        })
+      }
+      return jawab({ perubahan: [], waktu_server: waktu, berikutnya: null })
+    })
+
+    const pertama = await jalankanSinkron('tablet-uji')
+    expect(pertama).toMatchObject({ luring: true, galat: 'sementara', terkirim: 200 })
+    expect(await db.antrean_sinkron.count()).toBe(1)
+
+    // Simulasi restart: modul dimuat ulang, satu-satunya memori adalah IndexedDB.
+    const { jalankanSinkron: jalankanUlang } = await import('./sinkron.js?restart=1')
+    const dikirimUlang = []
+    vi.stubGlobal('fetch', async (jalur, opsi) => {
+      if (opsi?.method === 'POST') {
+        const isi = JSON.parse(opsi.body)
+        dikirimUlang.push(...isi.perubahan.map((p) => p.id_baris))
+        return jawab({
+          diterima: isi.perubahan.map((p) => p.id_baris),
+          ditolak: [],
+          waktu_server: waktu,
+        })
+      }
+      return jawab({ perubahan: [], waktu_server: waktu, berikutnya: null })
+    })
+
+    const kedua = await jalankanUlang('tablet-uji')
+    expect(dikirimUlang).toEqual(['k-200'])
+    expect(kedua).toMatchObject({ luring: false, terkirim: 1 })
+    expect(await db.antrean_sinkron.count()).toBe(0)
+  })
+
+  it('kalah_versi bertahan bila tarikan gagal, lalu dihapus putaran berikutnya', async () => {
+    const { kunjungan_id } = await simpanKunjungan({
+      balita: BALITA,
+      idPerangkat: 'tablet-uji',
+      tanggal: '2026-11-20',
+      berat_kg: 9.4,
+    })
+    const waktuTarik = new Date(Date.now() + 60_000).toISOString()
+    let tarikanGagal = true
+    vi.stubGlobal('fetch', async (jalur, opsi) => {
+      if (opsi?.method === 'POST') {
+        const isi = JSON.parse(opsi.body)
+        return jawab({
+          diterima: [],
+          ditolak: isi.perubahan.map((p) => ({ id_baris: p.id_baris, alasan: 'kalah_versi' })),
+          waktu_server: waktuTarik,
+        })
+      }
+      if (tarikanGagal) return gagalHttp(500)
+      return jawab({
+        perubahan: [
+          {
+            nama_tabel: 'kunjungan',
+            id_baris: kunjungan_id,
+            aksi: 'ubah',
+            terjadi_pada: waktuTarik,
+            dihapus_pada: null,
+            muatan: {
+              id: kunjungan_id,
+              balita_id: 'b1',
+              tanggal_kunjungan: '2026-11-20',
+              catatan: 'dari tablet lain',
+            },
+          },
+        ],
+        waktu_server: waktuTarik,
+        berikutnya: null,
+      })
+    })
+
+    const pertama = await jalankanSinkron('tablet-uji')
+    expect(pertama).toMatchObject({ luring: true, galat: 'sementara', ditolak: 2 })
+    const menunggu = await db.antrean_sinkron.where('status').equals('menunggu').toArray()
+    expect(menunggu).toHaveLength(2)
+    expect(menunggu.every((a) => a.pesan_gagal === 'kalah_versi')).toBe(true)
+
+    tarikanGagal = false
+    const kedua = await jalankanSinkron('tablet-uji')
+    expect(kedua).toMatchObject({ luring: false, ditolak: 2, ditarik: 1 })
+    expect(await db.antrean_sinkron.count()).toBe(0)
+    expect((await db.kunjungan.get(kunjungan_id)).catatan).toBe('dari tablet lain')
   })
 
   // Regresi: tablet pernah menampilkan 101 balita padahal server punya 3000.
@@ -422,5 +597,16 @@ describe('keadaan salinan saat tablet unggul karena antrean belum terkirim', () 
     }))
     expect(await db.balita.count()).toBe(2)
     expect(await db.antrean_sinkron.count()).toBe(1)
+  })
+})
+
+describe('galatSementara', () => {
+  it('hanya 429 dan 5xx yang dianggap bisa dicoba lagi', () => {
+    expect(galatSementara(new KesalahanApi(429, null))).toBe(true)
+    expect(galatSementara(new KesalahanApi(500, null))).toBe(true)
+    expect(galatSementara(new KesalahanApi(503, null))).toBe(true)
+    expect(galatSementara(new KesalahanApi(400, null))).toBe(false)
+    expect(galatSementara(new KesalahanApi(404, null))).toBe(false)
+    expect(galatSementara(new TypeError('putus'))).toBe(false)
   })
 })

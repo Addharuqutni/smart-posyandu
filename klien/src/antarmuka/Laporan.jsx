@@ -10,7 +10,7 @@ import {
   unduhCadangan,
   unduhEkspor,
 } from '../jaringan/api.js'
-import { PESAN_STATUS } from '../logika/rentang.js'
+import { labelStatus } from '../logika/rentang.js'
 import Ikon from './Ikon.jsx'
 import Bantuan from './Bantuan.jsx'
 import { BarisPetak, Kosong, Petak, Layar } from './Bersama.jsx'
@@ -231,6 +231,7 @@ export default function Laporan({ sesi }) {
 
   const sebaran = isi?.sebaran_status_gizi ?? {}
   const totalUkur = Object.values(sebaran).reduce((jumlah, n) => jumlah + n, 0)
+  const tanpaAcuan = isi?.jumlah_acuan_tidak_tersedia ?? 0
 
   return (
     <Layar>
@@ -401,7 +402,7 @@ export default function Laporan({ sesi }) {
                 <Bantuan
                   id="bantuan-sebaran"
                   label="Penjelasan sebaran status gizi"
-                  teks="Status gizi dihitung server dari berat dan tinggi menurut umur. Jumlah di sini hanya kunjungan bulan ini."
+                  teks="Status gizi dihitung server dari berat menurut umur. Jumlah di sini hanya kunjungan bulan ini."
                   ukuran={15}
                 />
               </h3>
@@ -419,7 +420,7 @@ export default function Laporan({ sesi }) {
                 {Object.entries(sebaran).map(([kode, cacah]) => (
                   <li key={kode} className="grid grid-cols-[8.5rem_minmax(0,1fr)_2.5rem] items-center gap-3 max-mini:grid-cols-[7rem_minmax(0,1fr)_2.25rem] max-mini:gap-2">
                     <span className={`lencana-gizi ${kode} w-fit`}>
-                      {PESAN_STATUS[kode] ?? 'Belum dinilai'}
+                      {labelStatus(kode) ?? 'Belum dinilai'}
                     </span>
                     <span className="h-2 overflow-hidden rounded-full bg-latar" aria-hidden="true">
                       <span
@@ -431,6 +432,11 @@ export default function Laporan({ sesi }) {
                   </li>
                 ))}
               </ul>
+            )}
+            {tanpaAcuan > 0 && (
+              <p className="mt-3 mb-0 text-padat text-teks-redup">
+                Acuan belum tersedia untuk {tanpaAcuan} pengukuran (termasuk dalam &quot;Belum dinilai&quot;).
+              </p>
             )}
 
             <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-garis pt-3">

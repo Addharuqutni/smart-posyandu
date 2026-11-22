@@ -8,6 +8,7 @@
     "dev": "node --watch src/server.js",
     "migrate": "node src/db/migrate.js",
     "test": "cross-env NODE_ENV=test node --test tests/*.test.js",
+    "periksa:produksi": "node src/bin/periksa-produksi.js",
     "demo": "node src/db/demo.js",
     "demo:hapus": "node src/db/demo.js --hapus",
     "siap": "npm run migrate",

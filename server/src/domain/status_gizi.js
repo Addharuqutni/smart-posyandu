@@ -8,6 +8,15 @@
 // Batas klasifikasi mengikuti KMS kertas yang sudah dikenal kader
 // (ARSITEKTUR 4.4).
 
+// Jangkauan baris acuan yang terisi saat ini. Kunjungan boleh sampai 84 bulan,
+// tetapi tabel acuan masih berhenti di 60 (lihat docs/VALIDASI-KLINIS.md).
+const ACUAN_MAKS_BULAN = 60
+
+/** Apakah usia (bulan) berada dalam jangkauan acuan yang tersedia sekarang. */
+function acuanTersedia(usiaBulan) {
+  return Number.isInteger(usiaBulan) && usiaBulan >= 0 && usiaBulan <= ACUAN_MAKS_BULAN
+}
+
 // Batas bawah tiap kelas, urut dari terberat.
 const BATAS = [
   [80, 'gizi_baik'],
@@ -45,4 +54,4 @@ function hitung(beratKg, medianKg, sumber) {
   }
 }
 
-module.exports = { klasifikasi, hitung, BATAS, PESAN_STATUS }
+module.exports = { klasifikasi, hitung, BATAS, PESAN_STATUS, ACUAN_MAKS_BULAN, acuanTersedia }

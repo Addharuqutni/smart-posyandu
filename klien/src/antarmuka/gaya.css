@@ -936,6 +936,13 @@ dialog::backdrop {
     color: var(--color-biru-800);
   }
 
+  /* Missing reference is a data reason, not a clinical result: keep it neutral. */
+  .lencana-gizi.acuan_tidak_tersedia {
+    background: var(--color-latar);
+    border-color: var(--color-garis-kuat);
+    color: var(--color-teks-redup);
+  }
+
   /* Lencana aksi pada log aktivitas. Warna menandai jenis, bukan menghias. */
   .lencana.buat {
     background: var(--color-hijau-100);

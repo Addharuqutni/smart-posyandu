@@ -3,11 +3,27 @@
 const express = require('express')
 const helmet = require('helmet')
 const { muat } = require('./env')
-const { muatPengguna } = require('./middleware/auth')
+const { muatPengguna, butuhPeran } = require('./middleware/auth')
+const { kueri, satu, banyak, dapatkan } = require('./db/pool')
+const { ringkasPermintaan, usiaJam } = require('./domain/metrik')
 
 function buatAplikasi() {
   const aplikasi = express()
   const env = muat()
+
+  // Penghitung tetap kecil: satu entri per kode status, bukan satu entri per
+  // permintaan. Pasang sebelum middleware lain supaya 429 dari pembatas laju
+  // ikut terhitung.
+  const hitsMetrik = { jumlah: 0, latensiMs: 0, kode: new Map() }
+  aplikasi.use((minta, balas, lanjut) => {
+    const mulai = Date.now()
+    balas.on('finish', () => {
+      hitsMetrik.jumlah += 1
+      hitsMetrik.latensiMs += Date.now() - mulai
+      hitsMetrik.kode.set(balas.statusCode, (hitsMetrik.kode.get(balas.statusCode) || 0) + 1)
+    })
+    lanjut()
+  })
 
   // Jangan bocorkan teknologi lewat header.
   aplikasi.disable('x-powered-by')
@@ -70,11 +86,79 @@ function buatAplikasi() {
       balas.setHeader('Access-Control-Allow-Methods', 'GET,POST,PATCH,DELETE,OPTIONS')
       balas.setHeader(
         'Access-Control-Allow-Headers',
-        'Content-Type,X-Requested-With,X-Kata-Sandi,X-Nama-Berkas',
+        'Content-Type,X-Requested-With,X-Kata-Sandi,X-Nama-Berkas,X-Metrik-Token',
       )
       balas.setHeader('Access-Control-Max-Age', '600')
     }
     if (minta.method === 'OPTIONS') return balas.status(204).send()
+    lanjut()
+  })
+
+  // Batas laju per IP, disimpan di memori proses.
+  // Runs before the CSRF gate so header-less writes still consume quota.
+  //
+  // Bahaya pada server PUBLIK: Map ini tumbuh mengikuti jumlah IP SUMBER, bukan
+  // jumlah pengguna. Banjir permintaan dari banyak alamat (botnet, atau IPv6
+  // acak yang murah) membuat entri menumpuk sebelum jendela 60 detik habis.
+  // Diukur: 100.000 IP unik -> 30,5 MB, dan tak satu pun bisa dibersihkan
+  // karena semuanya masih baru.
+  //
+  // Dua penjaga: batas keras jumlah entri (menolak IP baru saat penuh, jadi
+  // memori tidak bisa didorong tanpa batas), dan pembersihan berkala yang
+  // tidak bergantung pada keberuntungan 1% permintaan.
+  const pencatatPercobaan = new Map()
+  const BATAS_ENTRI = 20_000
+  const JENDELA_MS = 60 * 1000
+  const BATAS_PER_JENDELA = 300
+  // Login and guardian lookup accept untrusted input, so they get a tighter cap.
+  const KUOTA_KETAT = 60
+  const JALUR_KETAT = ['/masuk', '/wali/cari']
+  const batasJalur = (jalur) =>
+    JALUR_KETAT.includes(jalur.replace(/\/+$/, '')) ? KUOTA_KETAT : BATAS_PER_JENDELA
+  // ponytail: two quota classes per IP, not per endpoint; move to router-level limiters when more classes are needed.
+
+  // Satu jalur untuk setiap 429 dari pembatas, supaya Retry-After tidak bisa
+  // terlewat pada cabang "peta penuh".
+  const tolakLaju = (balas) =>
+    balas.setHeader('Retry-After', '60').status(429).json({ detail: 'terlalu_banyak_permintaan' })
+
+  const bersihkanKedaluwarsa = (sekarang) => {
+    for (const [k, v] of pencatatPercobaan) {
+      if (v.reset < sekarang) pencatatPercobaan.delete(k)
+    }
+  }
+  // Jaring pengaman: bersihkan tiap menit, bukan hanya saat ada permintaan.
+  const pembersih = setInterval(() => bersihkanKedaluwarsa(Date.now()), JENDELA_MS)
+  pembersih.unref?.()
+
+  aplikasi.use((minta, balas, lanjut) => {
+    const batas = batasJalur(minta.path)
+    const ip = minta.ip || '-'
+    const kunci = `${batas}|${ip}`
+    const sekarang = Date.now()
+    let state = pencatatPercobaan.get(kunci)
+
+    if (!state) {
+      // Peta penuh: coba bersihkan dulu, lalu tolak IP baru bila masih penuh.
+      // Menolak (429) jauh lebih baik daripada membiarkan memori naik tanpa
+      // batas sampai proses mati dan SELURUH layanan ikut mati.
+      if (pencatatPercobaan.size >= BATAS_ENTRI) {
+        bersihkanKedaluwarsa(sekarang)
+        if (pencatatPercobaan.size >= BATAS_ENTRI) {
+          return tolakLaju(balas)
+        }
+      }
+      state = { n: 0, reset: sekarang + JENDELA_MS }
+      pencatatPercobaan.set(kunci, state)
+    } else if (state.reset < sekarang) {
+      state.n = 0
+      state.reset = sekarang + JENDELA_MS
+    }
+
+    state.n += 1
+    if (state.n > batas) {
+      return tolakLaju(balas)
+    }
     lanjut()
   })
 
@@ -91,63 +175,57 @@ function buatAplikasi() {
     lanjut()
   })
 
-  // Batas laju per IP, disimpan di memori proses.
-  //
-  // Bahaya pada server PUBLIK: Map ini tumbuh mengikuti jumlah IP SUMBER, bukan
-  // jumlah pengguna. Banjir permintaan dari banyak alamat (botnet, atau IPv6
-  // acak yang murah) membuat entri menumpuk sebelum jendela 60 detik habis.
-  // Diukur: 100.000 IP unik -> 30,5 MB, dan tak satu pun bisa dibersihkan
-  // karena semuanya masih baru.
-  //
-  // Dua penjaga: batas keras jumlah entri (menolak IP baru saat penuh, jadi
-  // memori tidak bisa didorong tanpa batas), dan pembersihan berkala yang
-  // tidak bergantung pada keberuntungan 1% permintaan.
-  const pencatatPercobaan = new Map()
-  const BATAS_ENTRI = 20_000
-  const JENDELA_MS = 60 * 1000
-  const BATAS_PER_JENDELA = 300
-
-  const bersihkanKedaluwarsa = (sekarang) => {
-    for (const [k, v] of pencatatPercobaan) {
-      if (v.reset < sekarang) pencatatPercobaan.delete(k)
-    }
-  }
-  // Jaring pengaman: bersihkan tiap menit, bukan hanya saat ada permintaan.
-  const pembersih = setInterval(() => bersihkanKedaluwarsa(Date.now()), JENDELA_MS)
-  pembersih.unref?.()
-
-  aplikasi.use((minta, balas, lanjut) => {
-    const ip = minta.ip || '-'
-    const sekarang = Date.now()
-    let state = pencatatPercobaan.get(ip)
-
-    if (!state) {
-      // Peta penuh: coba bersihkan dulu, lalu tolak IP baru bila masih penuh.
-      // Menolak (429) jauh lebih baik daripada membiarkan memori naik tanpa
-      // batas sampai proses mati dan SELURUH layanan ikut mati.
-      if (pencatatPercobaan.size >= BATAS_ENTRI) {
-        bersihkanKedaluwarsa(sekarang)
-        if (pencatatPercobaan.size >= BATAS_ENTRI) {
-          return balas.status(429).json({ detail: 'terlalu_banyak_permintaan' })
-        }
-      }
-      state = { n: 0, reset: sekarang + JENDELA_MS }
-      pencatatPercobaan.set(ip, state)
-    } else if (state.reset < sekarang) {
-      state.n = 0
-      state.reset = sekarang + JENDELA_MS
-    }
-
-    state.n += 1
-    if (state.n > BATAS_PER_JENDELA) {
-      return balas.status(429).json({ detail: 'terlalu_banyak_permintaan' })
-    }
-    lanjut()
-  })
-
   aplikasi.use(muatPengguna)
 
-  aplikasi.get('/sehat', (minta, balas) => balas.json({ status: 'sehat' }))
+  aplikasi.get('/sehat', async (_minta, balas) => {
+    try {
+      await kueri('SELECT 1')
+      balas.json({ status: 'sehat', db: 'ok' })
+    } catch {
+      balas.status(503).json({ status: 'sakit', db: 'gagal' })
+    }
+  })
+
+  // Token opsional menggantikan sesi: bila tidak diisi, hanya admin_desa yang
+  // boleh melihat metrik. Penjaga ini dipasang setelah muatPengguna.
+  const penjagaMetrik = env.metrikToken
+    ? (minta, balas, lanjut) => {
+        if (minta.header('X-Metrik-Token') === env.metrikToken) return lanjut()
+        return balas.status(401).json({ detail: 'metrik_tidak_diizinkan' })
+      }
+    : butuhPeran('admin_desa')
+
+  aplikasi.get('/metrik', penjagaMetrik, async (_minta, balas) => {
+    const pool = dapatkan()
+    const uji = await satu(
+      `SELECT berkas, cocok, diperiksa_pada
+       FROM uji_cadangan ORDER BY diperiksa_pada DESC LIMIT 1`,
+    ).catch(() => null)
+    const barisAktivitas = await banyak(
+      `SELECT COALESCE(state, 'null') AS state, count(*)::int AS jumlah
+       FROM pg_stat_activity GROUP BY state ORDER BY jumlah DESC`,
+    ).catch(() => null)
+    const aktivitas = barisAktivitas
+      ? Object.fromEntries(barisAktivitas.map(({ state, jumlah }) => [state, jumlah]))
+      : null
+
+    balas.json({
+      lingkup: 'proses_ini',
+      uptime_detik: process.uptime(),
+      rss_mb: Math.round((process.memoryUsage().rss / 1048576) * 100) / 100,
+      permintaan: ringkasPermintaan(hitsMetrik),
+      koneksi: {
+        totalCount: pool.totalCount,
+        idleCount: pool.idleCount,
+        waitingCount: pool.waitingCount,
+      },
+      uji_cadangan_terakhir: uji
+        ? { berkas: uji.berkas, cocok: uji.cocok, diperiksa_pada: uji.diperiksa_pada }
+        : null,
+      uji_cadangan_usia_jam: usiaJam(uji?.diperiksa_pada),
+      pg_stat_activity: aktivitas,
+    })
+  })
   aplikasi.get('/waktu', (minta, balas) =>
     balas.json({ waktu_server: new Date().toISOString() }),
   )

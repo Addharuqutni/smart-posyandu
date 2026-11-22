@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { db } from '../penyimpanan/db.js'
-import { PESAN_STATUS } from '../logika/rentang.js'
+import { labelStatus, kelasStatus } from '../logika/rentang.js'
 import { usiaBulan, tanggalHariIni } from '../logika/waktu.js'
 import { inisial } from '../logika/nama.js'
 import { kunjunganTerbaruPerBalita, idDiukurBulanIni, rentangBulan } from '../logika/terakhir.js'
@@ -122,7 +122,7 @@ export default function Beranda({
         const peta = {}
         for (const [idBalita, k] of terakhir) {
           const u = ukurPerKunjungan.get(k.id)
-          if (u?.status_gizi) peta[idBalita] = u.status_gizi
+          if (u?.status_gizi || u?.sumber_status) peta[idBalita] = { status: u.status_gizi ?? null, sumber: u.sumber_status ?? null }
         }
         if (!hidup) return
         cacheStatus.current.set(kunciHalaman, peta)
@@ -284,10 +284,10 @@ export default function Beranda({
                     {gender === 'laki' ? 'Laki-laki' : 'Perempuan'}
                     <span aria-hidden="true">·</span>
                     <span
-                      className={`lencana-gizi ${status ?? 'menunggu'}`}
-                      aria-label={`Status gizi terakhir: ${status ? PESAN_STATUS[status] : 'belum diukur'}`}
+                      className={`lencana-gizi ${kelasStatus(status?.status, status?.sumber)}`}
+                      aria-label={`Keterangan gizi terakhir: ${labelStatus(status?.status, status?.sumber) ?? 'belum diukur'}`}
                     >
-                      {status ? PESAN_STATUS[status] : statusSiap ? 'Belum diukur' : 'Menghitung…'}
+                      {labelStatus(status?.status, status?.sumber) ?? (statusSiap ? 'Belum diukur' : 'Menghitung…')}
                     </span>
                   </span>
                 </div>

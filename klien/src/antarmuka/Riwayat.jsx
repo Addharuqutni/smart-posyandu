@@ -2,8 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import Chart from 'chart.js/auto'
 import { db } from '../penyimpanan/db.js'
 import { ubahPengukuran } from '../penyimpanan/kunjungan.js'
-import { PESAN_STATUS, RENTANG } from '../logika/rentang.js'
-import { rapikanDesimal } from '../logika/angka.js'
+import { labelStatus, kelasStatus, RENTANG } from '../logika/rentang.js'
+import { rapikanDesimal } from '../logika/angka'
 import { waliBalita } from '../penyimpanan/balita.js'
 import { usiaBulan, tanggalHariIni } from '../logika/waktu.js'
 import { inisial } from '../logika/nama.js'
@@ -178,7 +178,8 @@ export default function Riwayat({ sesi, balita, versiData = 0, kembali, setelahU
   const umur = usiaBulan(balita.tanggal_lahir, tanggalHariIni())
   const denganUkur = baris.filter((b) => b.pengukuran)
   const terakhir = denganUkur[denganUkur.length - 1]
-  const statusTerakhir = terakhir?.pengukuran.status_gizi
+  const statusTerakhir = terakhir?.pengukuran.status_gizi ?? null
+  const sumberTerakhir = terakhir?.pengukuran.sumber_status ?? null
   const waliTeks = teksWali(wali, ibuKandung)
 
   return (
@@ -279,13 +280,13 @@ export default function Riwayat({ sesi, balita, versiData = 0, kembali, setelahU
         />
         <Petak
           ikon="info"
-          warna="hijau"
+          warna="slate"
           nilai={
-            <span className={`lencana-gizi w-fit ${statusTerakhir ?? 'menunggu'}`}>
-              {statusTerakhir ? PESAN_STATUS[statusTerakhir] : 'Belum dinilai'}
+            <span className={`lencana-gizi w-fit ${kelasStatus(statusTerakhir, sumberTerakhir)}`}>
+              {labelStatus(statusTerakhir, sumberTerakhir) ?? 'Belum dinilai'}
             </span>
           }
-          label="Status gizi terakhir"
+          label="Keterangan gizi terakhir"
           bantuan={{
             id: 'bantuan-gizi-riwayat',
             label: 'Penjelasan status gizi',
@@ -356,10 +357,12 @@ export default function Riwayat({ sesi, balita, versiData = 0, kembali, setelahU
                           <span className="lencana-gizi menunggu">Tidak hadir</span>
                         ) : b.pengukuran.status_gizi ? (
                           <span className={`lencana-gizi ${b.pengukuran.status_gizi}`}>
-                            {PESAN_STATUS[b.pengukuran.status_gizi]}
+                            {labelStatus(b.pengukuran.status_gizi, b.pengukuran.sumber_status)}
                           </span>
+                        ) : b.pengukuran.sumber_status === 'acuan_tidak_tersedia' ? (
+                          <span className="lencana-gizi acuan_tidak_tersedia">Acuan belum tersedia</span>
                         ) : b.divalidasi_oleh ? (
-                          <span className="lencana-gizi valid">Tervalidasi</span>
+                          <span className="lencana-gizi menunggu">Sudah divalidasi</span>
                         ) : (
                           <span className="lencana-gizi menunggu">Menunggu Persetujuan Nakes</span>
                         )}

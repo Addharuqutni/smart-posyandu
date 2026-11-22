@@ -49,19 +49,25 @@ router.get('/rekap', NakesAtauAdmin, async (minta, balas) => {
 
   const jumlah = await satu(`SELECT COUNT(*)::int AS n FROM kunjungan k WHERE ${syarat}`, nilai)
 
-  // Dihitung di SQL, bukan di Node: dulu seluruh baris pengukuran bulan itu
-  // diangkut hanya untuk dihitung, terukur 5.331 baris untuk 4 angka.
+  // Aggregated in SQL instead of fetching every measurement row into Node.
+  // `belum_dinilai` keeps its legacy meaning: every row without a nutrition
+  // status. `acuan_tidak_tersedia` is a separate subset exposed at the response
+  // root, so older cached clients still count the same total.
   const sebaran = { gizi_baik: 0, gizi_kurang: 0, gizi_buruk: 0, gizi_buruk_berat: 0, belum_dinilai: 0 }
   const ukur = await banyak(
-    `SELECT COALESCE(p.status_gizi, 'belum_dinilai') AS status, COUNT(*)::int AS n
+    `SELECT COALESCE(p.status_gizi, 'belum_dinilai') AS status, COUNT(*)::int AS n,
+            COUNT(*) FILTER (WHERE p.status_gizi IS NULL
+              AND p.sumber_status = 'acuan_tidak_tersedia')::int AS tanpa_acuan
      FROM pengukuran p JOIN kunjungan k ON k.id = p.kunjungan_id
      WHERE ${syarat} AND p.dihapus_pada IS NULL
      GROUP BY 1`,
     nilai,
   )
+  let jumlahAcuanTidakTersedia = 0
   for (const u of ukur) {
     if (sebaran[u.status] !== undefined) sebaran[u.status] = u.n
     else sebaran.belum_dinilai += u.n
+    jumlahAcuanTidakTersedia += u.tanpa_acuan
   }
 
   const balita = await satu(
@@ -112,6 +118,8 @@ router.get('/rekap', NakesAtauAdmin, async (minta, balas) => {
     balita_terdaftar: terdaftar?.n ?? 0,
     balita_tidak_berkunjung: tidakBerkunjung?.n ?? 0,
     sebaran_status_gizi: sebaran,
+    // Subset of `belum_dinilai`, not a nutrition status. See VALIDASI-KLINIS.md.
+    jumlah_acuan_tidak_tersedia: jumlahAcuanTidakTersedia,
     rata_persen_median: rata?.rata != null ? Number(rata.rata.toFixed(2)) : null,
   })
 })

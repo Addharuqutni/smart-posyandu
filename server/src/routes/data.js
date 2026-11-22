@@ -6,7 +6,7 @@ const { butuhLogin, butuhPeran, butuhPosyandu } = require('../middleware/auth')
 const { siapkan } = require('../domain/tabel')
 const { ubah, hapus, sisip, tulisTerotorisasi } = require('../domain/repositori')
 const { enkripsi, dekripsi } = require('../domain/rahasia')
-const { hitung } = require('../domain/status_gizi')
+const { hitung, acuanTersedia, ACUAN_MAKS_BULAN } = require('../domain/status_gizi')
 const { lahirDiterima } = require('../domain/usia')
 const { hapusBalita } = require('../domain/balita')
 
@@ -495,18 +495,31 @@ router.post('/kunjungan/:id/validasi', Nakes, async (minta, balas, lanjut) => {
         [minta.params.id],
       )
       if (ukur && !ukur.status_gizi) {
-        const balita = await satuDi(`SELECT jenis_kelamin FROM balita WHERE id = $1`, [
-          kunjungan.balita_id,
-        ])
-        const acuan = await satuDi(
-          `SELECT median_berat_kg, sumber FROM acuan_berat_umur
-           WHERE usia_bulan = $1 AND jenis_kelamin = $2 AND dihapus_pada IS NULL
-           ORDER BY dibuat_pada DESC LIMIT 1`,
-          [kunjungan.usia_bulan, balita?.jenis_kelamin],
-        )
-        if (acuan) {
-          const nilai = hitung(ukur.berat_kg, acuan.median_berat_kg, acuan.sumber)
-          if (nilai) await tulisTerotorisasi('pengukuran', ukur.id, nilai, meta)
+        // acuanTersedia() membatasi pencarian ke baris acuan yang memang terisi.
+        // Usia 61-84 bulan tidak punya median, jadi jangan dikira gizi baik.
+        const adaAcuan = acuanTersedia(kunjungan.usia_bulan)
+        const balita = adaAcuan
+          ? await satuDi(`SELECT jenis_kelamin FROM balita WHERE id = $1`, [
+              kunjungan.balita_id,
+            ])
+          : null
+        const acuan = adaAcuan
+          ? await satuDi(
+              `SELECT median_berat_kg, sumber FROM acuan_berat_umur
+               WHERE usia_bulan = $1 AND jenis_kelamin = $2 AND dihapus_pada IS NULL
+               ORDER BY dibuat_pada DESC LIMIT 1`,
+              [kunjungan.usia_bulan, balita?.jenis_kelamin],
+            )
+          : null
+        const nilai = acuan && hitung(ukur.berat_kg, acuan.median_berat_kg, acuan.sumber)
+        if (nilai) {
+          await tulisTerotorisasi('pengukuran', ukur.id, nilai, meta)
+        } else {
+          // Tidak ada median yang bisa dipakai: status_gizi sengaja tetap NULL,
+          // sumber_status menjelaskan sebabnya dan tetap masuk log_audit.
+          await tulisTerotorisasi('pengukuran', ukur.id, {
+            sumber_status: 'acuan_tidak_tersedia',
+          }, meta)
         }
       }
       return satuDi(`SELECT * FROM kunjungan WHERE id = $1`, [minta.params.id])
@@ -535,6 +548,8 @@ router.post('/validasi/semua', butuhPeran('nakes', 'admin_desa'), async (minta, 
   const pengguna = tandai(minta.pengguna.id)
   const sekarang = tandai(new Date().toISOString())
   const ip = tandai(minta.ip ?? null)
+  // Batas acuan yang memang terisi; 61-84 bulan sengaja tidak dicari mediannya.
+  const batasAcuan = tandai(ACUAN_MAKS_BULAN)
   let cari = ''
   const q = String(minta.body?.q ?? '').trim()
   if (q) cari = `AND b.nama_lengkap ILIKE ${tandai(`%${q}%`)}`
@@ -561,6 +576,7 @@ router.post('/validasi/semua', butuhPeran('nakes', 'admin_desa'), async (minta, 
            WHERE usia_bulan = kandidat.usia_bulan
              AND jenis_kelamin = kandidat.jenis_kelamin
              AND dihapus_pada IS NULL
+             AND kandidat.usia_bulan <= ${batasAcuan}
            ORDER BY dibuat_pada DESC LIMIT 1
          ) a ON TRUE
        ),
@@ -577,21 +593,31 @@ router.post('/validasi/semua', butuhPeran('nakes', 'admin_desa'), async (minta, 
        ),
        ukur_baru AS (
          UPDATE pengukuran p
-         SET persen_median = ROUND((n.berat_kg::numeric / n.median_berat_kg) * 100, 2),
-             status_gizi = CASE
-               WHEN (n.berat_kg::numeric / n.median_berat_kg) * 100 >= 80 THEN 'gizi_baik'
-               WHEN (n.berat_kg::numeric / n.median_berat_kg) * 100 >= 70 THEN 'gizi_kurang'
-               WHEN (n.berat_kg::numeric / n.median_berat_kg) * 100 >= 60 THEN 'gizi_buruk'
-               ELSE 'gizi_buruk_berat'
-             END,
-             sumber_status = n.sumber,
-             diperbarui_pada = ${sekarang}::timestamptz,
-             id_perangkat = 'server'
-         FROM nilai_gizi n
-         WHERE p.id = n.ukur_id AND p.status_gizi IS NULL
-           AND n.median_berat_kg IS NOT NULL AND n.median_berat_kg > 0
-           AND n.id IN (SELECT id FROM selesai)
-         RETURNING p.id
+         SET persen_median = CASE
+              WHEN n.median_berat_kg IS NOT NULL AND n.median_berat_kg > 0
+                THEN ROUND((n.berat_kg::numeric / n.median_berat_kg) * 100, 2)
+              ELSE p.persen_median
+            END,
+            status_gizi = CASE
+              WHEN n.median_berat_kg IS NOT NULL AND n.median_berat_kg > 0 THEN
+                CASE
+                  WHEN (n.berat_kg::numeric / n.median_berat_kg) * 100 >= 80 THEN 'gizi_baik'
+                  WHEN (n.berat_kg::numeric / n.median_berat_kg) * 100 >= 70 THEN 'gizi_kurang'
+                  WHEN (n.berat_kg::numeric / n.median_berat_kg) * 100 >= 60 THEN 'gizi_buruk'
+                  ELSE 'gizi_buruk_berat'
+                END
+              ELSE NULL
+            END,
+            sumber_status = CASE
+              WHEN n.median_berat_kg IS NOT NULL AND n.median_berat_kg > 0 THEN n.sumber
+              ELSE 'acuan_tidak_tersedia'
+            END,
+            diperbarui_pada = ${sekarang}::timestamptz,
+            id_perangkat = 'server'
+        FROM nilai_gizi n
+        WHERE p.id = n.ukur_id AND p.status_gizi IS NULL
+          AND n.id IN (SELECT id FROM selesai)
+        RETURNING p.id, p.sumber_status
        ),
        audit_kunjungan AS (
          INSERT INTO log_audit
@@ -608,11 +634,12 @@ router.post('/validasi/semua', butuhPeran('nakes', 'admin_desa'), async (minta, 
          INSERT INTO log_audit
            (id, pengguna_id, id_perangkat, nama_tabel, id_baris, aksi,
             nilai_lama, nilai_baru, alamat_ip, terjadi_pada, diterima_pada)
-         SELECT gen_random_uuid(), ${pengguna}::uuid, 'server', 'pengukuran', id, 'ubah',
+         SELECT gen_random_uuid(), ${pengguna}::uuid, 'server', 'pengukuran', u.id, 'ubah',
                 '{"status_gizi":null}'::jsonb,
-                jsonb_build_object('status_gizi', 'dihitung_server'),
+                jsonb_build_object('status_gizi', 'dihitung_server',
+                                   'sumber_status', u.sumber_status),
                 ${ip}::text, ${sekarang}::timestamptz, now()
-         FROM ukur_baru
+         FROM ukur_baru u
        )
        SELECT COUNT(*)::int AS n FROM selesai`,
       param,

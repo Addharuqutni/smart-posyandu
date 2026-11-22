@@ -6,7 +6,7 @@ const {
   terima, periksaWaktu, periksaRentang, periksaMuatan,
   TERIMA, TOLAK, WAKTU_LEWAT_MASA_DEPAN, KALAH_VERSI, MUATAN_TIDAK_SAH,
 } = require('../src/domain/sinkron')
-const { klasifikasi, hitung } = require('../src/domain/status_gizi')
+const { klasifikasi, hitung, ACUAN_MAKS_BULAN, acuanTersedia } = require('../src/domain/status_gizi')
 
 const SEKARANG = new Date('2026-11-20T12:00:00Z')
 const TOLERANSI = 24
@@ -85,4 +85,17 @@ test('hitung persen median', () => {
 
 test('hitung menolak median nol', () => {
   assert.strictEqual(hitung(9, 0, 'x'), null)
+})
+
+test('jangkauan acuan BB/U mengikuti batas yang terisi, bukan batas kunjungan', () => {
+  assert.strictEqual(ACUAN_MAKS_BULAN, 60)
+  assert.strictEqual(acuanTersedia(0), true)
+  assert.strictEqual(acuanTersedia(60), true) // tepat batas
+  assert.strictEqual(acuanTersedia(61), false)
+  assert.strictEqual(acuanTersedia(84), false)
+  assert.strictEqual(acuanTersedia(-1), false)
+  assert.strictEqual(acuanTersedia(1.5), false)
+  assert.strictEqual(acuanTersedia(null), false)
+  assert.strictEqual(acuanTersedia(undefined), false)
+  assert.strictEqual(acuanTersedia(NaN), false)
 })

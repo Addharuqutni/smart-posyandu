@@ -11,6 +11,13 @@
 
 const { muat } = require('../env')
 
+const LABEL_INTEGRITAS = {
+  cocok: 'COCOK',
+  tidak_cocok: 'TIDAK COCOK',
+  tanpa_metadata_integritas: 'TANPA METADATA',
+  tidak_diperiksa: 'TIDAK DIPERIKSA',
+}
+
 function pisahArgumen(daftar) {
   const opsi = { berkas: null, ke: null }
   for (let i = 0; i < daftar.length; i += 1) {
@@ -58,6 +65,8 @@ async function utama() {
   // Bukti: baca ulang berkasnya dan bandingkan dengan basis data sasaran.
   const v = await verifikasi.periksa(berkas)
   console.log(`Uji       : ${v.cocok ? 'COCOK' : 'TIDAK COCOK'}`)
+  console.log(`Integritas: ${LABEL_INTEGRITAS[v.integritas] ?? 'TIDAK DIKETAHUI'}`)
+  if (v.catatan) console.log(`Catatan    : ${v.catatan}`)
   if (v.jumlah) {
     for (const [tabel, n] of Object.entries(v.jumlah)) {
       const db = v.jumlah_db?.[tabel]
@@ -65,13 +74,17 @@ async function utama() {
       console.log(`  ${tabel.padEnd(20)} berkas ${String(n).padStart(7)}  basis data ${String(db ?? '-').padStart(7)}  ${tanda}`)
     }
   }
-  if (!v.cocok) {
+  if (!v.cocok || v.integritas === 'tidak_cocok') {
     console.error('Uji pemulihan GAGAL. Periksa catatan di atas.')
     process.exit(1)
   }
 }
 
 utama().catch((salah) => {
+  if (salah.kode === 'integritas_cadangan_tidak_cocok') {
+    console.log('Integritas: TIDAK COCOK')
+    console.log(`Catatan    : ${salah.kode}`)
+  }
   console.error('Pemulihan gagal:', salah.message)
   process.exit(1)
 })

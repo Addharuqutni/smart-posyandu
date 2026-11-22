@@ -29,4 +29,22 @@ export const PESAN_STATUS = {
   gizi_kurang: 'Gizi kurang',
   gizi_buruk: 'Gizi buruk',
   gizi_buruk_berat: 'Gizi buruk (berat)',
+  belum_dinilai: 'Belum dinilai',
+}
+
+export const ACUAN_TIDAK_TERSEDIA = 'acuan_tidak_tersedia'
+
+/** Reason for a missing assessment; never a nutrition status. */
+export const PESAN_ALASAN_STATUS = {
+  [ACUAN_TIDAK_TERSEDIA]: 'Acuan belum tersedia',
+}
+
+export function labelStatus(status, sumberStatus) {
+  if (status) return PESAN_STATUS[status] ?? status
+  return PESAN_ALASAN_STATUS[sumberStatus] ?? null
+}
+
+export function kelasStatus(status, sumberStatus) {
+  if (status) return status
+  return sumberStatus === ACUAN_TIDAK_TERSEDIA ? ACUAN_TIDAK_TERSEDIA : 'menunggu'
 }

@@ -57,6 +57,9 @@ function muat() {
     kodenaraHarian: process.env.KODENARA_HARIAN !== 'false',
     // Batas waktu satu pernyataan SQL. Lihat db/pool.js.
     batasWaktuKueriMs: Number(process.env.BATAS_WAKTU_KUERI_MS || 10000),
+    // Opsional. Tanpa nilai ini /metrik memakai sesi admin_desa; dengan nilai,
+    // pemanggil harus mengirim header X-Metrik-Token yang sama.
+    metrikToken: process.env.METRIK_TOKEN || null,
   }
 }
 

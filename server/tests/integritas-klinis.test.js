@@ -15,6 +15,7 @@ const tabel = baca('domain/tabel.js')
 const konten = baca('routes/konten.js')
 const sesi = baca('routes/sesi.js')
 const pengguna = baca('routes/pengguna.js')
+const { ACUAN_MAKS_BULAN, acuanTersedia } = require('../src/domain/status_gizi')
 
 test('muatan /sinkron tidak bisa menulis keputusan klinis', () => {
   const masuk = {
@@ -76,6 +77,11 @@ test('validasi tunggal: kunjungan dan status gizi dalam satu transaksi', () => {
   assert.match(blok, /tulisTerotorisasi\('kunjungan'/)
   assert.match(blok, /tulisTerotorisasi\('pengukuran'/)
   assert.match(blok, /const satuDi = async/)
+  assert.match(blok, /acuanTersedia\(kunjungan\.usia_bulan\)/)
+  assert.match(blok, /sumber_status: 'acuan_tidak_tersedia'/)
+  // Cabang penanda tidak boleh ikut menulis status_gizi.
+  const penanda = blok.slice(blok.indexOf("sumber_status: 'acuan_tidak_tersedia'"))
+  assert.ok(!/status_gizi/.test(penanda.slice(0, 220)))
   assert.ok(!/^ub ah\(/m.test(blok))
 })
 
@@ -97,6 +103,13 @@ test('validasi massal menghitung status gizi dan nomor parameter konsisten', () 
   for (const [, angka] of ambang.map((s) => s.match(/\[(\d+),/))) {
     assert.match(blok, new RegExp(`>= ${angka} THEN`))
   }
+  assert.match(blok, /sumber_status = CASE/)
+  assert.match(blok, /ELSE 'acuan_tidak_tersedia'/)
+  assert.match(blok, /tandai\(ACUAN_MAKS_BULAN\)/)
+  assert.match(blok, /kandidat\.usia_bulan <= \$\{batasAcuan\}/)
+  assert.match(blok, /RETURNING p\.id, p\.sumber_status/)
+  assert.strictEqual(acuanTersedia(ACUAN_MAKS_BULAN), true)
+  assert.strictEqual(acuanTersedia(ACUAN_MAKS_BULAN + 1), false)
 })
 
 test('tulisan server memakai whitelist terotorisasi, bukan whitelist sinkron', () => {
@@ -180,6 +193,8 @@ test('validasi massal mencatat audit untuk kunjungan dan pengukuran', () => {
   assert.match(blok, /audit_kunjungan AS/)
   assert.match(blok, /audit_pengukuran AS/)
   assert.match(blok, /FROM ukur_baru/)
+  assert.match(blok, /FROM ukur_baru u/)
+  assert.match(blok, /u\.sumber_status/)
 })
 
 test('pembatalan kunjungan tidak tertahan cek usia di antrean sinkron', () => {
@@ -189,4 +204,12 @@ test('pembatalan kunjungan tidak tertahan cek usia di antrean sinkron', () => {
   assert.match(sinkron, /namaTabel === 'kunjungan' && aksi !== 'hapus'/)
   // Pengukuran milik kunjungan yang sudah dibatalkan tetap ikut dibersihkan.
   assert.match(balita, /SELECT id FROM kunjungan WHERE balita_id = \$1`/)
+})
+
+test('rekap memisahkan alasan acuan dari sebaran status legacy', () => {
+  const laporan = baca('routes/laporan.js')
+  assert.match(laporan, /COALESCE\(p\.status_gizi, 'belum_dinilai'\)/)
+  assert.match(laporan, /FILTER \(WHERE p\.status_gizi IS NULL/)
+  assert.match(laporan, /jumlah_acuan_tidak_tersedia/)
+  assert.match(laporan, /FROM pengukuran p JOIN kunjungan k ON k\.id = p\.kunjungan_id/)
 })
